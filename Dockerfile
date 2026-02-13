@@ -2,6 +2,12 @@ FROM --platform=$BUILDPLATFORM maven:3.9.6-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
+# Copy Zscaler certificate and import into Java trust store (for corporate proxy)
+COPY docker/certs/ZscalerRootCertificate.crt /tmp/ZscalerRootCertificate.crt
+RUN keytool -import -trustcacerts -keystore $JAVA_HOME/lib/security/cacerts \
+    -storepass changeit -noprompt -alias zscaler-root \
+    -file /tmp/ZscalerRootCertificate.crt || true
+
 COPY fc-service-api fc-service-api
 COPY fc-service-client fc-service-client
 COPY fc-test-support fc-test-support
