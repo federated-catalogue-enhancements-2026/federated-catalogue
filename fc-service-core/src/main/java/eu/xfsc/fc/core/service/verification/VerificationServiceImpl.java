@@ -81,8 +81,8 @@ public class VerificationServiceImpl implements VerificationService {
   private boolean requireVP;
   @Value("${federated-catalogue.verification.semantics:true}")
   private boolean verifySemantics;
-  @Value("${federated-catalogue.verification.schema:true}")
-  private boolean verifySchema;
+  @Value("${federated-catalogue.verification.schema:false}")
+  boolean verifySchema;
   @Value("${federated-catalogue.verification.vp-signature:true}")
   private boolean verifyVPSignature;
   @Value("${federated-catalogue.verification.vc-signature:true}")
@@ -101,6 +101,8 @@ public class VerificationServiceImpl implements VerificationService {
 
   @Autowired
   private SchemaStore schemaStore;
+  @Autowired
+  private SchemaValidationService schemaValidationService;
   @Autowired
   private SignatureVerifier signVerifier;
 
@@ -284,7 +286,7 @@ public class VerificationServiceImpl implements VerificationService {
 
     // schema verification
     if (verifySchema) {
-      SemanticValidationResult result = verifyClaimsAgainstCompositeSchema(claims);
+      SemanticValidationResult result = schemaValidationService.validateClaimsAgainstCompositeSchema(claims);
       if (result == null || !result.isConforming()) {
         throw new VerificationException("Schema error: " + (result == null ? "unknown" : result.getValidationReport()));
       }
@@ -506,52 +508,24 @@ public class VerificationServiceImpl implements VerificationService {
   }
   
 
-  /* SD validation against SHACL Schemas */
+  /* SD validation against SHACL Schemas — delegated to SchemaValidationService */
+
+  /**
+   * @deprecated Use {@link SchemaValidationService#validateAgainstCompositeSchema} directly.
+   */
+  @Deprecated
   @Override
   public SemanticValidationResult verifySelfDescriptionAgainstCompositeSchema(ContentAccessor payload) {
-    return verifySelfDescriptionAgainstSchema(payload, null);
-  }
-
-  @Override
-  public SemanticValidationResult verifySelfDescriptionAgainstSchema(ContentAccessor payload, ContentAccessor schema) {
-    log.debug("verifySelfDescriptionAgainstSchema.enter;");
-    SemanticValidationResult result = null;
-    try {
-      if (schema == null) { 	
-        schema = schemaStore.getCompositeSchema(SchemaStore.SchemaType.SHAPE);
-      }
-      List<SdClaim> claims = extractClaims(payload);
-      result = verifyClaimsAgainstSchema(claims, schema);
-    } catch (Exception exc) {
-      log.info("verifySelfDescriptionAgainstSchema.error: {}", exc.getMessage());
-    }
-    log.debug("verifySelfDescriptionAgainstSchema.exit; conforms: {}", result.isConforming());
-    return result;
-  }
-  
-  private SemanticValidationResult verifyClaimsAgainstCompositeSchema(List<SdClaim> claims) {
-	log.debug("verifyClaimsAgainstCompositeSchema.enter;");
-	SemanticValidationResult result = null;
-	try {
-	  ContentAccessor shaclShape = schemaStore.getCompositeSchema(SchemaStore.SchemaType.SHAPE);
-	  result = verifyClaimsAgainstSchema(claims, shaclShape);
-	} catch (Exception exc) {
-	  log.info("verifyClaimsAgainstCompositeSchema.error: {}", exc.getMessage());
-	}
-	log.debug("verifyClaimsAgainstCompositeSchema.exit; conforms: {}", result.isConforming());
-	return result;
+    return schemaValidationService.validateSelfDescriptionAgainstCompositeSchema(payload);
   }
 
   /**
-   * Method that validates a dataGraph against shaclShape
-   *
-   * @param payload    ContentAccessor of a self-Description payload to be validated
-   * @param shaclShape ContentAccessor of a union schemas of type SHACL
-   * @return SemanticValidationResult object
+   * @deprecated Use {@link SchemaValidationService#validateAgainstSchema} directly.
    */
-  private SemanticValidationResult verifyClaimsAgainstSchema(List<SdClaim> claims, ContentAccessor schema) {
-	String report = ClaimValidator.validateClaimsBySchema(claims, schema, getStreamManager());
-	return new SemanticValidationResult(report == null, report);
+  @Deprecated
+  @Override
+  public SemanticValidationResult verifySelfDescriptionAgainstSchema(ContentAccessor payload, ContentAccessor schema) {
+    return schemaValidationService.validateSelfDescriptionAgainstSchema(payload, schema);
   }
 
   
