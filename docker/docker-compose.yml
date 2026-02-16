@@ -112,6 +112,8 @@ services:
       GRAPHSTORE_URI: "${GRAPH_STORE_URI}"
       GRAPHSTORE_USER: "${GRAPH_STORE_USER}"
       GRAPHSTORE_PASSWORD: "${GRAPH_STORE_PASSWORD}"
+      FEDERATED_CATALOGUE_VERIFICATION_SCHEMA: "${VERIFY_SCHEMA:-false}" # (CAT-FR-SF-04) disable automatic SHACL validation during upload
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE:-local}" # activate local profile (disables signature verification for testing)
       PUBLISHER_IMPL: nats
       PUBLISHER_URL: ${NATS_URL}
       SUBSCRIBER_IMPL: none

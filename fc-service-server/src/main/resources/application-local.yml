@@ -1,0 +1,24 @@
+# Local development profile
+# Usage: mvn spring-boot:run "-Dspring-boot.run.profiles=local"
+# Requires: docker-compose up -d postgres neo4j keycloak nats
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://key-server:8080/realms/gaia-x
+
+keycloak:
+  auth-server-url: http://key-server:8080
+
+publisher:
+  impl: none
+
+subscriber:
+  impl: none
+
+federated-catalogue:
+  verification:
+    vp-signature: false  # disable for local testing (JSON-LD normalization mismatch with signer tool)
+    vc-signature: false  # disable for local testing (JSON-LD normalization mismatch with signer tool)

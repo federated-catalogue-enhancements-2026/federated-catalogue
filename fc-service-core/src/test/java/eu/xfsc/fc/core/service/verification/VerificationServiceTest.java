@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
-        VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, DidResolverConfig.class, ValidatorCacheDaoImpl.class, HttpDocumentResolver.class})
+        VerificationServiceImpl.class, SchemaValidationServiceImpl.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, DidResolverConfig.class, ValidatorCacheDaoImpl.class, HttpDocumentResolver.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class VerificationServiceTest {
 
@@ -612,5 +612,42 @@ public class VerificationServiceTest {
             getAccessor("Validation-Tests/legalPerson_one_VC_Valid.jsonld"));
     assertTrue(validationResult.isConforming());
   }
-  
+
+  /** (CAT-FR-SF-04) With verifySchema=true, an SD that violates SHACL shapes should be rejected by the default verify path. */
+  @Test
+  void schemaValidationEnabled_InvalidSD_Rejected() {
+    log.debug("schemaValidationEnabled_InvalidSD_Rejected");
+    verificationService.verifySchema = true; // enable schema validation
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
+    ContentAccessor content = getAccessor("VerificationService/syntax/participantSD2.jsonld");
+    Exception ex = assertThrowsExactly(VerificationException.class, ()
+            -> verificationService.verifySelfDescription(content));
+    assertTrue(ex.getMessage().startsWith("Schema error:"), "Expected schema validation error but got: " + ex.getMessage());
+  }
+
+  /** (CAT-FR-SF-04) With verifySchema=false, an SD that violates SHACL shapes should still be accepted. */
+  @Test
+  void schemaValidationDisabled_InvalidSD_Accepted() {
+    log.debug("schemaValidationDisabled_InvalidSD_Accepted");
+    verificationService.verifySchema = false; // disable schema validation
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
+    ContentAccessor content = getAccessor("VerificationService/syntax/participantSD2.jsonld");
+    VerificationResult result = verificationService.verifySelfDescription(content);
+    assertNotNull(result, "SD should be accepted when schema validation is disabled");
+  }
+
+  /** (CAT-FR-SF-04 AC-5) A JSON-LD asset invalid against stored SHACL shapes is accepted with the default configuration. */
+  @Test
+  void defaultConfig_NoAutomaticSchemaValidation() {
+    log.debug("defaultConfig_NoAutomaticSchemaValidation");
+    // verifySchema is not set — relies on default (false)
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
+    ContentAccessor content = getAccessor("VerificationService/syntax/participantSD2.jsonld");
+    VerificationResult result = verificationService.verifySelfDescription(content);
+    assertNotNull(result, "SD should be accepted with default config (no automatic schema validation)");
+  }
+
 }

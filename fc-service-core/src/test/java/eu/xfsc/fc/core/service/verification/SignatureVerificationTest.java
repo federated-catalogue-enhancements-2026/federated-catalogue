@@ -36,7 +36,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {SignatureVerificationTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
-        VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheDaoImpl.class})
+        VerificationServiceImpl.class, SchemaValidationServiceImpl.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheDaoImpl.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class SignatureVerificationTest {

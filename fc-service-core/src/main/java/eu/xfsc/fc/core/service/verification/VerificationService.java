@@ -73,12 +73,14 @@ public interface VerificationService {
   List<SdClaim> extractClaims(ContentAccessor payload);
 
   /**
-   * The function validates the Self-Description against the composite schema.
+   * The function validates the Self-Description against the given schema.
    *
    * @param payload ContentAccessor to SD which should be validated.
-   * @param schema ContentAccessor - the schema to validate SDD against
+   * @param schema ContentAccessor - the schema to validate SD against (null = composite)
    * @return the result of the semantic validation.
+   * @deprecated Use {@link SchemaValidationService#validateSelfDescriptionAgainstSchema} directly.
    */
+  @Deprecated
   SemanticValidationResult verifySelfDescriptionAgainstSchema(ContentAccessor payload, ContentAccessor schema);
 
   /**
@@ -86,7 +88,9 @@ public interface VerificationService {
    *
    * @param payload ContentAccessor to SD which should be validated.
    * @return the result of the semantic validation.
+   * @deprecated Use {@link SchemaValidationService#validateSelfDescriptionAgainstCompositeSchema} directly.
    */
+  @Deprecated
   SemanticValidationResult verifySelfDescriptionAgainstCompositeSchema(ContentAccessor payload);
 
 }
