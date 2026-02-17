@@ -1,0 +1,53 @@
+# Helm values overlay for local Minikube deployment.
+# Use with: helm upgrade --install ... -f values-minikube.yaml
+
+image:
+  repository: fc-service-server
+  pullPolicy: Never
+  tag: "latest"
+
+# The ingress controller ClusterIP is injected at install time via:
+#   --set hostAliases[0].ip=<INGRESS_IP>
+hostAliases:
+  - ip: "127.0.0.1"
+    hostnames:
+      - key-server
+
+env:
+  - name: DATASTORE_FILE_PATH
+    value: /var/lib/fc-service/filestore
+  - name: FEDERATED_CATALOGUE_VERIFICATION_SIGNATURES
+    value: "true"
+  - name: GRAPHSTORE_URI
+    value: bolt://fc-neo4j:7687
+  - name: GRAPHSTORE_QUERY_TIMEOUT_IN_SECONDS
+    value: "5"
+  - name: GRAPHSTORE_PASSWORD
+    value: neo12345
+  - name: KEYCLOAK_AUTH_SERVER_URL
+    value: http://fc-keycloak:8080
+  - name: KEYCLOAK_CREDENTIALS_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: fc-keycloak-client-secret
+        key: keycloak_client_secret
+  - name: SPRING_DATASOURCE_URL
+    value: jdbc:postgresql://fc-postgres:5432/postgres
+  - name: SPRING_DATASOURCE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: fc-postgres
+        key: postgres-password
+  - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+    value: http://key-server/realms/gaia-x
+
+keycloak:
+  extraEnvVars:
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm"
+    - name: PROXY_ADDRESS_FORWARDING
+      value: "true"
+    - name: KEYCLOAK_FRONTEND_URL
+      value: "http://key-server/"
+    - name: KEYCLOAK_ADMIN_URL
+      value: "http://key-server/admin/"

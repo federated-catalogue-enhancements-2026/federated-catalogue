@@ -14,6 +14,8 @@ To get support you can open an issue in the project [Issues](https://github.com/
 ## Getting Started
 To start with FC project please follow the instructions: [Steps to build FC](./docker/README.md).
 
+For Minikube deployment, see [Minikube setup instructions](./deployment/minikube/README.md).
+
 ## Roadmap
 The project v1.0.0 was released in February 2023.
 
