@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 COMPOSE_DEV="docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file dev.env"
-COMPOSE_PROD="docker compose --env-file dev.env"
+COMPOSE_FULL="docker compose --env-file dev.env"
 
 usage() {
   cat <<EOF
@@ -91,10 +91,10 @@ case "${1:-}" in
     $COMPOSE_DEV watch "${@:2}"
     ;;
   full)
-    $COMPOSE_PROD up "${@:2}"
+    $COMPOSE_FULL up "${@:2}"
     ;;
   down)
-    $COMPOSE_DEV down "${@:2}"
+    $COMPOSE_FULL down "${@:2}"
     ;;
   build)
     # `mvn package` covers both scenarios (bare-metal with spring-boot dev-tools and containerized).
