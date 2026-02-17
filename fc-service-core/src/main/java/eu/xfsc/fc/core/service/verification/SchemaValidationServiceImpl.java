@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
+import jakarta.annotation.PostConstruct;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SdClaim;
@@ -53,7 +54,6 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     @Autowired
     private DocumentLoader documentLoader;
 
-    private boolean loadersInitialised;
     private StreamManager streamManager;
 
     /** {@inheritDoc} Delegates to {@link #validateSelfDescriptionAgainstSchema} with a {@code null} schema. */
@@ -100,8 +100,27 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     /** {@inheritDoc} */
     @Override
     public SemanticValidationResult validateClaimsAgainstSchema(List<SdClaim> claims, ContentAccessor schema) {
-        String report = ClaimValidator.validateClaimsBySchema(claims, schema, getStreamManager());
+        String report = ClaimValidator.validateClaimsBySchema(claims, schema, streamManager);
         return new SemanticValidationResult(report == null, report);
+    }
+
+    /**
+     * Initialises the JSON-LD {@link SchemeRouter} and Jena {@link StreamManager}
+     * once after dependency injection, ensuring thread-safe setup.
+     */
+    @PostConstruct
+    private void init() {
+        log.debug("init; Setting up SchemeRouter");
+        SchemeRouter loader = (SchemeRouter) SchemeRouter.defaultInstance();
+        loader.set("file", documentLoader);
+        loader.set("http", documentLoader);
+        loader.set("https", documentLoader);
+
+        log.debug("init; Setting up Jena caching Locator");
+        StreamManager clone = StreamManager.get().clone();
+        clone.clearLocators();
+        clone.addLocator(new CachingLocator(fileStore));
+        streamManager = clone;
     }
 
     /**
@@ -113,7 +132,6 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
      * @return extracted claims, or {@code null} if extraction fails
      */
     private List<SdClaim> extractClaims(ContentAccessor payload) {
-        initLoaders();
         List<SdClaim> claims = null;
         for (ClaimExtractor extractor : EXTRACTORS) {
             try {
@@ -126,41 +144,5 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             }
         }
         return claims;
-    }
-
-    /**
-     * Lazily initialises the JSON-LD {@link SchemeRouter} with the injected
-     * {@link DocumentLoader} for {@code file}, {@code http}, and {@code https}
-     * schemes. Called once before the first claim extraction.
-     */
-    private void initLoaders() {
-        if (!loadersInitialised) {
-            log.debug("initLoaders; Setting up SchemeRouter");
-            SchemeRouter loader = (SchemeRouter) SchemeRouter.defaultInstance();
-            loader.set("file", documentLoader);
-            loader.set("http", documentLoader);
-            loader.set("https", documentLoader);
-            loadersInitialised = true;
-        }
-    }
-
-    /**
-     * Returns a lazily initialised Jena {@link StreamManager} configured with
-     * a {@link CachingLocator} backed by the context-cache {@link FileStore}.
-     * The manager is cloned from the global default and cleared of standard
-     * locators so that all resource lookups go through the cache.
-     *
-     * @return the configured {@link StreamManager} for SHACL validation
-     */
-    private StreamManager getStreamManager() {
-        if (streamManager == null) {
-            initLoaders();
-            log.debug("getStreamManager; Setting up Jena caching Locator");
-            StreamManager clone = StreamManager.get().clone();
-            clone.clearLocators();
-            clone.addLocator(new CachingLocator(fileStore));
-            streamManager = clone;
-        }
-        return streamManager;
     }
 }
