@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.verification;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -18,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
@@ -31,8 +34,14 @@ import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 
-@SpringBootTest(properties = { "federated-catalogue.verification.signature-verifier=uni-res", "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
-		"federated-catalogue.verification.drop-validators=true" })
+@SpringBootTest(properties = {
+	"federated-catalogue.verification.signature-verifier=uni-res",
+	"federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
+	"federated-catalogue.verification.drop-validators=true",
+	// Enable Gaia-X trust framework to test trust anchor validation
+	"federated-catalogue.verification.trust-framework.gaiax.enabled=true",
+	"federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url=https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
+})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {SignatureVerificationTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
@@ -53,9 +62,13 @@ public class SignatureVerificationTest {
 	private SchemaStoreImpl schemaStore;
 	@Autowired
 	private VerificationServiceImpl verificationService;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	@AfterEach
 	public void storageSelfCleaning() throws IOException {
+	    // Clear validator cache to prevent interference with other tests
+	    jdbcTemplate.update("DELETE FROM validatorcache");
 	    schemaStore.clear();
 	}
 	
@@ -68,13 +81,25 @@ public class SignatureVerificationTest {
 	}
 
 	@Test
+	void testGaiaxTrustFrameworkIsEnabled() {
+		// Verify that Gaia-X trust framework is enabled for this test class
+		// This ensures the testJWKCertificate test above is testing the correct behavior
+		assertTrue(verificationService.gaiaxTrustFrameworkEnabled,
+				"Gaia-X trust framework should be enabled for this test class");
+	}
+
+	@Test
 	void testJWKCertificate() {
+	    // This test verifies that when Gaia-X trust framework is ENABLED,
+	    // credentials without x5u (trust anchor URL) in the JWK are rejected.
+	    // Note: This test requires gaiax.enabled=true (set in @SpringBootTest properties)
+	    // With gaiax.enabled=false, this credential would be accepted.
+	    // See GaiaxTrustFrameworkTest for tests covering both scenarios.
 	    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
 	    String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
 	    Exception ex = assertThrowsExactly(VerificationException.class, ()
 	            -> verificationService.verifySelfDescription(getAccessor(path), true, true, true, true));
 	    assertEquals("Signatures error; no trust anchor url found", ex.getMessage());
-		//assertEquals("uniresolver.ResolutionException: No consumer for application/did", ex.getMessage());
 	}
-	
+
 }
