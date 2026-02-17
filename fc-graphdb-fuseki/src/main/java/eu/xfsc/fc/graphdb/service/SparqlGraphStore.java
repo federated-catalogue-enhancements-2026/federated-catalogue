@@ -12,14 +12,17 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.sparql.core.ResultBinding;
 import org.apache.jena.system.Txn;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,7 +95,7 @@ public class SparqlGraphStore implements GraphStore {
                     .map(qs -> (ResultBinding) qs)
                     .map(rb -> {
                         final Map<String, Object> resultMap = new HashMap<>();
-                        rb.varNames().forEachRemaining(varName -> resultMap.put(varName, rb.get(varName)));
+                        rb.varNames().forEachRemaining(varName -> resultMap.put(varName, convertRdfNode(rb.get(varName))));
                         return resultMap;
                     }).toList());
             // Shuffle list to guarantee results won't appear in a deterministic order thus giving certain results
@@ -111,5 +114,26 @@ public class SparqlGraphStore implements GraphStore {
                 throw new RuntimeException("Error while executing query", e);
             }
         }
+    }
+
+    /**
+     * Converts an {@link RDFNode} to a JSON-serializable Java object.
+     */
+    private Object convertRdfNode(RDFNode node) {
+        if (node == null) {
+            return null;
+        }
+        if (node.isLiteral()) {
+            Literal lit = node.asLiteral();
+            try {
+                return lit.getValue();
+            } catch (Exception e) {
+                return lit.getLexicalForm();
+            }
+        }
+        if (node.isURIResource()) {
+            return node.asResource().getURI();
+        }
+        return node.toString();
     }
 }

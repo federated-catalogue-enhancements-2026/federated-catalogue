@@ -11,6 +11,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,7 +48,15 @@ public class GraphRebuilder {
    */
   public void rebuildGraphDb(int chunkCount, int chunkId, int threads, int batchSize) {
     BlockingQueue<String> taskQueue = new ArrayBlockingQueue<>(batchSize);
-    ExecutorService executorService = ProcessorUtils.createProcessors(threads, taskQueue, this::addSdToGraph, "GraphRebuilder");
+    AtomicInteger activeTasks = new AtomicInteger(0);
+    ExecutorService executorService = ProcessorUtils.createProcessors(threads, taskQueue, hash -> {
+      activeTasks.incrementAndGet();
+      try {
+        addSdToGraph(hash);
+      } finally {
+        activeTasks.decrementAndGet();
+      }
+    }, "GraphRebuilder");
 
     int lastCount;
     String lastHash = null;
@@ -69,15 +78,10 @@ public class GraphRebuilder {
       }
     } while (lastCount > 0);
 
-    int openJobs = taskQueue.size();
-    while (openJobs > 0) {
-      log.debug("Waiting for {} jobs to be finished.", openJobs);
+    while (taskQueue.size() > 0 || activeTasks.get() > 0) {
+      log.debug("Waiting for {} queued / {} active jobs to be finished.", taskQueue.size(), activeTasks.get());
       sleepForQueue();
-      openJobs = taskQueue.size();
     }
-
-    // Sleep to give the last task a chance to complete.
-    sleepForQueue();
 
     ProcessorUtils.shutdownProcessors(executorService, taskQueue, 10, TimeUnit.MINUTES);
   }

@@ -16,7 +16,7 @@ services:
     networks:
       - "gaia-x"
     volumes:
-#      - pgdata:/var/lib/postgresql/data/
+      - pgdata:/var/lib/postgresql/data/
       - ./postgres-initdb-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: pg_isready -d postgres -U postgres
@@ -71,7 +71,9 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - "gaia-x"
+      gaia-x:
+        aliases:
+          - key-server
     restart: unless-stopped
     volumes:
       - "../keycloak/providers:/opt/keycloak/providers"
@@ -99,6 +101,25 @@ services:
     networks: 
       - "gaia-x"
       
+  fuseki:
+    container_name: "fuseki"
+    image: docker.io/stain/jena-fuseki
+    environment:
+      ADMIN_PASSWORD: "admin"
+      FUSEKI_DATASET_1: "ds"
+      JVM_ARGS: "-Xmx1g"
+    ports:
+      - "3330:3030"
+    networks:
+      - "gaia-x"
+    restart: unless-stopped
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3030/ds || exit 1
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   server:
     container_name: "fc-server"
 #    image: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-service-server:2.0.0
@@ -125,9 +146,9 @@ services:
       - "8081:8081"
     networks:
       - "gaia-x"
-    extra_hosts:
-      - "key-server:host-gateway"
-      - "localhost:127.0.0.1"
+#    extra_hosts:
+#      - "key-server:host-gateway"
+#      - "localhost:127.0.0.1"
     restart: always #unless-stopped
     depends_on:
       postgres:
@@ -152,13 +173,16 @@ services:
       - "8088:8088"
     networks:
       - "gaia-x"
-    extra_hosts:
-      - "key-server:host-gateway"
-      - "localhost:host-gateway"
+#    extra_hosts:
+#      - "key-server:host-gateway"
+#      - "localhost:host-gateway"
     restart: unless-stopped
     depends_on:
       server:
         condition: service_healthy
+
+volumes:
+  pgdata:
 
 networks:
   gaia-x:
