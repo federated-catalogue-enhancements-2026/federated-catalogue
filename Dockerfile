@@ -2,12 +2,6 @@ FROM --platform=$BUILDPLATFORM maven:3.9.6-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copy Zscaler certificate and import into Java trust store (for corporate proxy)
-COPY docker/certs/ZscalerRootCertificate.crt /tmp/ZscalerRootCertificate.crt
-RUN keytool -import -trustcacerts -keystore $JAVA_HOME/lib/security/cacerts \
-    -storepass changeit -noprompt -alias zscaler-root \
-    -file /tmp/ZscalerRootCertificate.crt || true
-
 COPY fc-service-api fc-service-api
 COPY fc-service-client fc-service-client
 COPY fc-test-support fc-test-support
@@ -25,31 +19,10 @@ COPY lombok.config lombok.config
 RUN mvn clean install -DskipTests -Dcheckstyle.skip
 
 
-FROM bellsoft/liberica-openjdk-alpine:21 AS fc-service-server
-# Import Zscaler certificate into runtime Java trust store
-COPY docker/certs/ZscalerRootCertificate.crt /tmp/ZscalerRootCertificate.crt
-RUN keytool -import -trustcacerts -keystore $JAVA_HOME/lib/security/cacerts \
-    -storepass changeit -noprompt -alias zscaler-root \
-    -file /tmp/ZscalerRootCertificate.crt || true
+FROM bellsoft/liberica-openjdk-alpine:21 as fc-service-server
 COPY --from=build /app/fc-service-server/target/fc-service-server-*.jar fc-service-server.jar
 ENTRYPOINT ["java", "-jar","/fc-service-server.jar"]
 
-FROM bellsoft/liberica-openjdk-alpine:21 AS fc-demo-portal
-# Import Zscaler certificate into runtime Java trust store
-COPY docker/certs/ZscalerRootCertificate.crt /tmp/ZscalerRootCertificate.crt
-RUN keytool -import -trustcacerts -keystore $JAVA_HOME/lib/security/cacerts \
-    -storepass changeit -noprompt -alias zscaler-root \
-    -file /tmp/ZscalerRootCertificate.crt || true
+FROM bellsoft/liberica-openjdk-alpine:21 as fc-demo-portal
 COPY --from=build /app/fc-demo-portal/target/fc-demo-portal-*.jar fc-demo-portal.jar
 ENTRYPOINT ["java", "-jar","/fc-demo-portal.jar"]
-
-FROM neo4j:5.18.0 AS neo4j-with-zscaler
-# Import Zscaler certificate into system trust store for plugin downloads
-COPY docker/certs/ZscalerRootCertificate.crt /tmp/ZscalerRootCertificate.crt
-# Neo4j uses Java, so import into Java keystore
-RUN keytool -import -trustcacerts -keystore /opt/java/openjdk/lib/security/cacerts \
-    -storepass changeit -noprompt -alias zscaler-root \
-    -file /tmp/ZscalerRootCertificate.crt || true
-# Also add to system CA certificates for curl/wget
-RUN cp /tmp/ZscalerRootCertificate.crt /usr/local/share/ca-certificates/ZscalerRootCertificate.crt && \
-    update-ca-certificates

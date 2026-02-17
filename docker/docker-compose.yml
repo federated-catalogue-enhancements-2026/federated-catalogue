@@ -30,10 +30,7 @@ services:
           
   neo4j:
     container_name: "neo4j"
-    build:
-      context: "${FC_SERVICE_SERVER_DOCKER_CONTEXT}"
-      dockerfile: Dockerfile
-      target: "neo4j-with-zscaler"
+    image: neo4j:5.18.0
     environment:
       NEO4J_AUTH: "${GRAPH_STORE_USER}/${GRAPH_STORE_PASSWORD}"
       NEO4J_server_http_listen__address: :7474
