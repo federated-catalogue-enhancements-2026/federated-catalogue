@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.verification;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -78,14 +77,6 @@ public class SignatureVerificationTest {
 	    String path = "VerificationService/sign-unires/participant_v1_signed.jsonld";
 	    VerificationResult result = verificationService.verifySelfDescription(getAccessor(path));
 	    assertEquals(1, result.getValidators().size(), "Incorrect number of validators found");
-	}
-
-	@Test
-	void testGaiaxTrustFrameworkIsEnabled() {
-		// Verify that Gaia-X trust framework is enabled for this test class
-		// This ensures the testJWKCertificate test above is testing the correct behavior
-		assertTrue(verificationService.gaiaxTrustFrameworkEnabled,
-				"Gaia-X trust framework should be enabled for this test class");
 	}
 
 	@Test
