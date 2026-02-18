@@ -9,11 +9,22 @@ HELM_CHART_DIR="$(cd "$(dirname "$0")/../helm/fc-service" && pwd)"
 VALUES_FILE="$(cd "$(dirname "$0")" && pwd)/values-minikube.yaml"
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
+# Minikube resource settings — override via environment variables:
+#   MINIKUBE_CPUS=2 MINIKUBE_MEMORY=4096 ./setup.sh
+MINIKUBE_CPUS="${MINIKUBE_CPUS:-2}"
+MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-}"
+
+# Custom CA certificate (e.g. ZScaler root CA for corporate proxies).
+# Point this at a PEM file and the script will install it into Minikube's
+# trust store.  Requires a fresh cluster (minikube delete first).
+#   CUSTOM_CA_CERT=~/certs/ZscalerRootCA.pem ./setup.sh
+CUSTOM_CA_CERT="${CUSTOM_CA_CERT:-}"
+
 # ---------------------------------------------------------------------------
 # 1. Check prerequisites
 # ---------------------------------------------------------------------------
 echo "==> Checking prerequisites..."
-for cmd in minikube helm kubectl docker; do
+for cmd in minikube helm kubectl podman; do
   if ! command -v "$cmd" &>/dev/null; then
     echo "ERROR: '$cmd' is not installed. Please install it and try again."
     exit 1
@@ -22,30 +33,54 @@ done
 echo "    All prerequisites found."
 
 # ---------------------------------------------------------------------------
-# 2. Start Minikube (if not already running)
+# 2. Install custom CA certificate (corporate proxy / ZScaler)
+# ---------------------------------------------------------------------------
+if [[ -n "${CUSTOM_CA_CERT}" ]]; then
+  if [[ ! -f "${CUSTOM_CA_CERT}" ]]; then
+    echo "ERROR: CUSTOM_CA_CERT points to '${CUSTOM_CA_CERT}' but the file does not exist."
+    exit 1
+  fi
+  MINIKUBE_CERTS_DIR="${MINIKUBE_HOME:-${HOME}/.minikube}/certs"
+  mkdir -p "${MINIKUBE_CERTS_DIR}"
+  cp "${CUSTOM_CA_CERT}" "${MINIKUBE_CERTS_DIR}/"
+  echo "==> Installed CA certificate into ${MINIKUBE_CERTS_DIR}/$(basename "${CUSTOM_CA_CERT}")"
+  echo "    NOTE: Minikube reads certs only at cluster creation time."
+  echo "    If the cluster already exists, run 'minikube delete' first, then re-run this script."
+fi
+
+# ---------------------------------------------------------------------------
+# 3. Start Minikube (if not already running)
 # ---------------------------------------------------------------------------
 if minikube status --format='{{.Host}}' 2>/dev/null | grep -q "Running"; then
   echo "==> Minikube is already running."
 else
-  echo "==> Starting Minikube..."
-  minikube start --cpus=4 --memory=8192
+  MEMORY_FLAG=""
+  if [[ -n "${MINIKUBE_MEMORY}" ]]; then
+    MEMORY_FLAG="--memory=${MINIKUBE_MEMORY}"
+  fi
+  echo "==> Starting Minikube with Podman driver (cpus=${MINIKUBE_CPUS}, memory=${MINIKUBE_MEMORY:-podman default})..."
+  minikube start --driver=podman --cpus="${MINIKUBE_CPUS}" ${MEMORY_FLAG}
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Enable the ingress addon
+# 4. Enable the ingress addon
 # ---------------------------------------------------------------------------
 echo "==> Enabling ingress addon..."
-minikube addons enable ingress
+# The built-in addon verification may time out with the Podman driver while
+# images are still being pulled.  We ignore that error and do our own wait
+# in the next step with a longer timeout.
+minikube addons enable ingress || true
 
 # ---------------------------------------------------------------------------
-# 4. Wait for the ingress controller to be ready
+# 5. Wait for the ingress controller to be ready
 # ---------------------------------------------------------------------------
-echo "==> Waiting for ingress controller to be ready..."
-kubectl rollout status deployment/ingress-nginx-controller \
-  -n ingress-nginx --timeout=120s
+echo "==> Waiting for ingress controller to be ready (up to 5 min)..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=Available deployment/ingress-nginx-controller \
+  --timeout=300s
 
 # ---------------------------------------------------------------------------
-# 5. Get the ingress controller ClusterIP
+# 6. Get the ingress controller ClusterIP
 # ---------------------------------------------------------------------------
 echo "==> Discovering ingress controller ClusterIP..."
 INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
@@ -54,19 +89,13 @@ INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
 echo "    Ingress ClusterIP: ${INGRESS_IP}"
 
 # ---------------------------------------------------------------------------
-# 6. Point shell at Minikube's Docker daemon
+# 7. Build container images inside Minikube
 # ---------------------------------------------------------------------------
-echo "==> Configuring Docker to use Minikube's daemon..."
-eval "$(minikube docker-env)"
+echo "==> Building fc-service-server image inside Minikube..."
+minikube image build --target fc-service-server -t fc-service-server:latest "${PROJECT_ROOT}"
 
-# ---------------------------------------------------------------------------
-# 7. Build Docker images
-# ---------------------------------------------------------------------------
-echo "==> Building fc-service-server image..."
-docker build --target fc-service-server -t fc-service-server:latest "${PROJECT_ROOT}"
-
-echo "==> Building fc-demo-portal image..."
-docker build --target fc-demo-portal -t fc-demo-portal:latest "${PROJECT_ROOT}"
+echo "==> Building fc-demo-portal image inside Minikube..."
+minikube image build --target fc-demo-portal -t fc-demo-portal:latest "${PROJECT_ROOT}"
 
 # ---------------------------------------------------------------------------
 # 8. Fetch Helm dependencies

@@ -7,9 +7,40 @@ Run the full Federated Catalogue stack locally on Minikube.
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
 - [Helm](https://helm.sh/docs/intro/install/) v3+
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [Docker](https://docs.docker.com/get-docker/)
+- [Podman](https://podman.io/docs/installation)
 
-The setup script builds the Java services inside Minikube's Docker daemon, so a local JDK/Maven install is **not** required.
+The setup script builds the Java services directly inside Minikube using `minikube image build`, so a local JDK/Maven install is **not** required.
+
+## Corporate Proxy / ZScaler
+
+If you are behind a corporate proxy that performs TLS inspection (e.g. ZScaler),
+the Minikube container will fail to connect to image registries because it does
+not trust the proxy's CA certificate. You will see errors like:
+
+```
+Failing to connect to https://registry.k8s.io/ from inside the minikube container
+```
+
+To fix this, pass the proxy root CA certificate (PEM format) when running the
+setup script. **The cluster must be created fresh** for the certificate to be
+picked up:
+
+```bash
+# Delete any existing cluster first
+minikube delete
+
+# Then run setup with the CA cert
+CUSTOM_CA_CERT=/path/to/ZscalerRootCA.pem ./setup.sh
+```
+
+To export the ZScaler root CA on macOS:
+1. Open **Keychain Access**
+2. Search for "Zscaler Root CA"
+3. Right-click the certificate and choose **Export**
+4. Save as `.pem` format
+
+The script copies the certificate into `~/.minikube/certs/`, where Minikube
+picks it up at cluster creation time and adds it to the VM's trust store.
 
 ## Quick Start
 
@@ -19,12 +50,20 @@ cd deployment/minikube
 ```
 
 The script will:
-1. Start Minikube (4 CPUs, 8 GB RAM)
+1. Start Minikube with the Podman driver (2 CPUs, Podman machine's available memory)
 2. Enable the NGINX ingress addon
-3. Build `fc-service-server` and `fc-demo-portal` Docker images inside Minikube
+3. Build `fc-service-server` and `fc-demo-portal` container images inside Minikube
 4. Fetch Helm chart dependencies (PostgreSQL, Neo4j, Keycloak)
 5. Deploy the Helm release into the `federated-catalogue` namespace
 6. Print instructions for `/etc/hosts` configuration
+
+You can override CPU and memory settings via environment variables:
+```bash
+MINIKUBE_CPUS=4 MINIKUBE_MEMORY=8192 ./setup.sh
+```
+
+When `MINIKUBE_MEMORY` is not set, Minikube uses whatever the Podman machine
+provides, avoiding the "not enough memory" error.
 
 ## Host DNS Configuration
 
@@ -107,12 +146,28 @@ The Neo4j chart uses an init container to download APOC, GDS, and n10s plugins.
 If you are behind a corporate proxy, ensure the proxy env vars are set before
 running `setup.sh`.
 
-**Docker build fails**
+**Image build fails**
 
-Make sure you are using Minikube's Docker daemon:
+Verify the images are present inside Minikube:
 ```bash
-eval $(minikube docker-env)
-docker images | grep fc-service-server
+minikube image ls | grep fc-service-server
+```
+
+If the build itself fails, try building manually:
+```bash
+minikube image build --target fc-service-server -t fc-service-server:latest .
+```
+
+**Podman machine has insufficient memory**
+
+If you explicitly set `MINIKUBE_MEMORY` higher than what the Podman machine has,
+you will get `MK_USAGE: Podman has only X MB memory but Y MB were specified`.
+Either omit `MINIKUBE_MEMORY` (uses the machine default) or increase the Podman
+machine's memory:
+```bash
+podman machine stop
+podman machine set --memory 8192
+podman machine start
 ```
 
 **Helm dependency errors**
