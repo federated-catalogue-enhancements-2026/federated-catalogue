@@ -100,25 +100,27 @@ services:
       start_period: 40s
     networks: 
       - "gaia-x"
-      
-  fuseki:
-    container_name: "fuseki"
-    image: docker.io/stain/jena-fuseki
-    environment:
-      ADMIN_PASSWORD: "admin"
-      FUSEKI_DATASET_1: "ds"
-      JVM_ARGS: "-Xmx1g"
-    ports:
-      - "3330:3030"
-    networks:
-      - "gaia-x"
-    restart: unless-stopped
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:3030/ds || exit 1
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+
+# Optional: Fuseki SPARQL-star backend. Uncomment when using GRAPH_STORE_IMPL=fuseki (e.g. dev-fuseki.env).
+# Not needed for neo4j or dummy backends.
+#  fuseki:
+#    container_name: "fuseki"
+#    image: docker.io/stain/jena-fuseki
+#    environment:
+#      ADMIN_PASSWORD: "${GRAPH_STORE_PASSWORD}"
+#      FUSEKI_DATASET_1: "ds"
+#      JVM_ARGS: "-Xmx1g"
+#    ports:
+#      - "3330:3030"
+#    networks:
+#      - "gaia-x"
+#    restart: unless-stopped
+#    healthcheck:
+#      test: wget --no-verbose --tries=1 --spider http://localhost:3030/ds || exit 1
+#      interval: 20s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 30s
 
   server:
     container_name: "fc-server"
