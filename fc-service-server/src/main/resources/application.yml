@@ -137,7 +137,6 @@ federated-catalogue:
         enabled: false  # Set to true to enforce Gaia-X Trust Framework compliance
         # URLs for Gaia-X Trust Framework services (only used when enabled: true)
         trust-anchor-url: "https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
-        # Alternative: "https://registry.lab.gaia-x.eu/development/api/trustAnchor/chain/file"
     http-timeout: 3000
     validator-expire: 1D
     # Base class type URIs for credential subject classification
