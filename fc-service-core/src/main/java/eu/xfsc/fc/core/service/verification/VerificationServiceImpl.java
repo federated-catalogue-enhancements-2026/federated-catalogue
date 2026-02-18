@@ -686,7 +686,10 @@ public class VerificationServiceImpl implements VerificationService {
         ResponseEntity<Map> resp = rest.postForEntity(trustAnchorAddr, Map.of("uri", uri), Map.class);
         if (!resp.getStatusCode().is2xxSuccessful()) {
           log.info("hasPEMTrustAnchorAndIsNotExpired; Trust anchor is not set in the registry. URI: {}", uri);
+          throw new VerificationException("Signatures error; trust anchor is not registered in the Gaia-X registry. URI: " + uri);
         }
+      } catch (VerificationException ex) {
+        throw ex;
       } catch (Exception ex) {
         log.warn("hasPEMTrustAnchorAndIsNotExpired; trust anchor error: {}", ex.getMessage());
         throw new VerificationException("Signatures error; " + ex.getMessage());

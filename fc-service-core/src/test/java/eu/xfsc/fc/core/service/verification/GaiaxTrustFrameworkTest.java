@@ -69,6 +69,16 @@ import lombok.extern.slf4j.Slf4j;
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class GaiaxTrustFrameworkTest {
 
+    // Verification flags for readability
+    private static final boolean VERIFY_SEMANTICS = true;
+    private static final boolean VERIFY_SCHEMA = true;
+    private static final boolean VERIFY_VP_SIGNATURES = true;
+    private static final boolean VERIFY_VC_SIGNATURES = true;
+    private static final boolean SKIP_SEMANTICS = false;
+    private static final boolean SKIP_SCHEMA = false;
+    private static final boolean SKIP_VP_SIGNATURES = false;
+    private static final boolean SKIP_VC_SIGNATURES = false;
+
     @SpringBootApplication
     public static class TestApplication {
         public static void main(final String[] args) {
@@ -85,23 +95,16 @@ public class GaiaxTrustFrameworkTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private boolean originalGaiaxEnabled;
-
     @BeforeEach
     public void setUp() {
-        // Save original value to restore after each test
-        originalGaiaxEnabled = verificationService.gaiaxTrustFrameworkEnabled;
-        // Clear validator cache to ensure tests don't interfere with each other
-        // The cache bypasses trust anchor checks if a validator was previously cached
         clearValidatorCache();
         schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     }
 
     @AfterEach
     public void tearDown() throws IOException {
-        // Restore original value
-        verificationService.gaiaxTrustFrameworkEnabled = originalGaiaxEnabled;
-        // Clear validator cache again to not affect other tests
+        // Reset to default (matches @SpringBootTest property)
+        verificationService.gaiaxTrustFrameworkEnabled = false;
         clearValidatorCache();
         schemaStore.clear();
     }
@@ -115,21 +118,6 @@ public class GaiaxTrustFrameworkTest {
         jdbcTemplate.update("DELETE FROM validatorcache");
     }
 
-    // ==================== AC-2: Configuration Tests ====================
-
-    @Test
-    @DisplayName("AC-2: Getter and setter for gaiaxTrustFrameworkEnabled should work")
-    void testGetterAndSetterWork() {
-        // Test that we can toggle the setting programmatically
-        verificationService.gaiaxTrustFrameworkEnabled = true;
-        assertTrue(verificationService.gaiaxTrustFrameworkEnabled,
-            "Should be enabled after setting to true");
-
-        verificationService.gaiaxTrustFrameworkEnabled = false;
-        assertFalse(verificationService.gaiaxTrustFrameworkEnabled,
-            "Should be disabled after setting to false");
-    }
-
     // ==================== AC-1/AC-3: Disabled Behavior Tests ====================
 
     @Test
@@ -141,7 +129,7 @@ public class GaiaxTrustFrameworkTest {
 
         try {
             VerificationResult result = verificationService.verifySelfDescription(
-                getAccessor(path), true, true, true, true);
+                getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
             // Success - trust anchor check was skipped
             assertNotNull(result, "Should return result when Gaia-X is disabled");
         } catch (VerificationException e) {
@@ -161,7 +149,7 @@ public class GaiaxTrustFrameworkTest {
         String path = "VerificationService/syntax/participantSD2.jsonld";
 
         VerificationResult result = verificationService.verifySelfDescription(
-            getAccessor(path), true, true, false, false);
+            getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result, "Should return result");
         assertTrue(result instanceof VerificationResultParticipant, "Should be participant result");
@@ -179,7 +167,8 @@ public class GaiaxTrustFrameworkTest {
         String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifySelfDescription(getAccessor(path), true, true, true, true));
+            verificationService.verifySelfDescription(getAccessor(path),
+                VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES));
 
         assertEquals("Signatures error; no trust anchor url found", ex.getMessage(),
             "Should require trust anchor URL when Gaia-X is enabled");
@@ -194,7 +183,7 @@ public class GaiaxTrustFrameworkTest {
 
         // Without signature verification, this should work
         VerificationResult result = verificationService.verifySelfDescription(
-            getAccessor(path), true, true, false, false);
+            getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result, "Should process Gaia-X credential");
         assertTrue(result instanceof VerificationResultParticipant);
@@ -213,7 +202,8 @@ public class GaiaxTrustFrameworkTest {
         assertTrue(verificationService.gaiaxTrustFrameworkEnabled, "Precondition: Gaia-X should be enabled");
 
         Exception enabledEx = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifySelfDescription(getAccessor(path), true, true, true, true),
+            verificationService.verifySelfDescription(getAccessor(path),
+                VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES),
             "Should throw when Gaia-X is enabled");
         assertTrue(enabledEx.getMessage().contains("no trust anchor url found"),
             "Error should mention trust anchor when enabled");
@@ -224,7 +214,8 @@ public class GaiaxTrustFrameworkTest {
         assertFalse(verificationService.gaiaxTrustFrameworkEnabled, "Precondition: Gaia-X should be disabled");
 
         try {
-            verificationService.verifySelfDescription(getAccessor(path), true, true, true, true);
+            verificationService.verifySelfDescription(getAccessor(path),
+                VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
             // Success - no exception means trust anchor check was skipped
         } catch (VerificationException e) {
             // Must NOT be the trust anchor error
@@ -243,7 +234,8 @@ public class GaiaxTrustFrameworkTest {
         verificationService.gaiaxTrustFrameworkEnabled = false;
 
         try {
-            verificationService.verifySelfDescription(getAccessor(path), true, true, true, true);
+            verificationService.verifySelfDescription(getAccessor(path),
+                VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (VerificationException e) {
             if (e.getMessage().contains("no trust anchor url found")) {
                 fail("Should NOT require trust anchor when Gaia-X is disabled. Got: " + e.getMessage());
@@ -256,7 +248,8 @@ public class GaiaxTrustFrameworkTest {
         verificationService.gaiaxTrustFrameworkEnabled = true;
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifySelfDescription(getAccessor(path), true, true, true, true),
+            verificationService.verifySelfDescription(getAccessor(path),
+                VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES),
             "Should throw when Gaia-X is enabled");
         assertEquals("Signatures error; no trust anchor url found", ex.getMessage(),
             "Should require trust anchor when Gaia-X is enabled");
@@ -272,7 +265,8 @@ public class GaiaxTrustFrameworkTest {
         String path = "VerificationService/sign/hasInvalidSignature.json";
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifySelfDescription(getAccessor(path), false, false, true, true));
+            verificationService.verifySelfDescription(getAccessor(path),
+                SKIP_SEMANTICS, SKIP_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES));
 
         // The credential must NOT be accepted. We expect either:
         // - "does not match with proof" (when DID can be resolved)
@@ -290,7 +284,8 @@ public class GaiaxTrustFrameworkTest {
         String path = "VerificationService/sign/hasNoSignature1.json";
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifySelfDescription(getAccessor(path), false, true, true, true));
+            verificationService.verifySelfDescription(getAccessor(path),
+                SKIP_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES));
 
         assertEquals("Signatures error; No proof found", ex.getMessage(),
             "Missing proofs should still be rejected");
