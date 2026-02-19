@@ -41,7 +41,6 @@ COMMANDS:
               Example: ./dev.sh build
 
   test        Run the hot-reload verification script
-              Tests that changes are detected and applied automatically
 
   logs        Tail fc-server logs
               Example: ./dev.sh logs
