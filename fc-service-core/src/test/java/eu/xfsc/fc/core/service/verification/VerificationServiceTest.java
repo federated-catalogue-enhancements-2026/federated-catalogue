@@ -72,6 +72,7 @@ public class VerificationServiceTest {
   @AfterEach
   public void storageSelfCleaning() throws IOException {
     schemaStore.clear();
+    verificationService.verifySchema = false;
   }
 
   @Test
