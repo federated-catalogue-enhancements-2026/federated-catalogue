@@ -48,13 +48,12 @@ public class GraphRebuilder {
    */
   public void rebuildGraphDb(int chunkCount, int chunkId, int threads, int batchSize) {
     BlockingQueue<String> taskQueue = new ArrayBlockingQueue<>(batchSize);
-    AtomicInteger activeTasks = new AtomicInteger(0);
+    AtomicInteger pendingTasks = new AtomicInteger(0);
     ExecutorService executorService = ProcessorUtils.createProcessors(threads, taskQueue, hash -> {
-      activeTasks.incrementAndGet();
       try {
         addSdToGraph(hash);
       } finally {
-        activeTasks.decrementAndGet();
+        pendingTasks.decrementAndGet();
       }
     }, "GraphRebuilder");
 
@@ -68,18 +67,20 @@ public class GraphRebuilder {
         lastHash = activeSdHashes.get(activeSdHashes.size() - 1);
         for (String hash : activeSdHashes) {
           try {
+            pendingTasks.incrementAndGet();
             taskQueue.put(hash);
           } catch (InterruptedException ex) {
             log.warn("Interrupted while rebuilding the GraphDB, aborting.");
             lastCount = 0;
             taskQueue.clear();
+            pendingTasks.decrementAndGet();
           }
         }
       }
     } while (lastCount > 0);
 
-    while (taskQueue.size() > 0 || activeTasks.get() > 0) {
-      log.debug("Waiting for {} queued / {} active jobs to be finished.", taskQueue.size(), activeTasks.get());
+    while (pendingTasks.get() > 0) {
+      log.debug("Waiting for {} pending jobs to be finished.", pendingTasks.get());
       sleepForQueue();
     }
 
