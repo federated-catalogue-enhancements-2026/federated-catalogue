@@ -19,11 +19,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
@@ -56,6 +58,9 @@ public class QueryControllerFusekiTest {
 
   @Autowired
   private ObjectMapper objectMapper;
+
+  @MockitoBean
+  private DocumentLoader documentLoader;
 
   @BeforeAll
   public void setup() {

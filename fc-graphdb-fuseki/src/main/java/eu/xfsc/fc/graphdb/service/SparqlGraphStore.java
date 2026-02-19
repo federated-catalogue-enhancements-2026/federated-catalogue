@@ -1,6 +1,7 @@
 package eu.xfsc.fc.graphdb.service;
 
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
+import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -111,7 +112,7 @@ public class SparqlGraphStore implements GraphStore {
                 throw new TimeoutException("Timeout while executing query");
             } else {
                 log.error("Error while executing query: {}", sdQuery.getQuery(), e);
-                throw new RuntimeException("Error while executing query", e);
+                throw new ServerException("error querying data " + e.getMessage());
             }
         }
     }
