@@ -89,13 +89,22 @@ INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
 echo "    Ingress ClusterIP: ${INGRESS_IP}"
 
 # ---------------------------------------------------------------------------
-# 7. Build container images inside Minikube
+# 7. Build container images and load them into Minikube
 # ---------------------------------------------------------------------------
-echo "==> Building fc-service-server image inside Minikube..."
-minikube image build --target fc-service-server -t fc-service-server:latest "${PROJECT_ROOT}"
+# Build with the local Podman CLI, then load the images into Minikube's
+# container runtime.  This works regardless of the in-cluster runtime
+# (docker or cri-o).
+echo "==> Building fc-service-server image..."
+podman build --target fc-service-server -t fc-service-server:latest "${PROJECT_ROOT}"
 
-echo "==> Building fc-demo-portal image inside Minikube..."
-minikube image build --target fc-demo-portal -t fc-demo-portal:latest "${PROJECT_ROOT}"
+echo "==> Building fc-demo-portal image..."
+podman build --target fc-demo-portal -t fc-demo-portal:latest "${PROJECT_ROOT}"
+
+echo "==> Loading fc-service-server image into Minikube..."
+minikube image load fc-service-server:latest
+
+echo "==> Loading fc-demo-portal image into Minikube..."
+minikube image load fc-demo-portal:latest
 
 # ---------------------------------------------------------------------------
 # 8. Fetch Helm dependencies
