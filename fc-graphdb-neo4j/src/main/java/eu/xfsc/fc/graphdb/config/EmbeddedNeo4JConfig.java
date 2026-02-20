@@ -19,7 +19,7 @@ import org.neo4j.gds.catalog.GraphProjectProc;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 //import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
-@ConditionalOnProperty(value = "federated-catalogue.scope", havingValue = "test")
+@ConditionalOnExpression("'${federated-catalogue.scope}'.equals('test') && '${graphstore.impl}'.equals('neo4j')")
 //@EnableAutoConfiguration
 public class EmbeddedNeo4JConfig {
     
