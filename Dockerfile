@@ -8,6 +8,8 @@ COPY fc-test-support fc-test-support
 COPY fc-service-core fc-service-core
 COPY fc-service-server fc-service-server
 COPY fc-demo-portal fc-demo-portal
+COPY fc-graphdb-neo4j fc-graphdb-neo4j
+COPY fc-graphdb-fuseki fc-graphdb-fuseki
 COPY fc-tools fc-tools
 COPY openapi openapi
 
