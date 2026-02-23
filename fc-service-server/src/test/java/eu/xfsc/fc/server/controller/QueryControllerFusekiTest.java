@@ -121,4 +121,69 @@ public class QueryControllerFusekiTest {
             .header("Accept", "application/json"))
         .andExpect(status().is5xxServerError());
   }
+
+  @Test
+  public void testSparqlQueryWithExplicitLanguageParam() throws Exception {
+    String sparqlStatement = "{\"statement\": \"SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(sparqlStatement)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertFalse(result.getItems().isEmpty(), "SPARQL query with explicit language param should return results");
+  }
+
+  @Test
+  public void testDefaultLanguageRejectedOnFuseki() throws Exception {
+    String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(cypherStatement)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            // No queryLanguage param -- defaults to OPENCYPHER
+            .header("Accept", "application/json"))
+        .andExpect(status().isNotImplemented());
+  }
+
+  @Test
+  public void testOpenCypherOnFusekiReturnsError() throws Exception {
+    String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(cypherStatement)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.OPENCYPHER.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isNotImplemented());
+  }
+
+  @Test
+  public void testSparqlQueryWithoutLimitSucceeds() throws Exception {
+    String sparqlNoLimit = "{\"statement\": \"SELECT ?s ?p ?o WHERE { ?s ?p ?o }\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(sparqlNoLimit)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertFalse(result.getItems().isEmpty(),
+        "SPARQL query without LIMIT should succeed and return results (no limit injection for SPARQL)");
+  }
 }

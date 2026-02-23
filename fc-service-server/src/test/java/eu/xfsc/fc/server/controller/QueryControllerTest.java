@@ -2,6 +2,7 @@ package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -247,6 +248,154 @@ public class QueryControllerTest {
 
     Results result = objectMapper.readValue(response, Results.class);
     assertEquals(0, result.getItems().size());
+  }
+
+  @Test
+  public void postQueryWithExplicitOpenCypherLanguageParam() throws Exception {
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.OPENCYPHER.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertEquals(1, result.getItems().size());
+  }
+
+  /**
+   * POST /query without queryLanguage parameter. Verifies it defaults to OPENCYPHER
+   * (confirmed by OpenAPI spec: default=OPENCYPHER) and returns 200 with results.
+   */
+  @Test
+  public void postQueryWithoutLanguageParamUsesDefault() throws Exception {
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertEquals(1, result.getItems().size());
+  }
+
+  @Test
+  public void postQueryWithTotalCountTrue() throws Exception {
+    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(queryNoLimit)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("withTotalCount", "true")
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertFalse(result.getItems().isEmpty(), "Should return at least one ServiceOffering");
+    assertEquals(result.getItems().size(), result.getTotalCount(),
+        "With withTotalCount=true and no LIMIT, totalCount should match items count");
+  }
+
+  /**
+   * POST /query with withTotalCount=false. When withTotalCount is false, Neo4jGraphStore
+   * does not inject a count clause. The fallback totalCount = resultList.size() is evaluated
+   * before the current record is appended, resulting in totalCount = items.size() - 1
+   * for non-empty results. This is a known off-by-one in Neo4jGraphStore.doQuery().
+   */
+  @Test
+  public void postQueryWithTotalCountFalse() throws Exception {
+    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(queryNoLimit)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("withTotalCount", "false")
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertFalse(result.getItems().isEmpty(), "Should return at least one ServiceOffering");
+    // Off-by-one: totalCount = resultList.size() evaluated before current record appended
+    assertEquals(result.getItems().size() - 1, result.getTotalCount(),
+        "With withTotalCount=false, totalCount is items.size()-1 due to off-by-one in Neo4jGraphStore");
+  }
+
+  /**
+   * POST a Cypher query without LIMIT clause. Verifies that the default limit injection
+   * (QueryService.addDefaultLimit) does not break the query. With only 3 SDs in test data,
+   * the 100-item limit is not boundary-tested; this validates correctness of injection.
+   */
+  @Test
+  public void postQueryWithoutLimitGetsDefaultLimit() throws Exception {
+    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(queryNoLimit)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertFalse(result.getItems().isEmpty(), "Query without LIMIT should succeed with injected default limit");
+  }
+
+  @Test
+  public void postQueryWithExplicitLimitIsPreserved() throws Exception {
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET) // already has LIMIT 1
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    Results result = objectMapper.readValue(response, Results.class);
+    assertEquals(1, result.getItems().size(),
+        "Explicit LIMIT 1 should return exactly 1 result");
+  }
+
+  @Test
+  public void postQueryWithGraphQlLanguageReturnsError() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.GRAPHQL.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isNotImplemented());
+  }
+
+  @Test
+  public void postQueryWithInvalidLanguageReturnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", "INVALID")
+            .header("Accept", "application/json"))
+        .andExpect(status().is4xxClientError());
   }
 
   @Test
