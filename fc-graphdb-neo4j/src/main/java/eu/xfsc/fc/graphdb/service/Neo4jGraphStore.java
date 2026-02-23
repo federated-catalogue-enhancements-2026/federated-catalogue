@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.TimeoutException;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.SdClaim;
@@ -64,7 +65,19 @@ public class Neo4jGraphStore implements GraphStore {
         super();
         this.claimValidator = new ClaimValidator();
     }
-    
+
+    /** {@inheritDoc} */
+    @Override
+    public QueryLanguage getSupportedQueryLanguage() {
+        return QueryLanguage.OPENCYPHER;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public GraphBackendType getBackendType() {
+        return GraphBackendType.NEO4J;
+    }
+
     /**
      * {@inheritDoc}
      */

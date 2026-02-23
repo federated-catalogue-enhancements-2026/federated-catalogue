@@ -3,6 +3,8 @@ package eu.xfsc.fc.core.service.graphdb;
 import java.util.List;
 import java.util.Map;
 
+import eu.xfsc.fc.api.generated.model.QueryLanguage;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.SdClaim;
@@ -37,6 +39,24 @@ public interface GraphStore {
      * @return List of Maps
      */
     PaginatedResults<Map<String, Object>> queryData(GraphQuery sdQuery);
+
+    /**
+     * Returns the query language supported by this graph store implementation.
+     *
+     * @return the supported {@link QueryLanguage}, or {@code null} if the store is disabled
+     */
+    default QueryLanguage getSupportedQueryLanguage() {
+        return null;
+    }
+
+    /**
+     * Returns the type of graph database backend.
+     *
+     * @return the {@link GraphBackendType} of this store
+     */
+    default GraphBackendType getBackendType() {
+        return GraphBackendType.NONE;
+    }
 
 }
 

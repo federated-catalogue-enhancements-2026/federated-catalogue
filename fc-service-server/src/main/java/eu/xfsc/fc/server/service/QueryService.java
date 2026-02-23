@@ -30,6 +30,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.xfsc.fc.api.generated.model.AnnotatedStatement;
+import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.api.generated.model.Statement;
@@ -59,6 +60,8 @@ public class QueryService implements QueryApiDelegate {
   private ObjectMapper jsonMapper;
   @Autowired
   private ResourceLoader resourceLoader;
+  @Autowired
+  private QueryLanguageValidator queryLanguageValidator;
 
   @Autowired
   private QueryProperties queryProps;
@@ -99,10 +102,11 @@ public class QueryService implements QueryApiDelegate {
   @Override
   public ResponseEntity<Results> query(QueryLanguage queryLanguage, Integer timeout, Boolean withTotalCount, Statement statement) {
     log.debug("query.enter; got queryLanguage: {}, timeout: {}, withTotalCount: {}, statement: {}", queryLanguage, timeout, withTotalCount, statement);
+    queryLanguageValidator.validateLanguageSupport(queryLanguage);
     if (checkIfLimitAbsent(statement.getStatement())) {
       addDefaultLimit(statement);
     }
-    PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(new GraphQuery(statement.getStatement(), 
+    PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(new GraphQuery(statement.getStatement(),
             statement.getParameters(), queryLanguage, timeout, withTotalCount));
     Results result = new Results((int) queryResultList.getTotalCount(), queryResultList.getResults());
     log.debug("query.exit; returning results: {}", result);
@@ -133,7 +137,47 @@ public class QueryService implements QueryApiDelegate {
         .headers(responseHeaders)
         .body(page);
   }
-  
+
+  /**
+   * Returns information about the active query backend including supported language,
+   * content type, example query, and documentation link.
+   *
+   * @return {@link QueryInfo} with backend capabilities
+   */
+  @Override
+  public ResponseEntity<QueryInfo> queryInfo() {
+    log.debug("queryInfo.enter");
+    QueryLanguage supported = graphStore.getSupportedQueryLanguage();
+    boolean enabled = supported != null;
+    QueryInfo info = new QueryInfo();
+    info.setBackend(graphStore.getBackendType().name());
+    info.setEnabled(enabled);
+    if (enabled) {
+      info.setQueryLanguage(supported.name());
+      info.setContentType(QueryLanguageValidator.getContentType(supported));
+      info.setExampleQuery(getExampleQuery(supported));
+      info.setDocumentation(getDocumentationUrl(supported));
+    }
+    log.debug("queryInfo.exit; returning: {}", info);
+    return ResponseEntity.ok(info);
+  }
+
+  private String getExampleQuery(QueryLanguage language) {
+    return switch (language) {
+      case OPENCYPHER -> "MATCH (n:Resource) RETURN n.uri AS id, n.name AS name LIMIT 10";
+      case SPARQL -> "PREFIX ex: <http://example.org/> SELECT ?id ?name WHERE { ?id ex:name ?name } LIMIT 10";
+      default -> null;
+    };
+  }
+
+  private String getDocumentationUrl(QueryLanguage language) {
+    return switch (language) {
+      case OPENCYPHER -> "https://neo4j.com/docs/cypher-manual/";
+      case SPARQL -> "https://jena.apache.org/documentation/query/";
+      default -> null;
+    };
+  }
+
   /**
    * performs distributed search
    */
@@ -150,8 +194,9 @@ public class QueryService implements QueryApiDelegate {
 	String queryLanguage = getAnnotation(statement, "queryLanguage", QueryLanguage.OPENCYPHER.name());
 	Integer timeout = getAnnotation(statement, "timeout", GraphQuery.QUERY_TIMEOUT);
 	Boolean withTotalCount = getAnnotation(statement, "withTotalCount", true);
-	    
-	PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(new GraphQuery(statement.getStatement(), 
+
+	queryLanguageValidator.validateLanguageSupport(QueryLanguage.valueOf(queryLanguage));
+	PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(new GraphQuery(statement.getStatement(),
 	        statement.getParameters(), QueryLanguage.valueOf(queryLanguage), timeout, withTotalCount));
 	Results result = new Results((int) queryResultList.getTotalCount(), queryResultList.getResults());
 	if (extra != null) {

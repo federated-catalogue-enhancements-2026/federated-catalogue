@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.SdClaim;
@@ -26,6 +27,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -145,26 +148,44 @@ public class QueryControllerFusekiTest {
   public void testDefaultLanguageRejectedOnFuseki() throws Exception {
     String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
 
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(cypherStatement)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             // No queryLanguage param -- defaults to OPENCYPHER
             .header("Accept", "application/json"))
-        .andExpect(status().isNotImplemented());
+        .andExpect(status().isUnprocessableEntity())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
+        eu.xfsc.fc.api.generated.model.Error.class);
+    assertEquals("unsupported_query_language", error.getCode());
+    assertTrue(error.getMessage().contains("OPENCYPHER"));
+    assertTrue(error.getMessage().contains("SPARQL"));
   }
 
   @Test
   public void testOpenCypherOnFusekiReturnsError() throws Exception {
     String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
 
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(cypherStatement)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .queryParam("queryLanguage", QueryLanguage.OPENCYPHER.getValue())
             .header("Accept", "application/json"))
-        .andExpect(status().isNotImplemented());
+        .andExpect(status().isUnprocessableEntity())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
+        eu.xfsc.fc.api.generated.model.Error.class);
+    assertEquals("unsupported_query_language", error.getCode());
+    assertTrue(error.getMessage().contains("OPENCYPHER"));
+    assertTrue(error.getMessage().contains("SPARQL"));
   }
 
   @Test
@@ -185,5 +206,44 @@ public class QueryControllerFusekiTest {
     Results result = objectMapper.readValue(response, Results.class);
     assertFalse(result.getItems().isEmpty(),
         "SPARQL query without LIMIT should succeed and return results (no limit injection for SPARQL)");
+  }
+
+  @Test
+  public void getQueryInfoReturnsFusekiBackend() throws Exception {
+    String response = mockMvc.perform(MockMvcRequestBuilders.get("/query/info")
+            .with(csrf())
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    QueryInfo info = objectMapper.readValue(response, QueryInfo.class);
+    assertEquals("FUSEKI", info.getBackend());
+    assertEquals("SPARQL", info.getQueryLanguage());
+    assertEquals(true, info.getEnabled());
+    assertNotNull(info.getExampleQuery());
+    assertNotNull(info.getDocumentation());
+  }
+
+  @Test
+  public void testGraphQlOnFusekiReturnsError() throws Exception {
+    String statement = "{\"statement\": \"{ query { nodes { id } } }\", \"parameters\": null}";
+
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(statement)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .queryParam("queryLanguage", QueryLanguage.GRAPHQL.getValue())
+            .header("Accept", "application/json"))
+        .andExpect(status().isUnprocessableEntity())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
+        eu.xfsc.fc.api.generated.model.Error.class);
+    assertEquals("unsupported_query_language", error.getCode());
+    assertTrue(error.getMessage().contains("GRAPHQL"));
   }
 }

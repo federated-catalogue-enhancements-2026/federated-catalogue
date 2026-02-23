@@ -322,10 +322,29 @@ components:
         - $ref: '#/components/schemas/ResultPage'
         - type: object
           properties:
-            items: 
+            items:
               type: array
-              items: 
+              items:
                 $ref: '#/components/schemas/Result'
+    QueryInfo:
+      type: object
+      properties:
+        backend:
+          type: string
+          example: "NEO4J"
+        queryLanguage:
+          type: string
+          example: "OPENCYPHER"
+        contentType:
+          type: string
+          example: "application/opencypher-query"
+        enabled:
+          type: boolean
+          example: true
+        exampleQuery:
+          type: string
+        documentation:
+          type: string
 
   parameters:
     OffsetParam:
@@ -708,6 +727,25 @@ paths:
           ## interval. The client needs to rewrite the query so it can be
           ## processed faster.
           $ref: '#/components/responses/ServerError'
+        '422':
+          $ref: '#/components/responses/Unprocessible'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /query/info:
+    get:
+      tags:
+        - Query
+      summary: Get information about the active query backend
+      operationId: queryInfo
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Query backend information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryInfo'
         '500':
           $ref: '#/components/responses/ServerError'
   /query/search:
@@ -729,13 +767,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Results'
-        '400': ## Wrong query 
+        '400': ## Wrong query
           $ref: '#/components/responses/ClientError'
-        '408': ## Query Timeout: 
+        '408': ## Query Timeout:
           $ref: '#/components/responses/ServerError'
+        '422':
+          $ref: '#/components/responses/Unprocessible'
         '500':
           $ref: '#/components/responses/ServerError'
-          
+
   /schemas:
     get:
       tags:

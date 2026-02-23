@@ -3,6 +3,7 @@ package eu.xfsc.fc.graphdb.service;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.TimeoutException;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.SdClaim;
@@ -54,6 +55,18 @@ public class SparqlGraphStore implements GraphStore {
     public SparqlGraphStore() {
         super();
         this.claimValidator = new ClaimValidator();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public QueryLanguage getSupportedQueryLanguage() {
+        return QueryLanguage.SPARQL;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public GraphBackendType getBackendType() {
+        return GraphBackendType.FUSEKI;
     }
 
     @Override

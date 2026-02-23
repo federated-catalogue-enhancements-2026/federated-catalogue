@@ -3,6 +3,7 @@ package eu.xfsc.fc.server.controller;
 import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -32,6 +33,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -155,14 +157,24 @@ public class QueryControllerTest {
 
   @Test
   public void postUsupportedQueryReturnNotImplementedResponse() throws Exception {
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .contentType(MediaType.APPLICATION_JSON)
             .with(csrf())
             .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
             .header("Produces", "application/json")
             .header("Accept", "application/json"))
-            .andExpect(status().isNotImplemented());
+            .andExpect(status().isUnprocessableEntity())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
+        eu.xfsc.fc.api.generated.model.Error.class);
+    assertEquals("unsupported_query_language", error.getCode());
+    assertTrue(error.getMessage().contains("SPARQL"));
+    assertTrue(error.getMessage().contains("OPENCYPHER"));
+    assertTrue(error.getMessage().contains("NEO4J"));
   }
 
   @Test
@@ -378,13 +390,21 @@ public class QueryControllerTest {
 
   @Test
   public void postQueryWithGraphQlLanguageReturnsError() throws Exception {
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .queryParam("queryLanguage", QueryLanguage.GRAPHQL.getValue())
             .header("Accept", "application/json"))
-        .andExpect(status().isNotImplemented());
+        .andExpect(status().isUnprocessableEntity())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
+        eu.xfsc.fc.api.generated.model.Error.class);
+    assertEquals("unsupported_query_language", error.getCode());
+    assertTrue(error.getMessage().contains("GRAPHQL"));
   }
 
   @Test
@@ -451,6 +471,24 @@ public class QueryControllerTest {
     assertEquals("timeout_error", result.getCode());
   }
   
+  @Test
+  public void getQueryInfoReturnsNeo4jBackend() throws Exception {
+    String response = mockMvc.perform(MockMvcRequestBuilders.get("/query/info")
+            .with(csrf())
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    QueryInfo info = objectMapper.readValue(response, QueryInfo.class);
+    assertEquals("NEO4J", info.getBackend());
+    assertEquals("OPENCYPHER", info.getQueryLanguage());
+    assertEquals(true, info.getEnabled());
+    assertNotNull(info.getExampleQuery());
+    assertNotNull(info.getDocumentation());
+  }
+
   // the same tests as in DistributedQueryControllerTest. copied here to overcome Embedded Neo4J issue.
   // we run out of connections with it somehow, so had to disable DistributedQueryControllerTest.
   
