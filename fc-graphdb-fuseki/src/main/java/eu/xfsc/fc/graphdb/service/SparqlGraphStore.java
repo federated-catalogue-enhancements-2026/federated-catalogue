@@ -133,8 +133,14 @@ public class SparqlGraphStore implements GraphStore {
         if (node.isLiteral()) {
             Literal lit = node.asLiteral();
             try {
-                return lit.getValue();
+                Object value = lit.getValue();
+                if (value instanceof String || value instanceof Number || value instanceof Boolean) {
+                    return value;
+                }
+                // Jena-internal types (e.g. XSDDateTime) are not JSON-serializable
+                return lit.getLexicalForm();
             } catch (Exception e) {
+                log.warn("Could not extract typed value for literal '{}': {}", lit.getLexicalForm(), e.getMessage());
                 return lit.getLexicalForm();
             }
         }
