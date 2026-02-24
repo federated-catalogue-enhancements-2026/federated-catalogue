@@ -129,10 +129,10 @@ echo "==> Building fc-demo-portal image..."
 podman build --target fc-demo-portal -t fc-demo-portal:latest "${PROJECT_ROOT}"
 
 echo "==> Loading fc-service-server image into Minikube..."
-minikube image load fc-service-server:latest
+minikube image load localhost/fc-service-server:latest
 
 echo "==> Loading fc-demo-portal image into Minikube..."
-minikube image load fc-demo-portal:latest
+minikube image load localhost/fc-demo-portal:latest
 
 # ---------------------------------------------------------------------------
 # 9. Fetch Helm dependencies
