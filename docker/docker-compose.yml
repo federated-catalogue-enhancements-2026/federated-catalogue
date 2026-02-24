@@ -101,7 +101,7 @@ services:
       - "gaia-x"
 
 # Optional: Fuseki SPARQL-star backend. Uncomment when using GRAPH_STORE_IMPL=fuseki (e.g. dev-fuseki.env).
-# Not needed for neo4j or dummy backends.
+# Not needed for neo4j or none backends.
 #  fuseki:
 #    container_name: "fuseki"
 #    image: docker.io/stain/jena-fuseki

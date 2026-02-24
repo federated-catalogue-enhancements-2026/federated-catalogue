@@ -287,6 +287,41 @@ public class SparqlGraphStoreTest {
     }
 
     @Test
+    void isHealthyShouldReturnTrue() {
+        assertTrue(graphStore.isHealthy(),
+            "isHealthy() should return true for embedded Fuseki");
+    }
+
+    @Test
+    void getClaimCountShouldReturnZeroWhenEmpty() {
+        long count = graphStore.getClaimCount();
+        assertEquals(0, count,
+            "getClaimCount() should return 0 on empty dataset");
+    }
+
+    @Test
+    void getClaimCountShouldReturnCountAfterAddClaims() {
+        List<SdClaim> claims = Arrays.asList(
+            new SdClaim(
+                "<http://example.org/healthSubject>",
+                "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+                "<http://example.org/ServiceOffering>"
+            ),
+            new SdClaim(
+                "<http://example.org/healthSubject>",
+                "<http://example.org/name>",
+                "\"Health Check Service\""
+            )
+        );
+        String credentialSubject = "http://example.org/healthCredential";
+        graphStore.addClaims(claims, credentialSubject);
+
+        long count = graphStore.getClaimCount();
+        assertEquals(2, count,
+            "getClaimCount() should return 2 for 2 claim triples");
+    }
+
+    @Test
     void testAddClaimsEmptyList() {
         String credentialSubject = "http://example.org/emptySubject";
         assertDoesNotThrow(

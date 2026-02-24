@@ -2437,6 +2437,114 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Graph Admin",
+			"item": [
+				{
+					"name": "POST Trigger Graph Rebuild",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{fc_base_url}}/admin/graph/rebuild",
+							"host": [
+								"{{fc_base_url}}"
+							],
+							"path": [
+								"admin",
+								"graph",
+								"rebuild"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Rebuild Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{fc_base_url}}/admin/graph/rebuild/status",
+							"host": [
+								"{{fc_base_url}}"
+							],
+							"path": [
+								"admin",
+								"graph",
+								"rebuild",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Graph Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{fc_base_url}}/admin/graph/status",
+							"host": [
+								"{{fc_base_url}}"
+							],
+							"path": [
+								"admin",
+								"graph",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [

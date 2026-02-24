@@ -13,7 +13,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 
 //@Slf4j
 @Component
-@ConditionalOnProperty(value = "graphstore.impl", havingValue = "dummy")
+@ConditionalOnProperty(value = "graphstore.impl", havingValue = "none", matchIfMissing = true)
 public class DummyGraphStore implements GraphStore {
 
     @Override
@@ -29,7 +29,7 @@ public class DummyGraphStore implements GraphStore {
     @Override
     public PaginatedResults<Map<String, Object>> queryData(GraphQuery sdQuery) {
         // Dummy implementation
-        return new PaginatedResults<Map<String, Object>>(Collections.emptyList());
+        return new PaginatedResults<>(Collections.emptyList());
     }
 
 }

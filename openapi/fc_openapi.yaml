@@ -345,6 +345,59 @@ components:
           type: string
         documentation:
           type: string
+    RebuildStatus:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of SDs to process
+        processed:
+          type: integer
+          format: int64
+          description: Number of SDs processed so far
+        percentComplete:
+          type: integer
+          description: Completion percentage (0-100)
+        running:
+          type: boolean
+          description: Whether a rebuild is currently running
+        complete:
+          type: boolean
+          description: Whether the rebuild has completed
+        failed:
+          type: boolean
+          description: Whether the rebuild has failed
+        errorMessage:
+          type: string
+          description: Error message if the rebuild failed
+        durationMs:
+          type: integer
+          format: int64
+          description: Duration in milliseconds since rebuild started
+    GraphStatus:
+      type: object
+      properties:
+        backend:
+          type: string
+          description: The graph database backend type (NEO4J, FUSEKI, NONE)
+        enabled:
+          type: boolean
+          description: Whether the graph store is enabled
+        healthy:
+          type: boolean
+          description: Whether the graph store backend is healthy
+        activeSdCount:
+          type: integer
+          format: int64
+          description: Number of active SDs in PostgreSQL storage
+        claimCountInGraph:
+          type: integer
+          format: int64
+          description: Number of claims in the graph database
+        syncAssessment:
+          type: string
+          description: Sync assessment (empty, in-sync, out-of-sync, unknown, disabled)
 
   parameters:
     OffsetParam:
@@ -423,7 +476,17 @@ tags:
     description: Role Managemet operations
   - name: Session
     description: Management for auth sessions in the catalogue
+  - name: Graph Admin
+    description: >-
+      Graph database administration operations.
+      Endpoints under /admin/graph/ are implemented by a custom controller
+      (GraphAdminController) and not generated from this spec.
+      See RebuildStatus and GraphStatus schemas below for response models.
 paths:
+  # NOTE: /admin/graph/* endpoints are handled by GraphAdminController (not code-generated).
+  # POST /admin/graph/rebuild -> 202 Accepted (rebuild started) or 409 Conflict (already running)
+  # GET  /admin/graph/rebuild/status -> 200 OK (RebuildStatus JSON)
+  # GET  /admin/graph/status -> 200 OK (GraphStatus JSON)
   /self-descriptions:
     get:
       tags:

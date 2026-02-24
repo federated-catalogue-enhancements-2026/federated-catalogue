@@ -103,7 +103,12 @@ public class SecurityConfig {
 
           // Session APIs
           .requestMatchers(antMatcher("/session")).authenticated()
-          
+
+          // Graph Admin APIs
+          .requestMatchers(antMatcher(HttpMethod.POST, "/admin/graph/rebuild")).hasRole(CATALOGUE_ADMIN_ROLE)
+          .requestMatchers(antMatcher(HttpMethod.GET, "/admin/graph/rebuild/status")).hasRole(CATALOGUE_ADMIN_ROLE)
+          .requestMatchers(antMatcher(HttpMethod.GET, "/admin/graph/status")).hasRole(CATALOGUE_ADMIN_ROLE)
+
           .anyRequest().authenticated()
         )
         .exceptionHandling(c -> c.accessDeniedHandler(accessDeniedHandler()))

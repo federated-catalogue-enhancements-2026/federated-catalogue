@@ -69,6 +69,44 @@ public class SparqlGraphStore implements GraphStore {
         return GraphBackendType.FUSEKI;
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public boolean isHealthy() {
+        try {
+            Txn.calculateRead(rdfConnection, () -> {
+                try (QueryExecution qe = rdfConnection.newQuery()
+                        .query("ASK { ?s ?p ?o }").build()) {
+                    return qe.execAsk();
+                }
+            });
+            return true;
+        } catch (Exception e) {
+            log.warn("Fuseki health check failed", e);
+            return false;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getClaimCount() {
+        try {
+            return Txn.calculateRead(rdfConnection, () -> {
+                String query = "SELECT (COUNT(*) AS ?cnt) WHERE { "
+                    + "<<?s ?p ?o>> <" + PROP_CREDENTIAL_SUBJECT + "> ?cs }";
+                try (QueryExecution qe = rdfConnection.newQuery().query(query).build()) {
+                    ResultSet rs = qe.execSelect();
+                    if (rs.hasNext()) {
+                        return rs.next().getLiteral("cnt").getLong();
+                    }
+                }
+                return 0L;
+            });
+        } catch (Exception e) {
+            log.warn("Failed to get Fuseki claim count: {}", e.getMessage());
+            return -1;
+        }
+    }
+
     @Override
     public void addClaims(List<SdClaim> sdClaimList, String credentialSubject) {
         log.debug("addClaims.enter; got claims: {}, subject: {}", sdClaimList, credentialSubject);

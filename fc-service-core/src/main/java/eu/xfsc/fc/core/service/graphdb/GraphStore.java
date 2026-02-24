@@ -58,5 +58,24 @@ public interface GraphStore {
         return GraphBackendType.NONE;
     }
 
+    /**
+     * Checks whether the graph store backend is reachable and operational.
+     *
+     * @return {@code true} if the backend is healthy, {@code false} otherwise
+     */
+    default boolean isHealthy() {
+        return true;
+    }
+
+    /**
+     * Returns the number of claim entries currently stored in the graph database.
+     * Counts only claim-related data, not internal/structural nodes or triples.
+     *
+     * @return the claim count, or 0 if the store is empty or disabled
+     */
+    default long getClaimCount() {
+        return 0;
+    }
+
 }
 

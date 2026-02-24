@@ -18,7 +18,7 @@ federated-catalogue:
       - "http://localhost:9091"
 
 graphstore:
-  impl: neo4j
+  impl: none
   query-timeout-in-seconds: 5
 
 spring:
