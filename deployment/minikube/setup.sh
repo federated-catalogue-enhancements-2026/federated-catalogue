@@ -18,7 +18,14 @@ MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-}"
 # Point this at a PEM file and the script will install it into Minikube's
 # trust store.  Requires a fresh cluster (minikube delete first).
 #   CUSTOM_CA_CERT=~/certs/ZscalerRootCA.pem ./setup.sh
+# If not set, the script auto-detects the bundled ZScaler cert.
 CUSTOM_CA_CERT="${CUSTOM_CA_CERT:-}"
+if [[ -z "${CUSTOM_CA_CERT}" ]]; then
+  _bundled_cert="$(cd "$(dirname "$0")/../.." && pwd)/docker/certs/ZscalerRootCertificate.crt"
+  if [[ -f "${_bundled_cert}" ]]; then
+    CUSTOM_CA_CERT="${_bundled_cert}"
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Check prerequisites
@@ -63,7 +70,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Enable the ingress addon
+# 4. Pre-load ingress images into Minikube
+# ---------------------------------------------------------------------------
+# Loading the images from the host avoids slow or failing pulls from inside
+# the Minikube VM (e.g. behind ZScaler / corporate proxies).
+INGRESS_IMAGES=(
+  "registry.k8s.io/ingress-nginx/controller:v1.14.1"
+  "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.5"
+)
+echo "==> Pre-loading ingress images into Minikube..."
+for img in "${INGRESS_IMAGES[@]}"; do
+  if minikube image ls | grep -q "${img}"; then
+    echo "    ${img} already present."
+  else
+    echo "    Pulling ${img} on host..."
+    podman pull "${img}"
+    echo "    Loading ${img} into Minikube..."
+    minikube image load "${img}"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+# 5. Enable the ingress addon
 # ---------------------------------------------------------------------------
 echo "==> Enabling ingress addon..."
 # The built-in addon verification may time out with the Podman driver while
@@ -72,7 +100,7 @@ echo "==> Enabling ingress addon..."
 minikube addons enable ingress || true
 
 # ---------------------------------------------------------------------------
-# 5. Wait for the ingress controller to be ready
+# 6. Wait for the ingress controller to be ready
 # ---------------------------------------------------------------------------
 echo "==> Waiting for ingress controller to be ready (up to 5 min)..."
 kubectl wait --namespace ingress-nginx \
@@ -80,7 +108,7 @@ kubectl wait --namespace ingress-nginx \
   --timeout=300s
 
 # ---------------------------------------------------------------------------
-# 6. Get the ingress controller ClusterIP
+# 7. Get the ingress controller ClusterIP
 # ---------------------------------------------------------------------------
 echo "==> Discovering ingress controller ClusterIP..."
 INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
@@ -89,7 +117,7 @@ INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
 echo "    Ingress ClusterIP: ${INGRESS_IP}"
 
 # ---------------------------------------------------------------------------
-# 7. Build container images and load them into Minikube
+# 8. Build container images and load them into Minikube
 # ---------------------------------------------------------------------------
 # Build with the local Podman CLI, then load the images into Minikube's
 # container runtime.  This works regardless of the in-cluster runtime
@@ -107,13 +135,13 @@ echo "==> Loading fc-demo-portal image into Minikube..."
 minikube image load fc-demo-portal:latest
 
 # ---------------------------------------------------------------------------
-# 8. Fetch Helm dependencies
+# 9. Fetch Helm dependencies
 # ---------------------------------------------------------------------------
 echo "==> Building Helm dependencies..."
 helm dependency build "${HELM_CHART_DIR}"
 
 # ---------------------------------------------------------------------------
-# 9. Install / upgrade the Helm release
+# 10. Install / upgrade the Helm release
 # ---------------------------------------------------------------------------
 echo "==> Creating namespace ${NAMESPACE} (if needed)..."
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
@@ -128,7 +156,7 @@ helm upgrade --install "${RELEASE}" "${HELM_CHART_DIR}" \
   --wait=false
 
 # ---------------------------------------------------------------------------
-# 10. Wait for pods
+# 11. Wait for pods
 # ---------------------------------------------------------------------------
 echo "==> Waiting for pods to become ready (this may take several minutes)..."
 echo "    Waiting for PostgreSQL..."
@@ -148,7 +176,7 @@ kubectl rollout status deployment/fc-service \
   -n "${NAMESPACE}" --timeout=300s 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
-# 11. Print access instructions
+# 12. Print access instructions
 # ---------------------------------------------------------------------------
 MINIKUBE_IP=$(minikube ip)
 
