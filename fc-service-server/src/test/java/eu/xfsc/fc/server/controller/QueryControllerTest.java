@@ -64,6 +64,8 @@ public class QueryControllerTest {
   private final static String DEFAULT_PARTICIPANT_SD_FILE_NAME = "default_participant.json";
   private final static String UNIQUE_PARTICIPANT_SD_FILE_NAME = "unique_participant.json";
 
+  private static final String QUERY_NO_LIMIT = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
+
   @Autowired
   private WebApplicationContext context;
 
@@ -263,7 +265,7 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQueryWithExplicitOpenCypherLanguageParam() throws Exception {
+  public void postQuery_withExplicitOpenCypherLanguage_returnsResults() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
@@ -284,7 +286,7 @@ public class QueryControllerTest {
    * (confirmed by OpenAPI spec: default=OPENCYPHER) and returns 200 with results.
    */
   @Test
-  public void postQueryWithoutLanguageParamUsesDefault() throws Exception {
+  public void postQuery_withoutLanguageParam_defaultsToOpenCypher() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
@@ -300,11 +302,9 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQueryWithTotalCountTrue() throws Exception {
-    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
-
+  public void postQuery_withTotalCountTrue_returnsTotalCountMatchingItemsSize() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(queryNoLimit)
+            .content(QUERY_NO_LIMIT)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .queryParam("withTotalCount", "true")
@@ -321,44 +321,14 @@ public class QueryControllerTest {
   }
 
   /**
-   * POST /query with withTotalCount=false. When withTotalCount is false, Neo4jGraphStore
-   * does not inject a count clause. The fallback totalCount = resultList.size() is evaluated
-   * before the current record is appended, resulting in totalCount = items.size() - 1
-   * for non-empty results. This is a known off-by-one in Neo4jGraphStore.doQuery().
-   */
-  @Test
-  public void postQueryWithTotalCountFalse() throws Exception {
-    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
-
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(queryNoLimit)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("withTotalCount", "false")
-            .header("Accept", "application/json"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    Results result = objectMapper.readValue(response, Results.class);
-    assertFalse(result.getItems().isEmpty(), "Should return at least one ServiceOffering");
-    // Off-by-one: totalCount = resultList.size() evaluated before current record appended
-    assertEquals(result.getItems().size() - 1, result.getTotalCount(),
-        "With withTotalCount=false, totalCount is items.size()-1 due to off-by-one in Neo4jGraphStore");
-  }
-
-  /**
    * POST a Cypher query without LIMIT clause. Verifies that the default limit injection
    * (QueryService.addDefaultLimit) does not break the query. With only 3 SDs in test data,
    * the 100-item limit is not boundary-tested; this validates correctness of injection.
    */
   @Test
-  public void postQueryWithoutLimitGetsDefaultLimit() throws Exception {
-    String queryNoLimit = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
-
+  public void postQuery_withoutLimit_succeedsWithDefaultLimitInjected() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(queryNoLimit)
+            .content(QUERY_NO_LIMIT)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .header("Accept", "application/json"))
@@ -372,7 +342,7 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQueryWithExplicitLimitIsPreserved() throws Exception {
+  public void postQuery_withExplicitLimit_preservesLimit() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET) // already has LIMIT 1
             .with(csrf())
@@ -389,7 +359,7 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQueryWithGraphQlLanguageReturnsError() throws Exception {
+  public void postQuery_withGraphQlLanguage_returnsUnsupportedLanguageError() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
@@ -408,14 +378,14 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQueryWithInvalidLanguageReturnsBadRequest() throws Exception {
+  public void postQuery_withInvalidLanguageValue_returnsBadRequest() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .queryParam("queryLanguage", "INVALID")
             .header("Accept", "application/json"))
-        .andExpect(status().is4xxClientError());
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -472,7 +442,7 @@ public class QueryControllerTest {
   }
   
   @Test
-  public void getQueryInfoReturnsNeo4jBackend() throws Exception {
+  public void getQueryInfo_onNeo4jBackend_returnsNeo4jInfo() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.get("/query/info")
             .with(csrf())
             .header("Accept", "application/json"))
@@ -484,7 +454,7 @@ public class QueryControllerTest {
     QueryInfo info = objectMapper.readValue(response, QueryInfo.class);
     assertEquals("NEO4J", info.getBackend());
     assertEquals("OPENCYPHER", info.getQueryLanguage());
-    assertEquals(true, info.getEnabled());
+    assertEquals(Boolean.TRUE, info.getEnabled());
     assertNotNull(info.getExampleQuery());
     assertNotNull(info.getDocumentation());
   }

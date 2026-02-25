@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -45,6 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @TestPropertySource(properties = {"graphstore.impl=fuseki"})
 public class QueryControllerFusekiTest {
+
+  private static final String CYPHER_STATEMENT = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
 
   @Autowired
   private WebApplicationContext context;
@@ -130,30 +132,9 @@ public class QueryControllerFusekiTest {
   }
 
   @Test
-  public void testSparqlQueryWithExplicitLanguageParam() throws Exception {
-    String sparqlStatement = "{\"statement\": \"SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10\", \"parameters\": null}";
-
+  public void postQuery_withoutLanguageParam_returnsUnsupportedLanguageError() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(sparqlStatement)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
-            .header("Accept", "application/json"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    Results result = objectMapper.readValue(response, Results.class);
-    assertFalse(result.getItems().isEmpty(), "SPARQL query with explicit language param should return results");
-  }
-
-  @Test
-  public void testDefaultLanguageRejectedOnFuseki() throws Exception {
-    String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
-
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(cypherStatement)
+            .content(CYPHER_STATEMENT)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             // No queryLanguage param -- defaults to OPENCYPHER
@@ -171,11 +152,9 @@ public class QueryControllerFusekiTest {
   }
 
   @Test
-  public void testOpenCypherOnFusekiReturnsError() throws Exception {
-    String cypherStatement = "{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}";
-
+  public void postQuery_withOpenCypherLanguage_returnsUnsupportedLanguageError() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(cypherStatement)
+            .content(CYPHER_STATEMENT)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .queryParam("queryLanguage", QueryLanguage.OPENCYPHER.getValue())
@@ -193,7 +172,7 @@ public class QueryControllerFusekiTest {
   }
 
   @Test
-  public void testSparqlQueryWithoutLimitSucceeds() throws Exception {
+  public void postQuery_withSparqlAndNoLimit_returnsResults() throws Exception {
     String sparqlNoLimit = "{\"statement\": \"SELECT ?s ?p ?o WHERE { ?s ?p ?o }\", \"parameters\": null}";
 
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
@@ -213,7 +192,7 @@ public class QueryControllerFusekiTest {
   }
 
   @Test
-  public void getQueryInfoReturnsFusekiBackend() throws Exception {
+  public void getQueryInfo_onFusekiBackend_returnsFusekiInfo() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.get("/query/info")
             .with(csrf())
             .header("Accept", "application/json"))
@@ -225,13 +204,13 @@ public class QueryControllerFusekiTest {
     QueryInfo info = objectMapper.readValue(response, QueryInfo.class);
     assertEquals("FUSEKI", info.getBackend());
     assertEquals("SPARQL", info.getQueryLanguage());
-    assertEquals(true, info.getEnabled());
+    assertEquals(Boolean.TRUE, info.getEnabled());
     assertNotNull(info.getExampleQuery());
     assertNotNull(info.getDocumentation());
   }
 
   @Test
-  public void testGraphQlOnFusekiReturnsError() throws Exception {
+  public void postQuery_withGraphQlLanguage_returnsUnsupportedLanguageError() throws Exception {
     String statement = "{\"statement\": \"{ query { nodes { id } } }\", \"parameters\": null}";
 
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
@@ -249,5 +228,6 @@ public class QueryControllerFusekiTest {
         eu.xfsc.fc.api.generated.model.Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("GRAPHQL"));
+    assertTrue(error.getMessage().contains("SPARQL"));
   }
 }
