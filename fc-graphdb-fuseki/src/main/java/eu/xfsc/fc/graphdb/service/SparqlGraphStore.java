@@ -7,13 +7,15 @@ import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.SdClaim;
-import eu.xfsc.fc.core.util.ClaimValidator;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.util.ClaimValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
-import org.apache.jena.query.*;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionBuilder;
+import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -29,7 +31,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.http.HttpConnectTimeoutException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -125,7 +131,7 @@ public class SparqlGraphStore implements GraphStore {
                 throw new TimeoutException("Timeout while executing query");
             } else {
                 log.error("Error while executing query: {}", sdQuery.getQuery(), e);
-                throw new ServerException("error querying data " + e.getMessage());
+                throw new ServerException("error querying data " + e.getMessage(), e);
             }
         }
     }
@@ -140,8 +146,14 @@ public class SparqlGraphStore implements GraphStore {
         if (node.isLiteral()) {
             Literal lit = node.asLiteral();
             try {
-                return lit.getValue();
+                Object value = lit.getValue();
+                if (value instanceof String || value instanceof Number || value instanceof Boolean) {
+                    return value;
+                }
+                // Jena-internal types (e.g. XSDDateTime) are not JSON-serializable
+                return lit.getLexicalForm();
             } catch (Exception e) {
+                log.warn("Could not extract typed value for literal '{}': {}", lit.getLexicalForm(), e.getMessage());
                 return lit.getLexicalForm();
             }
         }

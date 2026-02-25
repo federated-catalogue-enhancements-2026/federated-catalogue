@@ -18,15 +18,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -58,11 +59,10 @@ public class QueryControllerFusekiTest {
   private ObjectMapper objectMapper;
 
   @BeforeAll
-  public void setup() {
+  void setup() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 
-    // Load test data via GraphStore.addClaims()
-    List<SdClaim> claims = Arrays.asList(
+    graphStore.addClaims(List.of(
         new SdClaim(
             "<http://example.org/service1>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -73,56 +73,60 @@ public class QueryControllerFusekiTest {
             "<http://example.org/name>",
             "\"Test SPARQL Service\""
         )
-    );
-    graphStore.addClaims(claims, "http://example.org/credential-fuseki-test");
+    ), "http://example.org/credential-fuseki-test");
   }
 
   @Test
-  public void testSparqlSelectQueryReturnsResults() throws Exception {
+  void postQuery_withSparqlSelect_returnsUploadedClaimData() throws Exception {
     String sparqlStatement = "{\"statement\": \"SELECT ?s ?p ?o WHERE { <<?s ?p ?o>> "
         + "<https://www.w3.org/2018/credentials#credentialSubject> ?cs }\", \"parameters\": null}";
 
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(sparqlStatement)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
-            .header("Accept", "application/json"))
+    String response = postSparqlQuery(sparqlStatement)
         .andExpect(status().isOk())
         .andReturn()
         .getResponse()
         .getContentAsString();
 
     Results result = objectMapper.readValue(response, Results.class);
-    assertFalse(result.getItems().isEmpty(), "SPARQL SELECT query should return non-empty results");
-    assertEquals(2, result.getItems().size(), "Should return 2 results for 2 claims");
+    List<Map<String, Object>> items = result.getItems();
+    assertEquals(2, items.size(), "Should return 2 results for 2 claims");
+
+    boolean foundType = items.stream().anyMatch(item ->
+        "http://example.org/service1".equals(item.get("s")) &&
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type".equals(item.get("p")) &&
+        "http://example.org/ServiceOffering".equals(item.get("o")));
+    boolean foundName = items.stream().anyMatch(item ->
+        "http://example.org/service1".equals(item.get("s")) &&
+        "http://example.org/name".equals(item.get("p")) &&
+        "Test SPARQL Service".equals(item.get("o")));
+    assertTrue(foundType, "Results should contain the rdf:type triple with ServiceOffering URI");
+    assertTrue(foundName, "Results should contain the name literal triple");
   }
 
   @Test
-  public void testSparqlWriteQueryRejected() throws Exception {
+  void postQuery_withSparqlInsert_returnsServerError() throws Exception {
     String insertStatement = "{\"statement\": \"INSERT DATA { <http://example.org/s> "
         + "<http://example.org/p> <http://example.org/o> }\", \"parameters\": null}";
 
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(insertStatement)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
-            .header("Accept", "application/json"))
+    postSparqlQuery(insertStatement)
         .andExpect(status().is5xxServerError());
   }
 
   @Test
-  public void testSparqlInvalidSyntaxReturnsError() throws Exception {
+  void postQuery_withInvalidSparqlSyntax_returnsServerError() throws Exception {
     String badStatement = "{\"statement\": \"SELCT ?s WERE { ?s ?p ?o }\", \"parameters\": null}";
 
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(badStatement)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
-            .header("Accept", "application/json"))
+    postSparqlQuery(badStatement)
         .andExpect(status().is5xxServerError());
+  }
+
+  private ResultActions postSparqlQuery(String jsonBody) throws Exception {
+    return mockMvc.perform(MockMvcRequestBuilders.post("/query")
+        .content(jsonBody)
+        .with(csrf())
+        .contentType(MediaType.APPLICATION_JSON)
+        .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
+        .header("Accept", "application/json"));
   }
 
   @Test
