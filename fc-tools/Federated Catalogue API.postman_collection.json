@@ -2462,9 +2462,10 @@
 							}
 						],
 						"url": {
-							"raw": "{{fc_base_url}}/admin/graph/rebuild",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/admin/graph/rebuild",
+							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
-								"{{fc_base_url}}"
+								"{{federated_catalogue_address}}"
 							],
 							"path": [
 								"admin",
@@ -2496,9 +2497,10 @@
 							}
 						],
 						"url": {
-							"raw": "{{fc_base_url}}/admin/graph/rebuild/status",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/admin/graph/rebuild/status",
+							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
-								"{{fc_base_url}}"
+								"{{federated_catalogue_address}}"
 							],
 							"path": [
 								"admin",
@@ -2531,9 +2533,10 @@
 							}
 						],
 						"url": {
-							"raw": "{{fc_base_url}}/admin/graph/status",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/admin/graph/status",
+							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
-								"{{fc_base_url}}"
+								"{{federated_catalogue_address}}"
 							],
 							"path": [
 								"admin",
