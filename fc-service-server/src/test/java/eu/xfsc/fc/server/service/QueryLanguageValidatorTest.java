@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,14 +34,14 @@ class QueryLanguageValidatorTest {
 
   @Test
   void validateLanguageSupport_correctLanguage_doesNotThrow() {
-    when(graphStore.getSupportedQueryLanguage()).thenReturn(QueryLanguage.OPENCYPHER);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.OPENCYPHER));
 
     assertDoesNotThrow(() -> validator.validateLanguageSupport(QueryLanguage.OPENCYPHER));
   }
 
   @Test
   void validateLanguageSupport_wrongLanguage_throwsUnsupportedQueryLanguageException() {
-    when(graphStore.getSupportedQueryLanguage()).thenReturn(QueryLanguage.OPENCYPHER);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.OPENCYPHER));
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
 
     UnsupportedQueryLanguageException ex = assertThrows(
@@ -57,7 +59,7 @@ class QueryLanguageValidatorTest {
 
   @Test
   void validateLanguageSupport_disabledGraphStore_throwsGraphStoreDisabledException() {
-    when(graphStore.getSupportedQueryLanguage()).thenReturn(null);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.empty());
 
     GraphStoreDisabledException ex = assertThrows(
         GraphStoreDisabledException.class,
@@ -68,14 +70,14 @@ class QueryLanguageValidatorTest {
 
   @Test
   void validateLanguageSupport_sparqlOnFuseki_doesNotThrow() {
-    when(graphStore.getSupportedQueryLanguage()).thenReturn(QueryLanguage.SPARQL);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.SPARQL));
 
     assertDoesNotThrow(() -> validator.validateLanguageSupport(QueryLanguage.SPARQL));
   }
 
   @Test
   void validateLanguageSupport_openCypherOnFuseki_throwsException() {
-    when(graphStore.getSupportedQueryLanguage()).thenReturn(QueryLanguage.SPARQL);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.SPARQL));
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.FUSEKI);
 
     UnsupportedQueryLanguageException ex = assertThrows(

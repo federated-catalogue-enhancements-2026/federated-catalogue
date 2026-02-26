@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.graphdb;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
@@ -43,20 +44,16 @@ public interface GraphStore {
     /**
      * Returns the query language supported by this graph store implementation.
      *
-     * @return the supported {@link QueryLanguage}, or {@code null} if the store is disabled
+     * @return the supported {@link QueryLanguage}, or empty if the store is disabled
      */
-    default QueryLanguage getSupportedQueryLanguage() {
-        return null;
-    }
+    Optional<QueryLanguage> getSupportedQueryLanguage();
 
     /**
      * Returns the type of graph database backend.
      *
      * @return the {@link GraphBackendType} of this store
      */
-    default GraphBackendType getBackendType() {
-        return GraphBackendType.NONE;
-    }
+    GraphBackendType getBackendType();
 
 }
 

@@ -26,11 +26,9 @@ public class QueryLanguageValidator {
    * @throws UnsupportedQueryLanguageException if the requested language does not match the supported language
    */
   public void validateLanguageSupport(QueryLanguage requested) {
-    QueryLanguage supported = graphStore.getSupportedQueryLanguage();
-    if (supported == null) {
-      throw new GraphStoreDisabledException(
-          "Graph database is disabled. Query functionality is not available.");
-    }
+    QueryLanguage supported = graphStore.getSupportedQueryLanguage()
+        .orElseThrow(() -> new GraphStoreDisabledException(
+            "Graph database is disabled. Query functionality is not available."));
     if (supported != requested) {
       String backend = graphStore.getBackendType().name();
       String expectedContentType = getContentType(supported);

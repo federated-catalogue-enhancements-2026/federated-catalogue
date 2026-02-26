@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,8 +69,8 @@ public class Neo4jGraphStore implements GraphStore {
 
     /** {@inheritDoc} */
     @Override
-    public QueryLanguage getSupportedQueryLanguage() {
-        return QueryLanguage.OPENCYPHER;
+    public Optional<QueryLanguage> getSupportedQueryLanguage() {
+        return Optional.of(QueryLanguage.OPENCYPHER);
     }
 
     /** {@inheritDoc} */

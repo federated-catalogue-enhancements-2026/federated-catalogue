@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -147,17 +148,16 @@ public class QueryService implements QueryApiDelegate {
   @Override
   public ResponseEntity<QueryInfo> queryInfo() {
     log.debug("queryInfo.enter");
-    QueryLanguage supported = graphStore.getSupportedQueryLanguage();
-    boolean enabled = supported != null;
+    Optional<QueryLanguage> supported = graphStore.getSupportedQueryLanguage();
     QueryInfo info = new QueryInfo();
     info.setBackend(graphStore.getBackendType().name());
-    info.setEnabled(enabled);
-    if (enabled) {
-      info.setQueryLanguage(supported.name());
-      info.setContentType(QueryLanguageValidator.getContentType(supported));
-      info.setExampleQuery(getExampleQuery(supported));
-      info.setDocumentation(getDocumentationUrl(supported));
-    }
+    info.setEnabled(supported.isPresent());
+    supported.ifPresent(lang -> {
+      info.setQueryLanguage(lang.name());
+      info.setContentType(QueryLanguageValidator.getContentType(lang));
+      info.setExampleQuery(getExampleQuery(lang));
+      info.setDocumentation(getDocumentationUrl(lang));
+    });
     log.debug("queryInfo.exit; returning: {}", info);
     return ResponseEntity.ok(info);
   }
