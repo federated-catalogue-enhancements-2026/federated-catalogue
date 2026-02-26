@@ -99,7 +99,9 @@ services:
       start_period: 40s
     networks: 
       - "gaia-x"
-      
+
+  # The did-server serves as a local trust environment for the Federated Catalogue, providing the trust anchor chain and public keys for signature verification.
+  # The trust anchor URL must point to the did-server's endpoint for fetching the trust anchor chain.
   did-server:
     container_name: "did-server"
     image: nginx:alpine
@@ -137,10 +139,8 @@ services:
       # Set to 'true' to enforce Gaia-X Trust Framework compliance validation
       # When 'false' (default), credentials can be uploaded without Gaia-X compliance
       FEDERATED_CATALOGUE_VERIFICATION_TRUST_FRAMEWORK_GAIAX_ENABLED: "${GAIAX_TRUST_FRAMEWORK_ENABLED:-false}"
-      # Signature Verification — local verifier with did-server trust environment
-      # UniSignatureVerifier is broken on the 2.0.0 release, so we use the local verifier as default for now.
-      # The local verifier will fetch the trust anchor chain from the did-server and verify signatures based on that.
-      FEDERATED_CATALOGUE_VERIFICATION_SIGNATURE_VERIFIER: "${FC_SIGNATURE_VERIFIER:-local}"
+      # Trust anchor URL — mock registry on did-server for test environments.
+      # Override in production with the real Gaia-X registry URL.
       FEDERATED_CATALOGUE_VERIFICATION_TRUST_FRAMEWORK_GAIAX_TRUST_ANCHOR_URL: "${FC_TRUST_ANCHOR_URL:-https://did-server/api/trustAnchor/chain/file}"
       JAVA_TOOL_OPTIONS: >-
         -Djavax.net.ssl.trustStore=/opt/certs/custom-cacerts
