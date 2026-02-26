@@ -3,8 +3,11 @@ package eu.xfsc.fc.core.service.graphdb;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import jakarta.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -97,6 +100,21 @@ public class GraphRebuildService {
    */
   public RebuildStatus getStatus() {
     return status;
+  }
+
+  /**
+   * Shuts down the executor service on application shutdown.
+   */
+  @PreDestroy
+  public void destroy() {
+    executor.shutdownNow();
+    try {
+      if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+        log.warn("Rebuild executor did not terminate within timeout");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**

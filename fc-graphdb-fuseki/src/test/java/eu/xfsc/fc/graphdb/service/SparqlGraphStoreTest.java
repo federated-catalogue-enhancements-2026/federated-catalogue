@@ -217,7 +217,7 @@ public class SparqlGraphStoreTest {
 
     @Test
     void getClaimCountShouldReturnCountAfterAddClaims() {
-        List<SdClaim> claims = Arrays.asList(
+        List<SdClaim> claims = List.of(
             new SdClaim(
                 "<http://example.org/healthSubject>",
                 "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",

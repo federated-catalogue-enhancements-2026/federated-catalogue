@@ -109,6 +109,9 @@ public class SecurityConfig {
           .requestMatchers(antMatcher(HttpMethod.GET, "/admin/graph/rebuild/status")).hasRole(CATALOGUE_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.GET, "/admin/graph/status")).hasRole(CATALOGUE_ADMIN_ROLE)
 
+          // Actuator graph-rebuild (requires admin role, matching /admin/graph/rebuild)
+          .requestMatchers(antMatcher(HttpMethod.POST, "/actuator/graph-rebuild")).hasRole(CATALOGUE_ADMIN_ROLE)
+
           .anyRequest().authenticated()
         )
         .exceptionHandling(c -> c.accessDeniedHandler(accessDeniedHandler()))

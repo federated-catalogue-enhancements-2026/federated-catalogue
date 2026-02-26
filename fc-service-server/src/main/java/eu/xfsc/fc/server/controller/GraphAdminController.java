@@ -121,6 +121,8 @@ public class GraphAdminController {
       syncAssessment = "empty";
     } else if (claimCount == 0 && activeSdCount > 0) {
       syncAssessment = "out-of-sync";
+    } else if (claimCount > 0 && activeSdCount == 0) {
+      syncAssessment = "out-of-sync";
     } else {
       syncAssessment = "in-sync";
     }
