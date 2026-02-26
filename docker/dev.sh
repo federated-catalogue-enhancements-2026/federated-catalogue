@@ -33,6 +33,9 @@ COMMANDS:
   full        Start full stack without hot-reload (traditional docker-compose)
               Example: ./dev.sh full
 
+  full-original Start full stack with original docker-compose (with overrides for 2.0.0 image)
+              Example: ./dev.sh full-original
+
   down        Stop and remove all containers
               Example: ./dev.sh down
 
@@ -64,6 +67,9 @@ WORKFLOWS:
   Development Workflow 3 — Full stack without hot-reload:
     1. ./dev.sh full
 
+  Development Workflow 4 - Full stack with original 2.0.0 image (with overrides):
+    1. ./dev.sh full-original
+
 NOTES:
   - All commands pass additional options to docker compose
   - Use ./dev.sh down to clean up when switching workflows
@@ -77,6 +83,7 @@ EOF
 case "${1:-}" in
   up)
     # Start infrastructure only by scaling server and portal to 0
+    echo "Start infrastructure only (postgres, neo4j, keycloak, nats) for use with manual strat of Spring Boot devtools"
     $COMPOSE_DEV up --scale server=0 --scale portal=0 "${@:2}"
     ;;
   run)
@@ -87,26 +94,37 @@ case "${1:-}" in
     (cd .. && mvn spring-boot:run -pl fc-service-server -Dspring-boot.run.profiles=dev "${@:2}")
     ;;
   watch)
+    echo "Starting full stack with hot-reload enabled (containerized server)..."
+    echo "The server container will automatically restart when the JAR changes"
     $COMPOSE_DEV watch "${@:2}"
     ;;
   full)
     $COMPOSE_FULL up "${@:2}"
     ;;
+  full-original)
+    echo "Starting full stack with original docker-compose (with overrides for 2.0.0 image)"
+    $COMPOSE_FULL -f docker-compose.yml -f docker-compose.original.yml up "${@:2}"
+    ;;
   down)
+    echo "Stopping and removing all containers..."
     $COMPOSE_FULL down "${@:2}"
     ;;
   build)
+    echo "Building fc-service-server JAR (skipping tests)..."
     # `mvn package` covers both scenarios (bare-metal with spring-boot dev-tools and containerized).
     # For local mode with devtools, `mvn compile` would be enough here.
     (cd .. && mvn package -pl fc-service-server -am -DskipTests -Dcheckstyle.skip "${@:2}")
     ;;
   test)
+    echo "Running hot-reload verification tests..."
     ./test-hot-reload.sh
     ;;
   logs)
+    echo "Tailing fc-server logs..."
     $COMPOSE_DEV logs -f server "${@:2}"
     ;;
   ps)
+    echo "Showing running containers..."
     $COMPOSE_DEV ps "${@:2}"
     ;;
   help|--help|-h)

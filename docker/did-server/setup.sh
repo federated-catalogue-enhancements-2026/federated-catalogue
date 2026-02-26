@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-SIGNER_KEY="${1:-../../../fc-tools/signer/src/main/resources/rsa2048.sign.pem}"
+SIGNER_KEY="${1:-../../fc-tools/signer/src/main/resources/rsa2048.sign.pem}"
 HOSTNAME="did-server"
 
 mkdir -p certs www/.well-known

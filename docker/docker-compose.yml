@@ -161,16 +161,18 @@ services:
       PUBLISHER_IMPL: nats
       PUBLISHER_URL: ${NATS_URL}
       SUBSCRIBER_IMPL: none
+      # DID resolution: 'local' resolves did:web directly from this container;
+      # 'uni-res' delegates to an external Universal Resolver (requires network access).
+      # Local is required for docker-compose where did-server is only reachable on the Docker network.
+      FEDERATED_CATALOGUE_VERIFICATION_SIGNATURE_VERIFIER: local
       # Trust Framework Configuration
       # Set to 'true' to enforce Gaia-X Trust Framework compliance validation
       # When 'false' (default), credentials can be uploaded without Gaia-X compliance
       FEDERATED_CATALOGUE_VERIFICATION_TRUST_FRAMEWORK_GAIAX_ENABLED: "${GAIAX_TRUST_FRAMEWORK_ENABLED:-false}"
       # Disable automatic validation using SHACL schemas during upload
       FEDERATED_CATALOGUE_VERIFICATION_SCHEMA: "${VERIFY_SCHEMA:-false}"
-      # Signature Verification — local verifier with did-server trust environment
-      # UniSignatureVerifier is broken on the 2.0.0 release, so we use the local verifier as default for now.
-      # The local verifier will fetch the trust anchor chain from the did-server and verify signatures based on that.
-      FEDERATED_CATALOGUE_VERIFICATION_SIGNATURE_VERIFIER: "${FC_SIGNATURE_VERIFIER:-local}"
+      # Trust anchor URL — mock registry on did-server for test environments.
+      # Override in production with the real Gaia-X registry URL.
       FEDERATED_CATALOGUE_VERIFICATION_TRUST_FRAMEWORK_GAIAX_TRUST_ANCHOR_URL: "${FC_TRUST_ANCHOR_URL:-https://did-server/api/trustAnchor/chain/file}"
       JAVA_TOOL_OPTIONS: >-
         -Djavax.net.ssl.trustStore=/opt/certs/custom-cacerts
