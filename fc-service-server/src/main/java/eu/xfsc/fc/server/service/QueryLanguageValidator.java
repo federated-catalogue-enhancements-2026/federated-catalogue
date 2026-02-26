@@ -39,6 +39,9 @@ public class QueryLanguageValidator {
     }
   }
 
+  // These helpers live here rather than on QueryLanguage because that enum is
+  // OpenAPI-generated code (fc-service-api) and would be overwritten on regeneration.
+
   /**
    * Returns the Content-Type string associated with the given query language.
    *
@@ -49,7 +52,7 @@ public class QueryLanguageValidator {
     return switch (language) {
       case OPENCYPHER -> "application/opencypher-query";
       case SPARQL -> "application/sparql-query";
-      default -> "application/json";
+      default -> throw new IllegalArgumentException("No content type mapping for " + language);
     };
   }
 
@@ -63,7 +66,7 @@ public class QueryLanguageValidator {
     return switch (language) {
       case OPENCYPHER -> "openCypher";
       case SPARQL -> "SPARQL";
-      default -> language.name();
+      default -> throw new IllegalArgumentException("No display name mapping for " + language);
     };
   }
 }

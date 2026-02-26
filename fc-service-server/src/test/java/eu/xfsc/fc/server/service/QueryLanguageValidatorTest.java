@@ -90,4 +90,16 @@ class QueryLanguageValidatorTest {
     assertEquals("application/sparql-query", ex.getExpectedContentType());
     assertTrue(ex.getHint().contains("SPARQL"));
   }
+
+  @Test
+  void getContentType_unmappedLanguage_throwsIllegalArgumentException() {
+    assertThrows(IllegalArgumentException.class,
+        () -> QueryLanguageValidator.getContentType(QueryLanguage.GRAPHQL));
+  }
+
+  @Test
+  void getDisplayName_unmappedLanguage_throwsIllegalArgumentException() {
+    assertThrows(IllegalArgumentException.class,
+        () -> QueryLanguageValidator.getDisplayName(QueryLanguage.GRAPHQL));
+  }
 }
