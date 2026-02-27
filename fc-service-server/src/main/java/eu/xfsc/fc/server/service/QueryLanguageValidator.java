@@ -31,42 +31,10 @@ public class QueryLanguageValidator {
             "Graph database is disabled. Query functionality is not available."));
     if (supported != requested) {
       String backend = graphStore.getBackendType().name();
-      String expectedContentType = getContentType(supported);
-      String displayName = getDisplayName(supported);
-      String hint = "Please use " + displayName + " queries with Content-Type: " + expectedContentType;
+      QueryLanguageProperties props = QueryLanguageProperties.of(supported);
+      String hint = "Please use " + props.displayName() + " queries with Content-Type: " + props.contentType();
       throw new UnsupportedQueryLanguageException(
-          backend, supported.name(), requested.name(), expectedContentType, hint);
+          backend, supported.name(), requested.name(), props.contentType(), hint);
     }
-  }
-
-  // These helpers live here rather than on QueryLanguage because that enum is
-  // OpenAPI-generated code (fc-service-api) and would be overwritten on regeneration.
-
-  /**
-   * Returns the Content-Type string associated with the given query language.
-   *
-   * @param language the query language
-   * @return the corresponding Content-Type
-   */
-  static String getContentType(QueryLanguage language) {
-    return switch (language) {
-      case OPENCYPHER -> "application/opencypher-query";
-      case SPARQL -> "application/sparql-query";
-      default -> throw new IllegalArgumentException("No content type mapping for " + language);
-    };
-  }
-
-  /**
-   * Returns a human-readable display name for the given query language.
-   *
-   * @param language the query language
-   * @return the display name
-   */
-  static String getDisplayName(QueryLanguage language) {
-    return switch (language) {
-      case OPENCYPHER -> "openCypher";
-      case SPARQL -> "SPARQL";
-      default -> throw new IllegalArgumentException("No display name mapping for " + language);
-    };
   }
 }

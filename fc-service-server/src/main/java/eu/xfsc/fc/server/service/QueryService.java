@@ -153,31 +153,14 @@ public class QueryService implements QueryApiDelegate {
     info.setBackend(graphStore.getBackendType().name());
     info.setEnabled(supported.isPresent());
     supported.ifPresent(lang -> {
+      QueryLanguageProperties props = QueryLanguageProperties.of(lang);
       info.setQueryLanguage(lang.name());
-      info.setContentType(QueryLanguageValidator.getContentType(lang));
-      info.setExampleQuery(getExampleQuery(lang));
-      info.setDocumentation(getDocumentationUrl(lang));
+      info.setContentType(props.contentType());
+      info.setExampleQuery(props.exampleQuery());
+      info.setDocumentation(props.documentationUrl());
     });
     log.debug("queryInfo.exit; returning: {}", info);
     return ResponseEntity.ok(info);
-  }
-
-  // These helpers live here rather than on QueryLanguage because that enum is
-  // OpenAPI-generated code (fc-service-api) and would be overwritten on regeneration.
-    private String getExampleQuery(QueryLanguage language) {
-    return switch (language) {
-      case OPENCYPHER -> "MATCH (n:Resource) RETURN n.uri AS id, n.name AS name LIMIT 10";
-      case SPARQL -> "PREFIX ex: <http://example.org/> SELECT ?id ?name WHERE { ?id ex:name ?name } LIMIT 10";
-      default -> null;
-    };
-  }
-
-  private String getDocumentationUrl(QueryLanguage language) {
-    return switch (language) {
-      case OPENCYPHER -> "https://neo4j.com/docs/cypher-manual/";
-      case SPARQL -> "https://jena.apache.org/documentation/query/";
-      default -> null;
-    };
   }
 
   /**

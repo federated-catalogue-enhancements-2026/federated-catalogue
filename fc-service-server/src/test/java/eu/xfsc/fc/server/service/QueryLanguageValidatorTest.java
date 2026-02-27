@@ -92,14 +92,8 @@ class QueryLanguageValidatorTest {
   }
 
   @Test
-  void getContentType_unmappedLanguage_throwsIllegalArgumentException() {
+  void queryLanguageProperties_unmappedLanguage_throwsIllegalArgumentException() {
     assertThrows(IllegalArgumentException.class,
-        () -> QueryLanguageValidator.getContentType(QueryLanguage.GRAPHQL));
-  }
-
-  @Test
-  void getDisplayName_unmappedLanguage_throwsIllegalArgumentException() {
-    assertThrows(IllegalArgumentException.class,
-        () -> QueryLanguageValidator.getDisplayName(QueryLanguage.GRAPHQL));
+        () -> QueryLanguageProperties.of(QueryLanguage.GRAPHQL));
   }
 }
