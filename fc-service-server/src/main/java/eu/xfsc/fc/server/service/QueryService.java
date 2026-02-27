@@ -162,7 +162,9 @@ public class QueryService implements QueryApiDelegate {
     return ResponseEntity.ok(info);
   }
 
-  private String getExampleQuery(QueryLanguage language) {
+  // These helpers live here rather than on QueryLanguage because that enum is
+  // OpenAPI-generated code (fc-service-api) and would be overwritten on regeneration.
+    private String getExampleQuery(QueryLanguage language) {
     return switch (language) {
       case OPENCYPHER -> "MATCH (n:Resource) RETURN n.uri AS id, n.name AS name LIMIT 10";
       case SPARQL -> "PREFIX ex: <http://example.org/> SELECT ?id ?name WHERE { ?id ex:name ?name } LIMIT 10";

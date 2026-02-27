@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
@@ -144,8 +145,7 @@ public class QueryControllerFusekiTest {
         .getResponse()
         .getContentAsString();
 
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
+    Error error = objectMapper.readValue(response, Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("OPENCYPHER"));
     assertTrue(error.getMessage().contains("SPARQL"));
@@ -164,8 +164,7 @@ public class QueryControllerFusekiTest {
         .getResponse()
         .getContentAsString();
 
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
+    Error error = objectMapper.readValue(response, Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("OPENCYPHER"));
     assertTrue(error.getMessage().contains("SPARQL"));
@@ -224,8 +223,7 @@ public class QueryControllerFusekiTest {
         .getResponse()
         .getContentAsString();
 
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
+    Error error = objectMapper.readValue(response, Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("GRAPHQL"));
     assertTrue(error.getMessage().contains("SPARQL"));

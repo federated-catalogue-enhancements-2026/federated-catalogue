@@ -1,20 +1,25 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.xfsc.fc.api.generated.model.Error;
+import eu.xfsc.fc.api.generated.model.QueryInfo;
+import eu.xfsc.fc.api.generated.model.QueryLanguage;
+import eu.xfsc.fc.api.generated.model.Results;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.PaginatedResults;
+import eu.xfsc.fc.core.pojo.SdFilter;
+import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
+import eu.xfsc.fc.core.pojo.VerificationResultOffering;
+import eu.xfsc.fc.core.pojo.VerificationResultParticipant;
+import eu.xfsc.fc.core.service.schemastore.SchemaStore;
+import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
+import eu.xfsc.fc.core.service.verification.VerificationService;
+import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
+import eu.xfsc.fc.server.helper.FileReaderHelper;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -31,26 +36,20 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import eu.xfsc.fc.api.generated.model.QueryInfo;
-import eu.xfsc.fc.api.generated.model.QueryLanguage;
-import eu.xfsc.fc.api.generated.model.Results;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.PaginatedResults;
-import eu.xfsc.fc.core.pojo.SdFilter;
-import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
-import eu.xfsc.fc.core.pojo.VerificationResultOffering;
-import eu.xfsc.fc.core.pojo.VerificationResultParticipant;
-import eu.xfsc.fc.core.service.schemastore.SchemaStore;
-import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
-import eu.xfsc.fc.core.service.verification.VerificationService;
-import eu.xfsc.fc.server.helper.FileReaderHelper;
-import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
+import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -171,8 +170,7 @@ public class QueryControllerTest {
             .getResponse()
             .getContentAsString();
 
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
+    Error error = objectMapper.readValue(response, Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("SPARQL"));
     assertTrue(error.getMessage().contains("OPENCYPHER"));
@@ -279,6 +277,10 @@ public class QueryControllerTest {
 
     Results result = objectMapper.readValue(response, Results.class);
     assertEquals(1, result.getItems().size());
+    Map<String, Object> node = (Map<String, Object>) result.getItems().getFirst().get("n");
+    assertNotNull(node, "Returned item should contain node data under key 'n'");
+    assertEquals("My example provider2", node.get("hasLegallyBindingName"));
+    assertTrue(((List<?>) node.get("claimsGraphUri")).contains("http://example.org/test-issuer2"));
   }
 
   /**
@@ -343,8 +345,22 @@ public class QueryControllerTest {
 
   @Test
   public void postQuery_withExplicitLimit_preservesLimit() throws Exception {
+    // Precondition: verify more than 1 node exists so LIMIT is actually tested
+    String allResponse = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content("{\"statement\": \"MATCH (n) RETURN n\", \"parameters\": null}")
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Accept", "application/json"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+    Results allResults = objectMapper.readValue(allResponse, Results.class);
+    assertTrue(allResults.getItems().size() > 1,
+        "Precondition: test fixture must contain more than 1 node for LIMIT test to be meaningful");
+
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(QUERY_REQUEST_GET) // already has LIMIT 1
+            .content("{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}")
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .header("Accept", "application/json"))
@@ -371,8 +387,7 @@ public class QueryControllerTest {
         .getResponse()
         .getContentAsString();
 
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
+    Error error = objectMapper.readValue(response, Error.class);
     assertEquals("unsupported_query_language", error.getCode());
     assertTrue(error.getMessage().contains("GRAPHQL"));
   }

@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.exception;
 
 /**
- * Exception thrown when query operations are attempted against a disabled (dummy) graph store.
+ * Exception thrown when query operations are attempted against a disabled graph store.
  */
 public class GraphStoreDisabledException extends ServiceException {
 
