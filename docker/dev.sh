@@ -11,6 +11,7 @@ cd "$SCRIPT_DIR"
 
 COMPOSE_DEV="docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file dev.env"
 COMPOSE_FULL="docker compose --env-file dev.env"
+COMPOSE_STRICT="docker compose -f docker-compose.yml -f docker-compose.strict.yml --env-file dev.env"
 
 usage() {
   cat <<EOF
@@ -32,6 +33,10 @@ COMMANDS:
 
   full        Start full stack without hot-reload (traditional docker-compose)
               Example: ./dev.sh full
+
+  strict      Start full stack with strict config (Gaia-X on, schema validation on)
+              Use for running @cfg.strict BDD tests
+              Example: ./dev.sh strict
 
   full-original Start full stack with original docker-compose (with overrides for 2.0.0 image)
               Example: ./dev.sh full-original
@@ -100,6 +105,10 @@ case "${1:-}" in
     ;;
   full)
     $COMPOSE_FULL up "${@:2}"
+    ;;
+  strict)
+    echo "Starting full stack with strict config (Gaia-X on, schema validation on)..."
+    $COMPOSE_STRICT up "${@:2}"
     ;;
   full-original)
     echo "Starting full stack with original docker-compose (with overrides for 2.0.0 image)"
