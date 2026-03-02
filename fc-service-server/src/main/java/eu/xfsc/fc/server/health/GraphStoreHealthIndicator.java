@@ -5,6 +5,8 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
@@ -34,10 +36,10 @@ public class GraphStoreHealthIndicator implements HealthIndicator {
           .withDetail("reason", "Backend connectivity check failed")
           .build();
     }
-    QueryLanguage queryLanguage = graphStore.getSupportedQueryLanguage();
+    Optional<QueryLanguage> queryLanguage = graphStore.getSupportedQueryLanguage();
     return Health.up()
         .withDetail("backend", backendType.name())
-        .withDetail("queryLanguage", queryLanguage != null ? queryLanguage.name() : "unknown")
+        .withDetail("queryLanguage", queryLanguage.map(QueryLanguage::name).orElse("unknown"))
         .build();
   }
 }
