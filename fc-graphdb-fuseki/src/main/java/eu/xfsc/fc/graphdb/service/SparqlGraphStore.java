@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -66,8 +67,8 @@ public class SparqlGraphStore implements GraphStore {
 
     /** {@inheritDoc} */
     @Override
-    public QueryLanguage getSupportedQueryLanguage() {
-        return QueryLanguage.SPARQL;
+    public Optional<QueryLanguage> getSupportedQueryLanguage() {
+        return Optional.of(QueryLanguage.SPARQL);
     }
 
     /** {@inheritDoc} */
