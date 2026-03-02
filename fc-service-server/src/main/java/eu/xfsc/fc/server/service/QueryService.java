@@ -67,9 +67,6 @@ public class QueryService implements QueryApiDelegate {
   @Autowired
   private QueryProperties queryProps;
 
-  @Autowired
-  private HttpServletRequest httpServletRequest;
-
   private List<QueryClient> queryClients;
   
   @PostConstruct
@@ -105,7 +102,10 @@ public class QueryService implements QueryApiDelegate {
    */
   @Override
   public ResponseEntity<Results> query(String body, Integer timeout, Boolean withTotalCount) {
-    String contentType = httpServletRequest.getContentType();
+    String contentType = getRequest()
+        .map(r -> r.getNativeRequest(HttpServletRequest.class))
+        .map(HttpServletRequest::getContentType)
+        .orElse(null);
     QueryLanguage queryLanguage = QueryLanguageProperties.fromContentType(contentType);
     log.debug("query.enter; got contentType: {}, queryLanguage: {}, timeout: {}, withTotalCount: {}, body: {}",
         contentType, queryLanguage, timeout, withTotalCount, body);
