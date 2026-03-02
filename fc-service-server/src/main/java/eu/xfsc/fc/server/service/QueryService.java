@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -34,7 +35,6 @@ import eu.xfsc.fc.api.generated.model.AnnotatedStatement;
 import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
-import eu.xfsc.fc.api.generated.model.Statement;
 import eu.xfsc.fc.client.QueryClient;
 import eu.xfsc.fc.server.config.QueryProperties;
 import eu.xfsc.fc.server.generated.controller.QueryApiDelegate;
@@ -66,7 +66,10 @@ public class QueryService implements QueryApiDelegate {
 
   @Autowired
   private QueryProperties queryProps;
-  
+
+  @Autowired
+  private HttpServletRequest httpServletRequest;
+
   private List<QueryClient> queryClients;
   
   @PostConstruct
@@ -92,23 +95,27 @@ public class QueryService implements QueryApiDelegate {
   }
   
   /**
-   * Get List of results from catalogue for provided {@link Statement}.
+   * Get List of results from catalogue for provided raw query text.
+   * The query language is determined from the Content-Type header.
    *
-   * @param queryLanguage  (required) Language for query the results like openCypher etc.
-   * @param statement JSON object to send queries. Use \&quot;application/json\&quot; for openCypher queries.
-   *                   A Catalogue may also support the other content types depending on its supported query languages
-   *                   but only \&quot;application/json\&quot; is mandatory. (optional)
+   * @param timeout query timeout in seconds
+   * @param withTotalCount whether to include total count
+   * @param body raw query text
    * @return List of {@link Results}
    */
   @Override
-  public ResponseEntity<Results> query(QueryLanguage queryLanguage, Integer timeout, Boolean withTotalCount, Statement statement) {
-    log.debug("query.enter; got queryLanguage: {}, timeout: {}, withTotalCount: {}, statement: {}", queryLanguage, timeout, withTotalCount, statement);
+  public ResponseEntity<Results> query(String body, Integer timeout, Boolean withTotalCount) {
+    String contentType = httpServletRequest.getContentType();
+    QueryLanguage queryLanguage = QueryLanguageProperties.fromContentType(contentType);
+    log.debug("query.enter; got contentType: {}, queryLanguage: {}, timeout: {}, withTotalCount: {}, body: {}",
+        contentType, queryLanguage, timeout, withTotalCount, body);
     queryLanguageValidator.validateLanguageSupport(queryLanguage);
-    if (checkIfLimitAbsent(statement.getStatement())) {
-      addDefaultLimit(statement);
+    String queryText = body;
+    if (checkIfLimitAbsent(queryText)) {
+      queryText = queryText + " LIMIT " + DEFAULT_LIMIT;
     }
-    PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(new GraphQuery(statement.getStatement(),
-            statement.getParameters(), queryLanguage, timeout, withTotalCount));
+    PaginatedResults<Map<String, Object>> queryResultList = graphStore.queryData(
+        new GraphQuery(queryText, null, queryLanguage, timeout, withTotalCount));
     Results result = new Results((int) queryResultList.getTotalCount(), queryResultList.getResults());
     log.debug("query.exit; returning results: {}", result);
     return ResponseEntity.ok(result);
@@ -201,21 +208,6 @@ public class QueryService implements QueryApiDelegate {
 	  return defaultValue;
 	}
 	return value;
-  }
-
-  /**
-   * Adding default limit for the query if not present.
-   *
-   * @param statement Query Statement
-   */
-  private void addDefaultLimit(Statement statement) {
-    String appendLimit = " limit $limit";
-    statement.setStatement(statement.getStatement().concat(appendLimit));
-    if (null == statement.getParameters()) {
-      statement.setParameters(Map.of("limit", DEFAULT_LIMIT));
-    } else {
-      statement.getParameters().putIfAbsent("limit", DEFAULT_LIMIT);
-    }
   }
 
   /**

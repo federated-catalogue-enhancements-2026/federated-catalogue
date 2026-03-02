@@ -96,4 +96,28 @@ class QueryLanguageValidatorTest {
     assertThrows(IllegalArgumentException.class,
         () -> QueryLanguageProperties.of(QueryLanguage.GRAPHQL));
   }
+
+  @Test
+  void fromContentType_openCypherContentType_returnsOpenCypher() {
+    assertEquals(QueryLanguage.OPENCYPHER,
+        QueryLanguageProperties.fromContentType("application/opencypher-query"));
+  }
+
+  @Test
+  void fromContentType_sparqlContentType_returnsSparql() {
+    assertEquals(QueryLanguage.SPARQL,
+        QueryLanguageProperties.fromContentType("application/sparql-query"));
+  }
+
+  @Test
+  void fromContentType_withCharsetParameter_returnsCorrectLanguage() {
+    assertEquals(QueryLanguage.SPARQL,
+        QueryLanguageProperties.fromContentType("application/sparql-query; charset=utf-8"));
+  }
+
+  @Test
+  void fromContentType_unknownContentType_throwsIllegalArgumentException() {
+    assertThrows(IllegalArgumentException.class,
+        () -> QueryLanguageProperties.fromContentType("application/json"));
+  }
 }

@@ -3,7 +3,6 @@ package eu.xfsc.fc.server.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.api.generated.model.QueryInfo;
-import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -63,7 +62,10 @@ public class QueryControllerTest {
   private final static String DEFAULT_PARTICIPANT_SD_FILE_NAME = "default_participant.json";
   private final static String UNIQUE_PARTICIPANT_SD_FILE_NAME = "unique_participant.json";
 
-  private static final String QUERY_NO_LIMIT = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n\", \"parameters\": null}";
+  private static final String OPENCYPHER_CONTENT_TYPE = "application/opencypher-query";
+  private static final String SPARQL_CONTENT_TYPE = "application/sparql-query";
+
+  private static final String QUERY_NO_LIMIT = "MATCH (n:ServiceOffering) RETURN n";
 
   @Autowired
   private WebApplicationContext context;
@@ -111,28 +113,30 @@ public class QueryControllerTest {
     embeddedDatabaseServer.close();
   }
 
-  private String QUERY_REQUEST_GET = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n LIMIT 1\", "
-          + "\"parameters\": null}";
+  private String QUERY_REQUEST_GET = "MATCH (n:ServiceOffering) RETURN n LIMIT 1";
 
-  private String QUERY_REQUEST_TIMEOUT = "{\"statement\": \"CALL apoc.util.sleep($duration)\", \"parameters\": {\"duration\": 3000}}";
+  private String QUERY_REQUEST_TIMEOUT = "CALL apoc.util.sleep(3000)";
 
-  private String QUERY_REQUEST_GET_WITH_PARAMETERS = "{\"statement\": \"MATCH (n)-[:hasLegallyBindingAddress]->(m)  " +
-      "where m.locality = $locality RETURN n \", \"parameters\": { \"locality\": \"City Name 2\"}}";
+  private String QUERY_REQUEST_GET_WITH_PARAMETERS = "MATCH (n)-[:hasLegallyBindingAddress]->(m) "
+      + "where m.locality = 'City Name 2' RETURN n";
 
-  private String QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN = "{\"statement\": \"MATCH (n:ServiceOffering) where "
-          + "n.name = $name RETURN n \", \"parameters\": { \"name\": \"notFound\"}}";
+  private String QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN = "MATCH (n:ServiceOffering) where "
+          + "n.name = 'notFound' RETURN n";
 
-  private String QUERY_REQUEST_POST = "{\"statement\": \" CREATE (n:Person {name: 'TestUser', title: 'Developer'})\", "
-          + "\"parameters\": null}";
+  private String QUERY_REQUEST_POST = "CREATE (n:Person {name: 'TestUser', title: 'Developer'})";
 
-  private String QUERY_REQUEST_UPDATE = "{\"statement\": \"Match (m:Person) where m.name = 'TestUser' SET m.name = "
-          + "'TestUserUpdated' RETURN m\", \"parameters\": null}";
+  private String QUERY_REQUEST_UPDATE = "Match (m:Person) where m.name = 'TestUser' SET m.name = "
+          + "'TestUserUpdated' RETURN m";
 
-  private String QUERY_REQUEST_DELETE = "{\"statement\": \"MATCH (n:LegalPerson) where n.name = 'Fredrik "
-          + "DETACH DELETE n\", \"parameters\": null}";
+  private String QUERY_REQUEST_DELETE = "MATCH (n:LegalPerson) where n.name = 'Fredrik "
+          + "DETACH DELETE n";
 
-  private String QUERY_REQUEST_GET_SUBJECT_ID = "{\"statement\": \"MATCH (n:ServiceOffering) where n.uri IS NOT NULL RETURN n" +
-      ".uri \", \"parameters\": null}";
+  private String QUERY_REQUEST_GET_SUBJECT_ID = "MATCH (n:ServiceOffering) where n.uri IS NOT NULL RETURN n.uri";
+
+  // JSON body for /query/search (AnnotatedStatement), which still uses application/json
+  private static final String SEARCH_REQUEST_GET = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n LIMIT 1\", \"parameters\": null}";
+  private static final String SEARCH_REQUEST_GET_WITH_PARAMETERS_UNKNOWN = "{\"statement\": \"MATCH (n:ServiceOffering) where "
+          + "n.name = 'notFound' RETURN n \", \"parameters\": null}";
 
   @Test
   public void getQueryPageShouldReturnSuccessResponse() throws Exception {
@@ -149,8 +153,7 @@ public class QueryControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("Produces", "application/json")
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
@@ -159,13 +162,11 @@ public class QueryControllerTest {
   @Test
   public void postUsupportedQueryReturnNotImplementedResponse() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(QUERY_REQUEST_GET)
-            .contentType(MediaType.APPLICATION_JSON)
+            .content("SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10")
             .with(csrf())
-            .queryParam("queryLanguage", QueryLanguage.SPARQL.getValue())
-            .header("Produces", "application/json")
+            .contentType(SPARQL_CONTENT_TYPE)
             .header("Accept", "application/json"))
-            .andExpect(status().isUnprocessableEntity())
+            .andExpect(status().isUnsupportedMediaType())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -182,8 +183,7 @@ public class QueryControllerTest {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("Produces", "application/json")
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -201,8 +201,7 @@ public class QueryControllerTest {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET_SUBJECT_ID)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("Produces", "application/json")
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -230,9 +229,8 @@ public class QueryControllerTest {
   public void postGetQueriesWithParametersReturnSuccessResponse() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET_WITH_PARAMETERS)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -249,9 +247,8 @@ public class QueryControllerTest {
 
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -263,12 +260,11 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQuery_withExplicitOpenCypherLanguage_returnsResults() throws Exception {
+  public void postQuery_withOpenCypherContentType_returnsResults() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.OPENCYPHER.getValue())
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -283,16 +279,12 @@ public class QueryControllerTest {
     assertTrue(((List<?>) node.get("claimsGraphUri")).contains("http://example.org/test-issuer2"));
   }
 
-  /**
-   * POST /query without queryLanguage parameter. Verifies it defaults to OPENCYPHER
-   * (confirmed by OpenAPI spec: default=OPENCYPHER) and returns 200 with results.
-   */
   @Test
-  public void postQuery_withoutLanguageParam_defaultsToOpenCypher() throws Exception {
+  public void postQuery_withOpenCypherContentType_returnsSuccessResponse() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -308,7 +300,7 @@ public class QueryControllerTest {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_NO_LIMIT)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .queryParam("withTotalCount", "true")
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
@@ -324,7 +316,7 @@ public class QueryControllerTest {
 
   /**
    * POST a Cypher query without LIMIT clause. Verifies that the default limit injection
-   * (QueryService.addDefaultLimit) does not break the query. With only 3 SDs in test data,
+   * does not break the query. With only 3 SDs in test data,
    * the 100-item limit is not boundary-tested; this validates correctness of injection.
    */
   @Test
@@ -332,7 +324,7 @@ public class QueryControllerTest {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_NO_LIMIT)
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -347,9 +339,9 @@ public class QueryControllerTest {
   public void postQuery_withExplicitLimit_preservesLimit() throws Exception {
     // Precondition: verify more than 1 node exists so LIMIT is actually tested
     String allResponse = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content("{\"statement\": \"MATCH (n) RETURN n\", \"parameters\": null}")
+            .content("MATCH (n) RETURN n")
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -360,9 +352,9 @@ public class QueryControllerTest {
         "Precondition: test fixture must contain more than 1 node for LIMIT test to be meaningful");
 
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content("{\"statement\": \"MATCH (n) RETURN n LIMIT 1\", \"parameters\": null}")
+            .content("MATCH (n) RETURN n LIMIT 1")
             .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .header("Accept", "application/json"))
         .andExpect(status().isOk())
         .andReturn()
@@ -375,41 +367,11 @@ public class QueryControllerTest {
   }
 
   @Test
-  public void postQuery_withGraphQlLanguage_returnsUnsupportedLanguageError() throws Exception {
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(QUERY_REQUEST_GET)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.GRAPHQL.getValue())
-            .header("Accept", "application/json"))
-        .andExpect(status().isUnprocessableEntity())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    Error error = objectMapper.readValue(response, Error.class);
-    assertEquals("unsupported_query_language", error.getCode());
-    assertTrue(error.getMessage().contains("GRAPHQL"));
-  }
-
-  @Test
-  public void postQuery_withInvalidLanguageValue_returnsBadRequest() throws Exception {
-    mockMvc.perform(MockMvcRequestBuilders.post("/query")
-            .content(QUERY_REQUEST_GET)
-            .with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", "INVALID")
-            .header("Accept", "application/json"))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
   public void postQueryReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_POST)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().is5xxServerError());
   }
@@ -418,9 +380,8 @@ public class QueryControllerTest {
   public void postQueryForUpdateReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_UPDATE)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().is5xxServerError());
 
@@ -430,9 +391,8 @@ public class QueryControllerTest {
   public void postQueryForDeleteReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_DELETE)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().is5xxServerError());
   }
@@ -442,10 +402,9 @@ public class QueryControllerTest {
 
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_TIMEOUT)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(OPENCYPHER_CONTENT_TYPE)
             .with(csrf())
             .queryParam("timeout", "1")
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isGatewayTimeout())
             .andReturn()
@@ -491,10 +450,9 @@ public class QueryControllerTest {
 			      .addHeader("Content-Type", "application/json"));
 		
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query/search")
-	            .content(QUERY_REQUEST_GET)
+	            .content(SEARCH_REQUEST_GET)
 	            .with(csrf())
 	            .contentType(MediaType.APPLICATION_JSON)
-	            .header("Produces", "application/json")
 	            .header("Accept", "application/json"))
 	            .andExpect(status().isOk())
 	            .andReturn()
@@ -521,10 +479,9 @@ public class QueryControllerTest {
 		      .addHeader("Content-Type", "application/json"));
 	
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query/search")
-            .content(QUERY_REQUEST_GET)
+            .content(SEARCH_REQUEST_GET)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -552,10 +509,9 @@ public class QueryControllerTest {
 		      .addHeader("Content-Type", "application/json"));
 		
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query/search")
-            .content(QUERY_REQUEST_GET)
+            .content(SEARCH_REQUEST_GET)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()
@@ -580,10 +536,9 @@ public class QueryControllerTest {
 		      .addHeader("Content-Type", "application/json"));
 		
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query/search")
-            .content(QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN)
+            .content(SEARCH_REQUEST_GET_WITH_PARAMETERS_UNKNOWN)
             .contentType(MediaType.APPLICATION_JSON)
             .with(csrf())
-            .header("Produces", "application/json")
             .header("Accept", "application/json"))
             .andExpect(status().isOk())
             .andReturn()

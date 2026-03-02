@@ -37,4 +37,21 @@ public record QueryLanguageProperties(
     }
     return props;
   }
+
+  /**
+   * Resolves a {@link QueryLanguage} from a Content-Type header value.
+   *
+   * @param contentType the Content-Type header (may include charset or other parameters)
+   * @return the matching query language
+   * @throws IllegalArgumentException if the content type is not recognised
+   */
+  public static QueryLanguage fromContentType(String contentType) {
+    String mediaType = contentType == null ? "" : contentType.split(";")[0].trim().toLowerCase();
+    for (var entry : PROPS.entrySet()) {
+      if (entry.getValue().contentType().equals(mediaType)) {
+        return entry.getKey();
+      }
+    }
+    throw new IllegalArgumentException("Unrecognised query content type: " + contentType);
+  }
 }

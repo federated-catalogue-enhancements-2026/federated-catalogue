@@ -8,6 +8,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -110,14 +111,14 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
    * Method handles the Unsupported Query Language Exception.
    *
    * @param exception Thrown UnsupportedQueryLanguageException.
-   * @return The custom Federated Catalogue application error with status code 422.
+   * @return The custom Federated Catalogue application error with status code 415.
    */
   @ExceptionHandler({UnsupportedQueryLanguageException.class})
   protected ResponseEntity<Error> handleUnsupportedQueryLanguageException(
       UnsupportedQueryLanguageException exception) {
     log.info("handleUnsupportedQueryLanguageException; error: {}", exception.getMessage());
     return new ResponseEntity<>(
-        new Error("unsupported_query_language", exception.getMessage()), UNPROCESSABLE_ENTITY);
+        new Error("unsupported_query_language", exception.getMessage()), UNSUPPORTED_MEDIA_TYPE);
   }
 
   /**
