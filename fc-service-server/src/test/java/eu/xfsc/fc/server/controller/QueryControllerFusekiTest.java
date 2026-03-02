@@ -3,7 +3,6 @@ package eu.xfsc.fc.server.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.api.generated.model.QueryInfo;
-import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.SdClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
@@ -189,24 +188,14 @@ public class QueryControllerFusekiTest {
   }
 
   @Test
-  public void postQuery_withGraphQlLanguage_returnsUnsupportedLanguageError() throws Exception {
+  public void postQuery_withJsonContentType_returnsUnsupportedMediaType() throws Exception {
     String statement = "{\"statement\": \"{ query { nodes { id } } }\", \"parameters\": null}";
 
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(statement)
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
-            .queryParam("queryLanguage", QueryLanguage.GRAPHQL.getValue())
             .header("Accept", "application/json"))
-        .andExpect(status().isUnprocessableEntity())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    eu.xfsc.fc.api.generated.model.Error error = objectMapper.readValue(response,
-        eu.xfsc.fc.api.generated.model.Error.class);
-    assertEquals("unsupported_query_language", error.getCode());
-    assertTrue(error.getMessage().contains("GRAPHQL"));
-    assertTrue(error.getMessage().contains("SPARQL"));
+        .andExpect(status().isUnsupportedMediaType());
   }
 }
