@@ -485,16 +485,55 @@ tags:
   - name: Session
     description: Management for auth sessions in the catalogue
   - name: Graph Admin
-    description: >-
-      Graph database administration operations.
-      Endpoints under /admin/graph/ are implemented by a custom controller
-      (GraphAdminController) and not generated from this spec.
-      See RebuildStatus and GraphStatus schemas below for response models.
+    description: Graph database administration operations.
 paths:
-  # NOTE: /admin/graph/* endpoints are handled by GraphAdminController (not code-generated).
-  # POST /admin/graph/rebuild -> 202 Accepted (rebuild started) or 409 Conflict (already running)
-  # GET  /admin/graph/rebuild/status -> 200 OK (RebuildStatus JSON)
-  # GET  /admin/graph/status -> 200 OK (GraphStatus JSON)
+  /admin/graph/rebuild:
+    post:
+      tags:
+        - Graph Admin
+      summary: Trigger an asynchronous graph rebuild
+      operationId: triggerGraphRebuild
+      security:
+        - jwt: []
+      responses:
+        '202':
+          description: Graph rebuild started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RebuildStatus'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/graph/rebuild/status:
+    get:
+      tags:
+        - Graph Admin
+      summary: Get the current graph rebuild status
+      operationId: getGraphRebuildStatus
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Current rebuild status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RebuildStatus'
+  /admin/graph/status:
+    get:
+      tags:
+        - Graph Admin
+      summary: Get the current graph store status
+      operationId: getGraphStatus
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Graph store status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphStatus'
   /self-descriptions:
     get:
       tags:

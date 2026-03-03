@@ -20,6 +20,7 @@ public class GraphRebuildServiceTest {
   public void triggerRebuild_disabledStore_throwsException() {
     DummyGraphStore dummyStore = new DummyGraphStore();
     GraphRebuildService service = new GraphRebuildService(null, null, dummyStore);
+
     assertThrows(GraphStoreDisabledException.class,
         () -> service.triggerRebuild(1, 0, 4, 100));
   }
@@ -27,6 +28,7 @@ public class GraphRebuildServiceTest {
   @Test
   public void idle_newInstance_isComplete() {
     RebuildStatus idle = RebuildStatus.idle();
+
     assertTrue(idle.isComplete());
     assertEquals(0, idle.getTotal());
     assertEquals(100, idle.getPercentComplete());
@@ -55,6 +57,7 @@ public class GraphRebuildServiceTest {
   public void markFailed_withMessage_setsErrorAndComplete() {
     RebuildStatus status = new RebuildStatus(5);
     status.markFailed("test error");
+
     assertTrue(status.isFailed());
     assertTrue(status.isComplete());
     assertEquals("test error", status.getErrorMessage());
@@ -63,6 +66,7 @@ public class GraphRebuildServiceTest {
   @Test
   public void getDurationMs_newInstance_returnsNonNegative() {
     RebuildStatus status = new RebuildStatus(1);
+
     assertTrue(status.getDurationMs() >= 0);
   }
 }

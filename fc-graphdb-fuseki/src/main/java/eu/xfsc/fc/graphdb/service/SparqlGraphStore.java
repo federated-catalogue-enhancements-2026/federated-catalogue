@@ -147,33 +147,35 @@ public class SparqlGraphStore implements GraphStore {
         if (sdQuery.getQueryLanguage() != QueryLanguage.SPARQL) {
             throw new UnsupportedOperationException(sdQuery.getQueryLanguage() + " query language is not supported");
         }
-        final QueryExecutionBuilder queryExecutionBuilder = rdfConnection.newQuery()
-                .query(sdQuery.getQuery())
-                .timeout(sdQuery.getTimeout(), TimeUnit.SECONDS);  // Fuseki timeout is in milliseconds per default
-        try(final QueryExecution queryResults = queryExecutionBuilder.build()) {
-            final List<Map<String, Object>> parsedResults = new ArrayList<>(ResultSetFormatter.toList(queryResults.execSelect()).stream()
-                    .map(qs -> (ResultBinding) qs)
-                    .map(rb -> {
-                        final Map<String, Object> resultMap = new HashMap<>();
-                        rb.varNames().forEachRemaining(varName -> resultMap.put(varName, convertRdfNode(rb.get(varName))));
-                        return resultMap;
-                    }).toList());
-            // Shuffle list to guarantee results won't appear in a deterministic order thus giving certain results
-            // an advantage over others as they would always be in the top n result entries.
-            // However, the shuffling should only be performed if the query does not, by itself, return an ordered result.
-            if (!orderByRegex.matcher(sdQuery.getQuery()).find()) {
-                Collections.shuffle(parsedResults);
+        return Txn.calculateRead(rdfConnection, () -> {
+            final QueryExecutionBuilder queryExecutionBuilder = rdfConnection.newQuery()
+                    .query(sdQuery.getQuery())
+                    .timeout(sdQuery.getTimeout(), TimeUnit.SECONDS);  // Fuseki timeout is in milliseconds per default
+            try(final QueryExecution queryResults = queryExecutionBuilder.build()) {
+                final List<Map<String, Object>> parsedResults = new ArrayList<>(ResultSetFormatter.toList(queryResults.execSelect()).stream()
+                        .map(qs -> (ResultBinding) qs)
+                        .map(rb -> {
+                            final Map<String, Object> resultMap = new HashMap<>();
+                            rb.varNames().forEachRemaining(varName -> resultMap.put(varName, convertRdfNode(rb.get(varName))));
+                            return resultMap;
+                        }).toList());
+                // Shuffle list to guarantee results won't appear in a deterministic order thus giving certain results
+                // an advantage over others as they would always be in the top n result entries.
+                // However, the shuffling should only be performed if the query does not, by itself, return an ordered result.
+                if (!orderByRegex.matcher(sdQuery.getQuery()).find()) {
+                    Collections.shuffle(parsedResults);
+                }
+                return new PaginatedResults<>(parsedResults);
+            } catch (Exception e) {
+                if (e.getCause() instanceof HttpConnectTimeoutException) {
+                    log.error("Timeout while executing query: {}", sdQuery.getQuery(), e);
+                    throw new TimeoutException("Timeout while executing query");
+                } else {
+                    log.error("Error while executing query: {}", sdQuery.getQuery(), e);
+                    throw new ServerException("error querying data " + e.getMessage(), e);
+                }
             }
-            return new PaginatedResults<>(parsedResults);
-        } catch (Exception e) {
-            if (e.getCause() instanceof HttpConnectTimeoutException) {
-                log.error("Timeout while executing query: {}", sdQuery.getQuery(), e);
-                throw new TimeoutException("Timeout while executing query");
-            } else {
-                log.error("Error while executing query: {}", sdQuery.getQuery(), e);
-                throw new ServerException("error querying data " + e.getMessage(), e);
-            }
-        }
+        });
     }
 
     /**
