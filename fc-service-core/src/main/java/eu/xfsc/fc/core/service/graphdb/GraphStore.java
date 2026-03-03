@@ -66,9 +66,24 @@ public interface GraphStore {
      * Returns the number of claim entries currently stored in the graph database.
      * Counts only claim-related data, not internal/structural nodes or triples.
      *
-     * @return the claim count, or 0 if the store is empty or disabled
+     * @return the claim count (&ge; 0), or {@code -1} if the count could not be
+     *         determined (e.g. connectivity failure). The default implementation
+     *         returns {@code 0}, suitable for disabled or dummy stores.
      */
     default long getClaimCount() {
+        return 0;
+    }
+
+    /**
+     * Returns the number of distinct self-descriptions whose claims are stored
+     * in the graph database. Unlike {@link #getClaimCount()}, which counts
+     * individual claim triples/nodes, this counts unique credential subjects.
+     *
+     * @return the SD count (&ge; 0), or {@code -1} if the count could not be
+     *         determined (e.g. connectivity failure). The default implementation
+     *         returns {@code 0}, suitable for disabled or dummy stores.
+     */
+    default long getSdCountInGraph() {
         return 0;
     }
 

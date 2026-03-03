@@ -104,6 +104,20 @@ public class Neo4jGraphStore implements GraphStore {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public long getSdCountInGraph() {
+        try (Session session = driver.session()) {
+            Result result = session.run(
+                "MATCH (n) WHERE n.claimsGraphUri IS NOT NULL "
+                + "UNWIND n.claimsGraphUri AS uri RETURN count(DISTINCT uri) AS cnt");
+            return result.single().get("cnt").asLong();
+        } catch (Exception e) {
+            log.warn("Failed to get Neo4j SD count: {}", e.getMessage());
+            return -1;
+        }
+    }
+
     /**
      * {@inheritDoc}
      */

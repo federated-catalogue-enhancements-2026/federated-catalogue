@@ -62,29 +62,35 @@ public class GraphRebuildService {
       return false;
     }
     status = new RebuildStatus(0);
-    executor.submit(() -> {
-      try {
-        SdFilter filter = new SdFilter();
-        filter.setStatuses(List.of(SelfDescriptionStatus.ACTIVE));
-        filter.setLimit(0);
-        filter.setOffset(0);
-        long total = sdStore.getByFilter(filter, false, false).getTotalCount();
-        status.setTotal(total);
-        graphRebuilder.rebuildGraphDb(chunkCount, chunkId, threads, batchSize,
-            (count, error) -> {
-              status.incrementProcessed();
-              if (error != null) {
-                status.incrementErrors();
-              }
-            });
-        status.markComplete();
-      } catch (Exception e) {
-        log.error("Graph rebuild failed", e);
-        status.markFailed(e.getMessage());
-      } finally {
-        running.set(false);
-      }
-    });
+    try {
+      executor.submit(() -> {
+        try {
+          SdFilter filter = new SdFilter();
+          filter.setStatuses(List.of(SelfDescriptionStatus.ACTIVE));
+          filter.setLimit(0);
+          filter.setOffset(0);
+          long total = sdStore.getByFilter(filter, false, false).getTotalCount();
+          status.setTotal(total);
+          graphRebuilder.rebuildGraphDb(chunkCount, chunkId, threads, batchSize,
+              (count, error) -> {
+                status.incrementProcessed();
+                if (error != null) {
+                  status.incrementErrors();
+                }
+              });
+          status.markComplete();
+        } catch (Exception e) {
+          log.error("Graph rebuild failed", e);
+          status.markFailed(e.getMessage());
+        } finally {
+          running.set(false);
+        }
+      });
+    } catch (Exception e) {
+      running.set(false);
+      status.markFailed(e.getMessage());
+      throw e;
+    }
     return true;
   }
 

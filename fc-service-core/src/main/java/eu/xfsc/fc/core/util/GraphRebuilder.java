@@ -70,7 +70,7 @@ public class GraphRebuilder {
       try {
         addSdToGraph(hash);
       } catch (Exception e) {
-        log.error("Failed to add SD {} to graph: {}", hash, e.getMessage());
+        log.error("Failed to add SD {} to graph", hash, e);
         caught = e;
       } finally {
         pendingTasks.decrementAndGet();
@@ -87,7 +87,7 @@ public class GraphRebuilder {
       lastCount = activeSdHashes.size();
       log.info("Rebuilding GraphDB: Fetched {} Hashes", lastCount);
       if (lastCount > 0) {
-        lastHash = activeSdHashes.get(activeSdHashes.size() - 1);
+        lastHash = activeSdHashes.getLast();
         for (String hash : activeSdHashes) {
           try {
             pendingTasks.incrementAndGet();

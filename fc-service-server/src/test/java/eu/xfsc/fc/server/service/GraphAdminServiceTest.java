@@ -97,10 +97,10 @@ class GraphAdminServiceTest {
   }
 
   @Test
-  void getGraphStatus_claimCountUnknown_returnsUnknownAssessment() {
+  void getGraphStatus_sdCountUnknown_returnsUnknownAssessment() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(5);
-    when(graphStore.getClaimCount()).thenReturn(-1L);
+    when(graphStore.getSdCountInGraph()).thenReturn(-1L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -111,7 +111,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_bothEmpty_returnsEmptyAssessment() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(0);
-    when(graphStore.getClaimCount()).thenReturn(0L);
+    when(graphStore.getSdCountInGraph()).thenReturn(0L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -122,7 +122,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_emptyGraphWithActiveSds_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.FUSEKI, true);
     stubActiveSdCount(10);
-    when(graphStore.getClaimCount()).thenReturn(0L);
+    when(graphStore.getSdCountInGraph()).thenReturn(0L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -130,10 +130,10 @@ class GraphAdminServiceTest {
   }
 
   @Test
-  void getGraphStatus_claimsExistButNoActiveSds_returnsOutOfSync() {
+  void getGraphStatus_graphSdsButNoActiveSds_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(0);
-    when(graphStore.getClaimCount()).thenReturn(5L);
+    when(graphStore.getSdCountInGraph()).thenReturn(5L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -141,10 +141,10 @@ class GraphAdminServiceTest {
   }
 
   @Test
-  void getGraphStatus_claimsAtLeastSdCount_returnsInSync() {
+  void getGraphStatus_sdCountMatchesActiveSds_returnsInSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(10);
-    when(graphStore.getClaimCount()).thenReturn(25L);
+    when(graphStore.getSdCountInGraph()).thenReturn(10L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -154,10 +154,21 @@ class GraphAdminServiceTest {
   }
 
   @Test
-  void getGraphStatus_fewerClaimsThanSds_returnsOutOfSync() {
+  void getGraphStatus_fewerSdsInGraphThanActive_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(500);
-    when(graphStore.getClaimCount()).thenReturn(2L);
+    when(graphStore.getSdCountInGraph()).thenReturn(2L);
+
+    GraphStatus body = service.getGraphStatus().getBody();
+
+    assertEquals("out-of-sync", body.getSyncAssessment());
+  }
+
+  @Test
+  void getGraphStatus_moreSdsInGraphThanActive_returnsOutOfSync() {
+    stubEnabledBackend(GraphBackendType.NEO4J, true);
+    stubActiveSdCount(10);
+    when(graphStore.getSdCountInGraph()).thenReturn(25L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 

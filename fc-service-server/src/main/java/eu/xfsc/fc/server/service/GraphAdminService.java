@@ -89,6 +89,7 @@ public class GraphAdminService implements GraphAdminApiDelegate {
       dto.setHealthy(false);
       dto.setActiveSdCount(0L);
       dto.setClaimCountInGraph(0L);
+      dto.setSdCountInGraph(0L);
       dto.setSyncAssessment("disabled");
       return ResponseEntity.ok(dto);
     }
@@ -101,18 +102,18 @@ public class GraphAdminService implements GraphAdminApiDelegate {
     filter.setOffset(0);
     long activeSdCount = sdStore.getByFilter(filter, false, false).getTotalCount();
     long claimCount = graphStore.getClaimCount();
+    long sdCountInGraph = graphStore.getSdCountInGraph();
 
     dto.setActiveSdCount(activeSdCount);
     dto.setClaimCountInGraph(claimCount);
+    dto.setSdCountInGraph(sdCountInGraph);
 
-    // Each SD produces at least one claim, so claimCount >= activeSdCount is a
-    // reliable minimum-bound check for graph completeness.
     String syncAssessment;
-    if (claimCount == -1) {
+    if (sdCountInGraph == -1) {
       syncAssessment = "unknown";
-    } else if (claimCount == 0 && activeSdCount == 0) {
+    } else if (sdCountInGraph == 0 && activeSdCount == 0) {
       syncAssessment = "empty";
-    } else if (claimCount >= activeSdCount && activeSdCount > 0) {
+    } else if (sdCountInGraph == activeSdCount && activeSdCount > 0) {
       syncAssessment = "in-sync";
     } else {
       syncAssessment = "out-of-sync";

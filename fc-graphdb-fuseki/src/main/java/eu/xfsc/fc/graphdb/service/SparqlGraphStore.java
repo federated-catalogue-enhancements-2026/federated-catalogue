@@ -115,6 +115,27 @@ public class SparqlGraphStore implements GraphStore {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public long getSdCountInGraph() {
+        try {
+            return Txn.calculateRead(rdfConnection, () -> {
+                String query = "SELECT (COUNT(DISTINCT ?cs) AS ?cnt) WHERE { "
+                    + "<<?s ?p ?o>> <" + PROP_CREDENTIAL_SUBJECT + "> ?cs }";
+                try (QueryExecution qe = rdfConnection.newQuery().query(query).build()) {
+                    ResultSet rs = qe.execSelect();
+                    if (rs.hasNext()) {
+                        return rs.next().getLiteral("cnt").getLong();
+                    }
+                }
+                return 0L;
+            });
+        } catch (Exception e) {
+            log.warn("Failed to get Fuseki SD count: {}", e.getMessage());
+            return -1;
+        }
+    }
+
     @Override
     public void addClaims(List<SdClaim> sdClaimList, String credentialSubject) {
         log.debug("addClaims.enter; got claims: {}, subject: {}", sdClaimList, credentialSubject);

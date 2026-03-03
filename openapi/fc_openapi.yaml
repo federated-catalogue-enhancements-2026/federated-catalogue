@@ -406,7 +406,11 @@ components:
         claimCountInGraph:
           type: integer
           format: int64
-          description: Number of claims in the graph database
+          description: Number of claim triples/nodes in the graph database
+        sdCountInGraph:
+          type: integer
+          format: int64
+          description: Number of distinct self-descriptions in the graph database
         syncAssessment:
           type: string
           description: Sync assessment (empty, in-sync, out-of-sync, unknown, disabled)
@@ -507,7 +511,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/RebuildStatus'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: A graph rebuild is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RebuildStatus'
+        '503':
+          description: Graph store is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/graph/rebuild/status:
     get:
       tags:
