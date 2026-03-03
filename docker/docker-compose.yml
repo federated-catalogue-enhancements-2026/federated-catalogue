@@ -165,11 +165,12 @@ services:
       # 'uni-res' delegates to an external Universal Resolver (requires network access).
       # Local is required for docker-compose where did-server is only reachable on the Docker network.
       FEDERATED_CATALOGUE_VERIFICATION_SIGNATURE_VERIFIER: local
-      # Trust Framework Configuration
-      # Set to 'true' to enforce Gaia-X Trust Framework compliance validation
-      # When 'false' (default), credentials can be uploaded without Gaia-X compliance
+      # Verification defaults: only semantics enabled.
+      # Signatures are off because they provide no security without the trust framework (ADR 3).
+      # Use docker-compose.strict.yml overlay to enable full verification.
+      FEDERATED_CATALOGUE_VERIFICATION_VP_SIGNATURE: "${VERIFY_VP_SIGNATURE:-false}"
+      FEDERATED_CATALOGUE_VERIFICATION_VC_SIGNATURE: "${VERIFY_VC_SIGNATURE:-false}"
       FEDERATED_CATALOGUE_VERIFICATION_TRUST_FRAMEWORK_GAIAX_ENABLED: "${GAIAX_TRUST_FRAMEWORK_ENABLED:-false}"
-      # Disable automatic validation using SHACL schemas during upload
       FEDERATED_CATALOGUE_VERIFICATION_SCHEMA: "${VERIFY_SCHEMA:-false}"
       # Trust anchor URL — mock registry on did-server for test environments.
       # Override in production with the real Gaia-X registry URL.
