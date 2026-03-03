@@ -77,7 +77,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class CredentialVerificationStrategy implements VerificationStrategy {
+public class CredentialVerificationStrategy extends AbstractVerificationStrategy {
 
   private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new TitaniumClaimExtractor(), new DanubeTechClaimExtractor()};
 
@@ -125,21 +125,20 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
   @Value("${federated-catalogue.verification.validator-expire:1D}")
   private Duration validatorExpiration;
 
-  private static final int HTTP_TIMEOUT = 5*1000;
-
   private RestTemplate rest;
   private volatile boolean loadersInitialised;
   private volatile StreamManager streamManager;
 
-  public CredentialVerificationStrategy() {
-    rest = restTemplate();
-  }
-
   private RestTemplate restTemplate() {
     HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-    factory.setConnectTimeout(HTTP_TIMEOUT);
-    factory.setConnectionRequestTimeout(HTTP_TIMEOUT);
+    factory.setConnectTimeout(httpTimeout);
+    factory.setConnectionRequestTimeout(httpTimeout);
     return new RestTemplate(factory);
+  }
+
+  @PostConstruct
+  private void initRestTemplate() {
+    rest = restTemplate();
   }
 
   @PostConstruct
@@ -406,7 +405,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
   }
 
   @Override
-  public List<SdClaim> extractClaims(ContentAccessor payload) {
+  protected List<SdClaim> doExtractClaims(ContentAccessor payload) {
     // Make sure our interceptors are in place.
     initLoaders();
     List<SdClaim> claims = null;

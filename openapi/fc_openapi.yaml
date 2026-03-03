@@ -1,7 +1,24 @@
 openapi: 3.0.1
 info:
   title: Eclipse XFSC Federated Catalogue
-  description: REST API of the XFSC catalogue
+  description: |
+    REST API of the XFSC catalogue
+
+    ## Protected RDF Namespace
+
+    The namespace `https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#`
+    (prefix: `fcmeta:`) is reserved for internal catalogue metadata. Triples using terms in this
+    namespace are automatically filtered from:
+    - Credential and non-credential asset uploads
+    - Schema imports (SHACL, OWL, SKOS)
+
+    A warning is issued when triples are filtered. The upload still succeeds with remaining triples.
+
+    ### Reserved Predicates
+    - `fcmeta:complianceCheckDate` — Date/time of compliance check
+    - `fcmeta:complianceResult` — Boolean compliance result
+    - `fcmeta:validatedAgainst` — Trust framework or schema identifier
+    - `fcmeta:validationTimestamp` — Validation timestamp
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
