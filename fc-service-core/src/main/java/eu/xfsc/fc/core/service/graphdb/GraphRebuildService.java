@@ -1,27 +1,23 @@
 package eu.xfsc.fc.core.service.graphdb;
 
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
-
-import jakarta.annotation.PreDestroy;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import eu.xfsc.fc.api.generated.model.SelfDescriptionStatus;
 import eu.xfsc.fc.core.exception.GraphStoreDisabledException;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
 import eu.xfsc.fc.core.util.GraphRebuilder;
+import jakarta.annotation.PreDestroy;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Wraps {@link GraphRebuilder} with async execution and rebuild status tracking.
@@ -36,9 +32,10 @@ public class GraphRebuildService {
   private final GraphStore graphStore;
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
   private final AtomicBoolean running = new AtomicBoolean(false);
+
+  @Getter
   private volatile RebuildStatus status = RebuildStatus.idle();
 
-  @Autowired
   public GraphRebuildService(GraphRebuilder graphRebuilder, SelfDescriptionStore sdStore,
                              GraphStore graphStore) {
     this.graphRebuilder = graphRebuilder;
@@ -98,15 +95,6 @@ public class GraphRebuildService {
    */
   public boolean isRunning() {
     return running.get();
-  }
-
-  /**
-   * Returns the current rebuild status.
-   *
-   * @return the current {@link RebuildStatus}
-   */
-  public RebuildStatus getStatus() {
-    return status;
   }
 
   /**
