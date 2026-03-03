@@ -36,7 +36,7 @@ public class GraphAdminControllerTest {
 
   @Test
   @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE})
-  public void postRebuildWithAdminRoleShouldReturn202() throws Exception {
+  public void postRebuild_withAdminRole_returns202() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/admin/graph/rebuild")
             .contentType(MediaType.APPLICATION_JSON)
             .with(csrf()))
@@ -45,7 +45,7 @@ public class GraphAdminControllerTest {
 
   @Test
   @WithMockUser
-  public void postRebuildWithoutAdminRoleShouldReturn403() throws Exception {
+  public void postRebuild_withoutAdminRole_returns403() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/admin/graph/rebuild")
             .contentType(MediaType.APPLICATION_JSON)
             .with(csrf()))
@@ -54,7 +54,7 @@ public class GraphAdminControllerTest {
 
   @Test
   @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE})
-  public void getStatusWithAdminRoleShouldReturn200() throws Exception {
+  public void getRebuildStatus_withAdminRole_returns200() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/admin/graph/rebuild/status")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
@@ -65,7 +65,7 @@ public class GraphAdminControllerTest {
 
   @Test
   @WithMockUser
-  public void getStatusWithoutAdminRoleShouldReturn403() throws Exception {
+  public void getRebuildStatus_withoutAdminRole_returns403() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/admin/graph/rebuild/status")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());
@@ -73,7 +73,7 @@ public class GraphAdminControllerTest {
 
   @Test
   @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE})
-  public void getGraphStatusShouldReturnBackendInfo() throws Exception {
+  public void getGraphStatus_withAdminRole_returnsBackendInfo() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/admin/graph/status")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())

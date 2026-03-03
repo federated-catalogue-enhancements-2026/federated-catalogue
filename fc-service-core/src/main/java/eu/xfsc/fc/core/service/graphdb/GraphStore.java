@@ -60,9 +60,7 @@ public interface GraphStore {
      *
      * @return {@code true} if the backend is healthy, {@code false} otherwise
      */
-    default boolean isHealthy() {
-        return true;
-    }
+    boolean isHealthy();
 
     /**
      * Returns the number of claim entries currently stored in the graph database.

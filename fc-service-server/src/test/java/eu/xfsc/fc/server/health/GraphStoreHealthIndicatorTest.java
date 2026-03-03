@@ -1,61 +1,94 @@
 package eu.xfsc.fc.server.health;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@TestPropertySource(properties = {"graphstore.impl=neo4j"})
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
-@Import(EmbeddedNeo4JConfig.class)
-public class GraphStoreHealthIndicatorTest {
+import eu.xfsc.fc.api.generated.model.QueryLanguage;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
 
-  @Autowired
+/**
+ * Unit tests for {@link GraphStoreHealthIndicator}.
+ * Covers UP, DOWN, and disabled backend scenarios.
+ */
+@ExtendWith(MockitoExtension.class)
+class GraphStoreHealthIndicatorTest {
+
+  @Mock
+  private GraphStore graphStore;
+
+  @InjectMocks
   private GraphStoreHealthIndicator healthIndicator;
 
-  @Autowired
-  private MockMvc mockMvc;
-
   @Test
-  public void healthShouldReportUpWhenBackendHealthy() {
+  void health_disabledBackend_reportsUpWithDisabledStatus() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NONE);
+
     Health health = healthIndicator.health();
+
     assertEquals(Status.UP, health.getStatus());
+    assertEquals("NONE", health.getDetails().get("backend"));
+    assertEquals("disabled", health.getDetails().get("status"));
   }
 
   @Test
-  public void healthShouldIncludeBackendType() {
+  void health_healthyNeo4jBackend_reportsUpWithQueryLanguage() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.isHealthy()).thenReturn(true);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.OPENCYPHER));
+
     Health health = healthIndicator.health();
-    assertNotNull(health.getDetails().get("backend"));
+
+    assertEquals(Status.UP, health.getStatus());
+    assertEquals("NEO4J", health.getDetails().get("backend"));
+    assertEquals("OPENCYPHER", health.getDetails().get("queryLanguage"));
   }
 
   @Test
-  @WithMockUser
-  public void actuatorHealthShouldIncludeGraphStoreComponent() throws Exception {
-    mockMvc.perform(MockMvcRequestBuilders.get("/actuator/health")
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk());
+  void health_healthyFusekiBackend_reportsUpWithSparql() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.FUSEKI);
+    when(graphStore.isHealthy()).thenReturn(true);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.of(QueryLanguage.SPARQL));
+
+    Health health = healthIndicator.health();
+
+    assertEquals(Status.UP, health.getStatus());
+    assertEquals("FUSEKI", health.getDetails().get("backend"));
+    assertEquals("SPARQL", health.getDetails().get("queryLanguage"));
+  }
+
+  @Test
+  void health_unhealthyBackend_reportsDownWithReason() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.isHealthy()).thenReturn(false);
+
+    Health health = healthIndicator.health();
+
+    assertEquals(Status.DOWN, health.getStatus());
+    assertEquals("NEO4J", health.getDetails().get("backend"));
+    assertEquals("Backend connectivity check failed", health.getDetails().get("reason"));
+  }
+
+  @Test
+  void health_emptyQueryLanguage_reportsUnknown() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.isHealthy()).thenReturn(true);
+    when(graphStore.getSupportedQueryLanguage()).thenReturn(Optional.empty());
+
+    Health health = healthIndicator.health();
+
+    assertEquals(Status.UP, health.getStatus());
+    assertEquals("unknown", health.getDetails().get("queryLanguage"));
   }
 }

@@ -203,20 +203,20 @@ public class SparqlGraphStoreTest {
     }
 
     @Test
-    void isHealthyShouldReturnTrue() {
+    void isHealthy_embeddedFuseki_returnsTrue() {
         assertTrue(graphStore.isHealthy(),
             "isHealthy() should return true for embedded Fuseki");
     }
 
     @Test
-    void getClaimCountShouldReturnZeroWhenEmpty() {
+    void getClaimCount_emptyDataset_returnsZero() {
         long count = graphStore.getClaimCount();
         assertEquals(0, count,
             "getClaimCount() should return 0 on empty dataset");
     }
 
     @Test
-    void getClaimCountShouldReturnCountAfterAddClaims() {
+    void getClaimCount_afterAddClaims_returnsCorrectCount() {
         List<SdClaim> claims = List.of(
             new SdClaim(
                 "<http://example.org/healthSubject>",

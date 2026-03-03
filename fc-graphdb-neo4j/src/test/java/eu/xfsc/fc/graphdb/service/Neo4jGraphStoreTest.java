@@ -1009,13 +1009,13 @@ public class Neo4jGraphStoreTest {
 
 
     @Test
-    void isHealthyShouldReturnTrue() {
+    void isHealthy_embeddedNeo4j_returnsTrue() {
         Assertions.assertTrue(graphGaia.isHealthy(),
             "isHealthy() should return true for embedded Neo4j");
     }
 
     @Test
-    void getClaimCountShouldReturnZeroWhenEmpty() {
+    void getClaimCount_emptyGraph_returnsZeroOrPositive() {
         // On a fresh graph, claim count should be 0 or greater (other tests may have added data)
         long count = graphGaia.getClaimCount();
         Assertions.assertTrue(count >= 0,
@@ -1023,7 +1023,7 @@ public class Neo4jGraphStoreTest {
     }
 
     @Test
-    void getClaimCountShouldReturnCountAfterAddClaims() {
+    void getClaimCount_afterAddClaims_returnsPositiveValue() {
         String credentialSubject = "http://example.org/healthCheckSubject";
         List<SdClaim> sdClaimList = List.of(
                 new SdClaim(

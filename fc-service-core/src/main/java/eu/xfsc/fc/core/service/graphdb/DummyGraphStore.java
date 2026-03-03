@@ -45,4 +45,9 @@ public class DummyGraphStore implements GraphStore {
         return GraphBackendType.NONE;
     }
 
+    @Override
+    public boolean isHealthy() {
+        return true;
+    }
+
 }

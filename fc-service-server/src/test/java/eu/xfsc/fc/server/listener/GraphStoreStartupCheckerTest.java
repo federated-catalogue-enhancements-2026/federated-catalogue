@@ -1,34 +1,128 @@
 package eu.xfsc.fc.server.listener;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
+import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.service.graphdb.GraphRebuildService;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
-public class GraphStoreStartupCheckerTest {
+/**
+ * Unit tests for {@link GraphStoreStartupChecker}.
+ * Verifies startup behavior for each graph state scenario using mocks.
+ */
+@ExtendWith(MockitoExtension.class)
+class GraphStoreStartupCheckerTest {
 
-  @Autowired
+  @Mock
+  private GraphStore graphStore;
+
+  @Mock
+  private SelfDescriptionStore sdStore;
+
+  @Mock
   private GraphRebuildService graphRebuildService;
 
-  @Autowired
+  @Mock
+  private ApplicationReadyEvent event;
+
+  @InjectMocks
   private GraphStoreStartupChecker startupChecker;
 
+  @BeforeEach
+  void setAutoRebuildDisabled() {
+    ReflectionTestUtils.setField(startupChecker, "autoRebuildOnEmpty", false);
+  }
+
   @Test
-  public void startupCheckerShouldNotTriggerRebuildOnEmptyDatabase() {
-    // With no active SDs in the database and an empty graph, no rebuild should be running
-    assertFalse(graphRebuildService.isRunning());
+  void onApplicationEvent_disabledBackend_skipsCheckEntirely() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NONE);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphStore, never()).getClaimCount();
+    verify(graphRebuildService, never()).triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt());
+  }
+
+  @Test
+  void onApplicationEvent_connectivityFailure_skipsRebuild() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.getClaimCount()).thenReturn(-1L);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphRebuildService, never()).triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt());
+  }
+
+  @Test
+  void onApplicationEvent_emptyGraphWithActiveSds_logsWarningWithoutRebuild() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.getClaimCount()).thenReturn(0L);
+    stubActiveSdCount(5);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphRebuildService, never()).triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt());
+  }
+
+  @Test
+  void onApplicationEvent_emptyGraphWithActiveSdsAndAutoRebuild_triggersRebuild() {
+    ReflectionTestUtils.setField(startupChecker, "autoRebuildOnEmpty", true);
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.getClaimCount()).thenReturn(0L);
+    stubActiveSdCount(5);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphRebuildService).triggerRebuild(eq(1), eq(0), anyInt(), anyInt());
+  }
+
+  @Test
+  void onApplicationEvent_populatedGraph_doesNotTriggerRebuild() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.FUSEKI);
+    when(graphStore.getClaimCount()).thenReturn(10L);
+    stubActiveSdCount(5);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphRebuildService, never()).triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt());
+  }
+
+  @Test
+  void onApplicationEvent_emptyGraphAndNoActiveSds_doesNotTriggerRebuild() {
+    when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
+    when(graphStore.getClaimCount()).thenReturn(0L);
+    stubActiveSdCount(0);
+
+    startupChecker.onApplicationEvent(event);
+
+    verify(graphRebuildService, never()).triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void stubActiveSdCount(long count) {
+    var result = org.mockito.Mockito.mock(
+        eu.xfsc.fc.core.pojo.PaginatedResults.class);
+    when(result.getTotalCount()).thenReturn(count);
+    when(sdStore.getByFilter(any(SdFilter.class), eq(false), eq(false))).thenReturn(result);
   }
 }

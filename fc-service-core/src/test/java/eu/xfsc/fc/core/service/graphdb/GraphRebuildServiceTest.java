@@ -17,7 +17,7 @@ import eu.xfsc.fc.core.service.graphdb.GraphRebuildService.RebuildStatus;
 public class GraphRebuildServiceTest {
 
   @Test
-  public void triggerRebuildOnDisabledStoreShouldThrow() {
+  public void triggerRebuild_disabledStore_throwsException() {
     DummyGraphStore dummyStore = new DummyGraphStore();
     GraphRebuildService service = new GraphRebuildService(null, null, dummyStore);
     assertThrows(GraphStoreDisabledException.class,
@@ -25,7 +25,7 @@ public class GraphRebuildServiceTest {
   }
 
   @Test
-  public void rebuildStatusIdleShouldBeComplete() {
+  public void idle_newInstance_isComplete() {
     RebuildStatus idle = RebuildStatus.idle();
     assertTrue(idle.isComplete());
     assertEquals(0, idle.getTotal());
@@ -33,7 +33,7 @@ public class GraphRebuildServiceTest {
   }
 
   @Test
-  public void rebuildStatusShouldTrackProgress() {
+  public void incrementProcessed_multipleCalls_tracksProgress() {
     RebuildStatus status = new RebuildStatus(10);
     assertEquals(10, status.getTotal());
     assertEquals(0, status.getProcessed().get());
@@ -52,7 +52,7 @@ public class GraphRebuildServiceTest {
   }
 
   @Test
-  public void rebuildStatusMarkFailedShouldSetError() {
+  public void markFailed_withMessage_setsErrorAndComplete() {
     RebuildStatus status = new RebuildStatus(5);
     status.markFailed("test error");
     assertTrue(status.isFailed());
@@ -61,7 +61,7 @@ public class GraphRebuildServiceTest {
   }
 
   @Test
-  public void rebuildStatusDurationShouldBePositive() {
+  public void getDurationMs_newInstance_returnsNonNegative() {
     RebuildStatus status = new RebuildStatus(1);
     assertTrue(status.getDurationMs() >= 0);
   }
