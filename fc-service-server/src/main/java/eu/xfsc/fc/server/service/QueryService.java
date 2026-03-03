@@ -111,7 +111,6 @@ public class QueryService implements QueryApiDelegate {
         contentType, queryLanguage, timeout, withTotalCount, body);
     queryLanguageValidator.validateLanguageSupport(queryLanguage);
     String queryText = body;
-    queryLanguageValidator.validateLanguageSupport(queryLanguage);
     if (checkIfLimitAbsent(queryText)) {
       queryText = queryText + " LIMIT " + DEFAULT_LIMIT;
     }
