@@ -38,14 +38,14 @@ public class GraphRebuildServiceTest {
   public void incrementProcessed_multipleCalls_tracksProgress() {
     RebuildStatus status = new RebuildStatus(10);
     assertEquals(10, status.getTotal());
-    assertEquals(0, status.getProcessed().get());
+    assertEquals(0, status.getProcessedCount());
     assertEquals(0, status.getPercentComplete());
     assertFalse(status.isComplete());
 
     status.incrementProcessed();
     status.incrementProcessed();
     status.incrementProcessed();
-    assertEquals(3, status.getProcessed().get());
+    assertEquals(3, status.getProcessedCount());
     assertEquals(30, status.getPercentComplete());
 
     status.markComplete();
@@ -61,6 +61,16 @@ public class GraphRebuildServiceTest {
     assertTrue(status.isFailed());
     assertTrue(status.isComplete());
     assertEquals("test error", status.getErrorMessage());
+  }
+
+  @Test
+  public void incrementErrors_multipleCalls_tracksErrorCount() {
+    RebuildStatus status = new RebuildStatus(5);
+    assertEquals(0, status.getErrorCount());
+
+    status.incrementErrors();
+    status.incrementErrors();
+    assertEquals(2, status.getErrorCount());
   }
 
   @Test

@@ -12,7 +12,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -59,21 +59,23 @@ public class GraphRebuilder {
    * @param chunkId The (0-based) index of this GraphRebuilder.
    * @param threads The number of threads to use to rebuild the graph.
    * @param batchSize The number of Hashes to fetch from the database at the same time.
-   * @param progressCallback Called with 1 for each SD processed (success or failure). May be null.
+   * @param progressCallback Called for each SD processed: (1, null) on success, (1, exception) on failure. May be null.
    */
   public void rebuildGraphDb(int chunkCount, int chunkId, int threads, int batchSize,
-                             Consumer<Integer> progressCallback) {
+                             BiConsumer<Integer, Exception> progressCallback) {
     BlockingQueue<String> taskQueue = new ArrayBlockingQueue<>(batchSize);
     AtomicInteger pendingTasks = new AtomicInteger(0);
     ExecutorService executorService = ProcessorUtils.createProcessors(threads, taskQueue, hash -> {
+      Exception caught = null;
       try {
         addSdToGraph(hash);
       } catch (Exception e) {
         log.error("Failed to add SD {} to graph: {}", hash, e.getMessage());
+        caught = e;
       } finally {
         pendingTasks.decrementAndGet();
         if (progressCallback != null) {
-          progressCallback.accept(1);
+          progressCallback.accept(1, caught);
         }
       }
     }, "GraphRebuilder");

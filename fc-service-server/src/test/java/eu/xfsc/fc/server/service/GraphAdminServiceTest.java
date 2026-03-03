@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -39,8 +39,12 @@ class GraphAdminServiceTest {
   @Mock
   private SelfDescriptionStore sdStore;
 
-  @InjectMocks
   private GraphAdminService service;
+
+  @BeforeEach
+  void setUp() {
+    service = new GraphAdminService(graphRebuildService, graphStore, sdStore, 4, 100);
+  }
 
   @Test
   void triggerGraphRebuild_started_returns202Accepted() {
@@ -137,7 +141,7 @@ class GraphAdminServiceTest {
   }
 
   @Test
-  void getGraphStatus_bothPopulated_returnsInSync() {
+  void getGraphStatus_claimsAtLeastSdCount_returnsInSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveSdCount(10);
     when(graphStore.getClaimCount()).thenReturn(25L);
@@ -147,6 +151,17 @@ class GraphAdminServiceTest {
     assertEquals("in-sync", body.getSyncAssessment());
     assertEquals(true, body.getEnabled());
     assertEquals(true, body.getHealthy());
+  }
+
+  @Test
+  void getGraphStatus_fewerClaimsThanSds_returnsOutOfSync() {
+    stubEnabledBackend(GraphBackendType.NEO4J, true);
+    stubActiveSdCount(500);
+    when(graphStore.getClaimCount()).thenReturn(2L);
+
+    GraphStatus body = service.getGraphStatus().getBody();
+
+    assertEquals("out-of-sync", body.getSyncAssessment());
   }
 
   // --- Helpers ---

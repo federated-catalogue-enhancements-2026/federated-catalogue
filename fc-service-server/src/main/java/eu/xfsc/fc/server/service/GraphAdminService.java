@@ -2,7 +2,7 @@ package eu.xfsc.fc.server.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -27,34 +27,55 @@ public class GraphAdminService implements GraphAdminApiDelegate {
 
   private static final int DEFAULT_CHUNK_COUNT = 1;
   private static final int DEFAULT_CHUNK_ID = 0;
-  private static final int DEFAULT_THREADS = 4;
-  private static final int DEFAULT_BATCH_SIZE = 100;
 
-  @Autowired
-  private GraphRebuildService graphRebuildService;
+  private final GraphRebuildService graphRebuildService;
+  private final GraphStore graphStore;
+  private final SelfDescriptionStore sdStore;
+  private final int rebuildThreads;
+  private final int rebuildBatchSize;
 
-  @Autowired
-  private GraphStore graphStore;
+  public GraphAdminService(GraphRebuildService graphRebuildService, GraphStore graphStore,
+                           SelfDescriptionStore sdStore,
+                           @Value("${graphstore.rebuild-threads:4}") int rebuildThreads,
+                           @Value("${graphstore.rebuild-batch-size:100}") int rebuildBatchSize) {
+    this.graphRebuildService = graphRebuildService;
+    this.graphStore = graphStore;
+    this.sdStore = sdStore;
+    this.rebuildThreads = rebuildThreads;
+    this.rebuildBatchSize = rebuildBatchSize;
+  }
 
-  @Autowired
-  private SelfDescriptionStore sdStore;
-
+  /**
+   * Triggers an async graph rebuild. Returns 202 if started, 409 if already running.
+   *
+   * @return rebuild status with the appropriate HTTP status code
+   */
   @Override
   public ResponseEntity<RebuildStatus> triggerGraphRebuild() {
     log.info("triggerGraphRebuild.enter");
     boolean started = graphRebuildService.triggerRebuild(
-        DEFAULT_CHUNK_COUNT, DEFAULT_CHUNK_ID, DEFAULT_THREADS, DEFAULT_BATCH_SIZE);
+        DEFAULT_CHUNK_COUNT, DEFAULT_CHUNK_ID, rebuildThreads, rebuildBatchSize);
     RebuildStatus dto = toRebuildStatusDto(graphRebuildService.getStatus());
     HttpStatus status = started ? HttpStatus.ACCEPTED : HttpStatus.CONFLICT;
     return ResponseEntity.status(status).body(dto);
   }
 
+  /**
+   * Returns the current rebuild progress.
+   *
+   * @return current {@link RebuildStatus}
+   */
   @Override
   public ResponseEntity<RebuildStatus> getGraphRebuildStatus() {
     RebuildStatus dto = toRebuildStatusDto(graphRebuildService.getStatus());
     return ResponseEntity.ok(dto);
   }
 
+  /**
+   * Returns the graph store status including backend type, health, and sync assessment.
+   *
+   * @return current {@link GraphStatus}
+   */
   @Override
   public ResponseEntity<GraphStatus> getGraphStatus() {
     GraphBackendType backendType = graphStore.getBackendType();
@@ -84,33 +105,40 @@ public class GraphAdminService implements GraphAdminApiDelegate {
     dto.setActiveSdCount(activeSdCount);
     dto.setClaimCountInGraph(claimCount);
 
+    // Each SD produces at least one claim, so claimCount >= activeSdCount is a
+    // reliable minimum-bound check for graph completeness.
     String syncAssessment;
     if (claimCount == -1) {
       syncAssessment = "unknown";
     } else if (claimCount == 0 && activeSdCount == 0) {
       syncAssessment = "empty";
-    } else if (claimCount == 0 && activeSdCount > 0) {
-      syncAssessment = "out-of-sync";
-    } else if (claimCount > 0 && activeSdCount == 0) {
-      syncAssessment = "out-of-sync";
-    } else {
+    } else if (claimCount >= activeSdCount && activeSdCount > 0) {
       syncAssessment = "in-sync";
+    } else {
+      syncAssessment = "out-of-sync";
     }
     dto.setSyncAssessment(syncAssessment);
 
     return ResponseEntity.ok(dto);
   }
 
+  /**
+   * Maps the internal rebuild status to the API DTO.
+   *
+   * @param internal the internal status from {@link GraphRebuildService}
+   * @return the API-facing {@link RebuildStatus} DTO
+   */
   private RebuildStatus toRebuildStatusDto(GraphRebuildService.RebuildStatus internal) {
     RebuildStatus dto = new RebuildStatus();
     dto.setTotal(internal.getTotal());
-    dto.setProcessed(internal.getProcessed().get());
+    dto.setProcessed(internal.getProcessedCount());
     dto.setPercentComplete(internal.getPercentComplete());
     dto.setRunning(graphRebuildService.isRunning());
     dto.setComplete(internal.isComplete());
     dto.setFailed(internal.isFailed());
     dto.setErrorMessage(internal.getErrorMessage());
     dto.setDurationMs(internal.getDurationMs());
+    dto.setErrors(internal.getErrorCount());
     return dto;
   }
 }

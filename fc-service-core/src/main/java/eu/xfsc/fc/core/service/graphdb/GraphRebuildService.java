@@ -6,6 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 import jakarta.annotation.PreDestroy;
 
@@ -18,6 +19,7 @@ import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
 import eu.xfsc.fc.core.util.GraphRebuilder;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,17 +64,22 @@ public class GraphRebuildService {
     if (!running.compareAndSet(false, true)) {
       return false;
     }
-    SdFilter filter = new SdFilter();
-    filter.setStatuses(List.of(SelfDescriptionStatus.ACTIVE));
-    filter.setLimit(0);
-    filter.setOffset(0);
-    long total = sdStore.getByFilter(filter, false, false).getTotalCount();
-
-    status = new RebuildStatus(total);
+    status = new RebuildStatus(0);
     executor.submit(() -> {
       try {
+        SdFilter filter = new SdFilter();
+        filter.setStatuses(List.of(SelfDescriptionStatus.ACTIVE));
+        filter.setLimit(0);
+        filter.setOffset(0);
+        long total = sdStore.getByFilter(filter, false, false).getTotalCount();
+        status.setTotal(total);
         graphRebuilder.rebuildGraphDb(chunkCount, chunkId, threads, batchSize,
-            count -> status.incrementProcessed());
+            (count, error) -> {
+              status.incrementProcessed();
+              if (error != null) {
+                status.incrementErrors();
+              }
+            });
         status.markComplete();
       } catch (Exception e) {
         log.error("Graph rebuild failed", e);
@@ -122,8 +129,11 @@ public class GraphRebuildService {
    */
   @Getter
   public static class RebuildStatus {
-    private final long total;
+    private volatile long total;
+    @Getter(AccessLevel.NONE)
     private final AtomicLong processed = new AtomicLong(0);
+    @Getter(AccessLevel.NONE)
+    private final AtomicLong errors = new AtomicLong(0);
     private final long startTimeMs;
     private volatile boolean complete;
     private volatile boolean failed;
@@ -151,10 +161,44 @@ public class GraphRebuildService {
     }
 
     /**
+     * Sets the total SD count. Used when the count is determined asynchronously.
+     *
+     * @param total the total number of SDs to process
+     */
+    void setTotal(long total) {
+      this.total = total;
+    }
+
+    /**
+     * Returns the number of SDs processed so far.
+     *
+     * @return the processed count
+     */
+    public long getProcessedCount() {
+      return processed.get();
+    }
+
+    /**
+     * Returns the number of SDs that failed during processing.
+     *
+     * @return the error count
+     */
+    public long getErrorCount() {
+      return errors.get();
+    }
+
+    /**
      * Increments the processed count by one.
      */
     public void incrementProcessed() {
       processed.incrementAndGet();
+    }
+
+    /**
+     * Increments the error count by one.
+     */
+    public void incrementErrors() {
+      errors.incrementAndGet();
     }
 
     /**

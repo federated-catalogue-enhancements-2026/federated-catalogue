@@ -2,7 +2,6 @@ package eu.xfsc.fc.server.listener;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -24,21 +23,32 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class GraphStoreStartupChecker implements ApplicationListener<ApplicationReadyEvent> {
 
-  private static final int DEFAULT_REBUILD_THREADS = 4;
-  private static final int DEFAULT_REBUILD_BATCH_SIZE = 100;
+  private final GraphStore graphStore;
+  private final SelfDescriptionStore sdStore;
+  private final GraphRebuildService graphRebuildService;
+  private final boolean autoRebuildOnEmpty;
+  private final int rebuildThreads;
+  private final int rebuildBatchSize;
 
-  @Autowired
-  private GraphStore graphStore;
+  public GraphStoreStartupChecker(GraphStore graphStore, SelfDescriptionStore sdStore,
+                                  GraphRebuildService graphRebuildService,
+                                  @Value("${graphstore.auto-rebuild-on-empty:false}") boolean autoRebuildOnEmpty,
+                                  @Value("${graphstore.rebuild-threads:4}") int rebuildThreads,
+                                  @Value("${graphstore.rebuild-batch-size:100}") int rebuildBatchSize) {
+    this.graphStore = graphStore;
+    this.sdStore = sdStore;
+    this.graphRebuildService = graphRebuildService;
+    this.autoRebuildOnEmpty = autoRebuildOnEmpty;
+    this.rebuildThreads = rebuildThreads;
+    this.rebuildBatchSize = rebuildBatchSize;
+  }
 
-  @Autowired
-  private SelfDescriptionStore sdStore;
-
-  @Autowired
-  private GraphRebuildService graphRebuildService;
-
-  @Value("${graphstore.auto-rebuild-on-empty:false}")
-  private boolean autoRebuildOnEmpty;
-
+  /**
+   * Checks graph store state once the application is ready. Logs a warning if the graph
+   * is empty while active SDs exist, and optionally triggers an auto-rebuild.
+   *
+   * @param event the application ready event
+   */
   @Override
   public void onApplicationEvent(ApplicationReadyEvent event) {
     GraphBackendType backendType = graphStore.getBackendType();
@@ -65,7 +75,7 @@ public class GraphStoreStartupChecker implements ApplicationListener<Application
       log.warn("Graph store is empty but {} active SDs exist in storage", activeSdCount);
       if (autoRebuildOnEmpty) {
         log.info("Auto-rebuild is enabled, triggering graph rebuild");
-        graphRebuildService.triggerRebuild(1, 0, DEFAULT_REBUILD_THREADS, DEFAULT_REBUILD_BATCH_SIZE);
+        graphRebuildService.triggerRebuild(1, 0, rebuildThreads, rebuildBatchSize);
       }
     } else {
       log.info("Graph store state: {} claims, {} active SDs", claimCount, activeSdCount);

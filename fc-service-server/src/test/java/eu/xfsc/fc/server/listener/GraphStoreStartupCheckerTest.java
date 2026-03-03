@@ -1,25 +1,19 @@
 package eu.xfsc.fc.server.listener;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.service.graphdb.GraphRebuildService;
@@ -45,12 +39,12 @@ class GraphStoreStartupCheckerTest {
   @Mock
   private ApplicationReadyEvent event;
 
-  @InjectMocks
   private GraphStoreStartupChecker startupChecker;
 
   @BeforeEach
-  void setAutoRebuildDisabled() {
-    ReflectionTestUtils.setField(startupChecker, "autoRebuildOnEmpty", false);
+  void setUp() {
+    startupChecker = new GraphStoreStartupChecker(
+        graphStore, sdStore, graphRebuildService, false, 4, 100);
   }
 
   @Test
@@ -86,7 +80,8 @@ class GraphStoreStartupCheckerTest {
 
   @Test
   void onApplicationEvent_emptyGraphWithActiveSdsAndAutoRebuild_triggersRebuild() {
-    ReflectionTestUtils.setField(startupChecker, "autoRebuildOnEmpty", true);
+    startupChecker = new GraphStoreStartupChecker(
+        graphStore, sdStore, graphRebuildService, true, 4, 100);
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
     when(graphStore.getClaimCount()).thenReturn(0L);
     stubActiveSdCount(5);

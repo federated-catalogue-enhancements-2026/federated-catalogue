@@ -379,6 +379,10 @@ components:
         errorMessage:
           type: string
           description: Error message if the rebuild failed
+        errors:
+          type: integer
+          format: int64
+          description: Number of SDs that failed during processing
         durationMs:
           type: integer
           format: int64

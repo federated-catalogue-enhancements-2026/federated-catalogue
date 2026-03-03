@@ -1,6 +1,6 @@
 package eu.xfsc.fc.server.health;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
@@ -16,11 +16,17 @@ import eu.xfsc.fc.core.service.graphdb.GraphStore;
  * Reports the backend type and its health status.
  */
 @Component
+@RequiredArgsConstructor
 public class GraphStoreHealthIndicator implements HealthIndicator {
 
-  @Autowired
-  private GraphStore graphStore;
+  private final GraphStore graphStore;
 
+  /**
+   * Returns the health of the graph store backend. Reports UP with "disabled" status
+   * when the backend is NONE, DOWN when connectivity fails, or UP with query language details.
+   *
+   * @return the graph store health
+   */
   @Override
   public Health health() {
     GraphBackendType backendType = graphStore.getBackendType();
