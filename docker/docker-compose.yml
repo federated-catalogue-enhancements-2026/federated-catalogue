@@ -145,7 +145,7 @@ services:
 #    image: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-service-server:2.0.0
     build:
       context: "${FC_SERVICE_SERVER_DOCKER_CONTEXT}"
-      dockerfile: Dockerfile
+      dockerfile: "${FC_DOCKERFILE:-Dockerfile}"
       target: "${FC_SERVICE_SERVER_DOCKER_TARGET}"
     environment:
       KEYCLOAK_CREDENTIALS_SECRET: "${FC_CLIENT_SECRET}"
@@ -206,7 +206,7 @@ services:
 #    image: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-demo-portal:2.0.0
     build:
       context: "${FC_DEMO_PORTAL_DOCKER_CONTEXT}"
-      dockerfile: Dockerfile
+      dockerfile: "${FC_DOCKERFILE:-Dockerfile}"
       target: "${FC_DEMO_PORTAL_DOCKER_TARGET}"
     environment:
       SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FC_CLIENT_OIDC_CLIENT_SECRET: "${FC_CLIENT_SECRET}"

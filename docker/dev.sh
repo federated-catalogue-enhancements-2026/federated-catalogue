@@ -13,6 +13,15 @@ COMPOSE_DEV="docker compose -f docker-compose.yml -f docker-compose.dev.yml --en
 COMPOSE_FULL="docker compose --env-file dev.env"
 COMPOSE_STRICT="docker compose -f docker-compose.yml -f docker-compose.strict.yml --env-file dev.env"
 
+require_jar() {
+  local jar
+  jar=$(ls ../fc-service-server/target/fc-service-server-*.jar 2>/dev/null | head -1)
+  if [ -z "$jar" ]; then
+    echo "Error: No fc-service-server JAR found. Run './dev.sh build' first."
+    exit 1
+  fi
+}
+
 usage() {
   cat <<EOF
 Usage: ./dev.sh <command> [options]
@@ -31,8 +40,9 @@ COMMANDS:
               Example: ./dev.sh build && ./dev.sh watch
                        # Edit code, then: ./dev.sh build
 
-  full        Start full stack without hot-reload (traditional docker-compose)
-              Example: ./dev.sh full
+  full        Start full stack (requires ./dev.sh build first)
+              Always rebuilds container images from locally-built JARs
+              Example: ./dev.sh build && ./dev.sh full
 
   strict      Start full stack with strict config (Gaia-X on, schema validation on)
               Use for running @cfg.strict BDD tests
@@ -43,6 +53,10 @@ COMMANDS:
 
   down        Stop and remove all containers
               Example: ./dev.sh down
+
+  clean       Stop containers and remove all volumes (wipes PostgreSQL, Neo4j data)
+              Use this to get a truly fresh start (e.g. after schema/data changes)
+              Example: ./dev.sh clean
 
   build       Build the fc-service-server JAR (skips tests)
               Required after code changes to trigger hot-reload
@@ -70,7 +84,7 @@ WORKFLOWS:
     3. ./dev.sh build  (server restarts automatically)
 
   Development Workflow 3 — Full stack without hot-reload:
-    1. ./dev.sh full
+    1. ./dev.sh build && ./dev.sh full
 
   Development Workflow 4 - Full stack with original 2.0.0 image (with overrides):
     1. ./dev.sh full-original
@@ -78,6 +92,8 @@ WORKFLOWS:
 NOTES:
   - All commands pass additional options to docker compose
   - Use ./dev.sh down to clean up when switching workflows
+  - Use ./dev.sh clean to wipe DB volumes (removes stale SHACL shapes, etc.)
+  - full/strict/full-original always rebuild images (--build) to avoid stale containers
   - The 'watch' command requires Docker Compose v2.22.0+
   - Build artifacts are cached; use 'mvn clean' if needed
 
@@ -104,19 +120,26 @@ case "${1:-}" in
     $COMPOSE_DEV watch "${@:2}"
     ;;
   full)
-    $COMPOSE_FULL up "${@:2}"
+    require_jar
+    echo "Starting full stack (rebuilding images from locally-built JARs)..."
+    $COMPOSE_FULL up --build "${@:2}"
     ;;
   strict)
+    require_jar
     echo "Starting full stack with strict config (Gaia-X on, schema validation on)..."
-    $COMPOSE_STRICT up "${@:2}"
+    $COMPOSE_STRICT up --build "${@:2}"
     ;;
   full-original)
     echo "Starting full stack with original docker-compose (with overrides for 2.0.0 image)"
-    $COMPOSE_FULL -f docker-compose.yml -f docker-compose.original.yml up "${@:2}"
+    $COMPOSE_FULL -f docker-compose.yml -f docker-compose.original.yml up --build "${@:2}"
     ;;
   down)
     echo "Stopping and removing all containers..."
     $COMPOSE_FULL down "${@:2}"
+    ;;
+  clean)
+    echo "Stopping containers and removing all volumes (fresh start)..."
+    $COMPOSE_FULL down -v "${@:2}"
     ;;
   build)
     echo "Building fc-service-server JAR (skipping tests)..."
