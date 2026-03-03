@@ -45,6 +45,7 @@ import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.filestore.FileStore;
+import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.util.HashUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,6 +63,9 @@ public class SchemaStoreImpl implements SchemaStore {
 
   @Autowired
   private SchemaDao dao;
+
+  @Autowired
+  private ProtectedNamespaceFilter protectedNamespaceFilter;
 
   private static final Map<SchemaType, ContentAccessor> COMPOSITE_SCHEMAS = new ConcurrentHashMap<>();
 
@@ -120,6 +124,9 @@ public class SchemaStoreImpl implements SchemaStore {
         result.setValid(false);
         result.setErrorMessage(exc.getMessage());
       }
+    }
+    if (result.isValid()) {
+      model = protectedNamespaceFilter.filterModel(model, "schema import");
     }
     if (model.contains(null, RDF.type, SHACLM.NodeShape)
         || model.contains(null, RDF.type, SHACLM.PropertyShape)) {

@@ -29,6 +29,7 @@ import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
 import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -40,7 +41,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Test class for CAT-FR-CO-01: Remove Gaia-X Trust Framework Hard-Coding
+ * Test class for configurable Gaia-X Trust Framework validation.
  *
  * These tests verify that:
  * - AC-1: Assets can be uploaded without Gaia-X Compliance validation
@@ -65,7 +66,7 @@ import lombok.extern.slf4j.Slf4j;
 @ContextConfiguration(classes = {GaiaxTrustFrameworkTest.TestApplication.class, FileStoreConfig.class,
     DocumentLoaderConfig.class, DocumentLoaderProperties.class, VerificationServiceImpl.class,
     SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, DidResolverConfig.class,
-    DidDocumentResolver.class, ValidatorCacheDaoImpl.class})
+    DidDocumentResolver.class, ValidatorCacheDaoImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class GaiaxTrustFrameworkTest {
 

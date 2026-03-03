@@ -34,6 +34,13 @@ public interface VerificationStrategy {
   /**
    * Extracts claims from the given payload without performing verification.
    *
+   * <p>Implementations that extend {@link AbstractVerificationStrategy} must implement
+   * {@code doExtractClaims} instead of this method. The base class applies
+   * {@link ProtectedNamespaceFilter} automatically.</p>
+   *
+   * <p>Implementations that do NOT extend {@link AbstractVerificationStrategy} are
+   * responsible for applying namespace filtering themselves before returning claims.</p>
+   *
    * @param payload the Self-Description content to extract claims from
    * @return the list of extracted claims
    */
