@@ -44,10 +44,10 @@ import lombok.extern.slf4j.Slf4j;
  * Test class for configurable Gaia-X Trust Framework validation.
  *
  * These tests verify that:
- * - AC-1: Assets can be uploaded without Gaia-X Compliance validation
- * - AC-2: Gaia-X validation is configurable via gaiax.enabled property
- * - AC-3: No mandatory Gaia-X validation when disabled
- * - AC-4: Backward compatibility - Gaia-X validation works when enabled
+ * - Assets can be uploaded without Gaia-X Compliance validation
+ * - Gaia-X validation is configurable via gaiax.enabled property
+ * - No mandatory Gaia-X validation when disabled
+ * - Backward compatibility - Gaia-X validation works when enabled
  *
  * Tests use programmatic toggling of the gaiax.enabled flag to verify
  * behavior changes with the same Spring context.
@@ -122,10 +122,10 @@ public class GaiaxTrustFrameworkTest {
         jdbcTemplate.update("DELETE FROM validatorcache");
     }
 
-    // ==================== AC-1/AC-3: Disabled Behavior Tests ====================
+    // ==================== Disabled Behavior Tests ====================
 
     @Test
-    @DisplayName("AC-1/AC-3: Credential without x5u URL should be ACCEPTED when Gaia-X is disabled")
+    @DisplayName("Credential without x5u URL should be ACCEPTED when Gaia-X is disabled")
     void testCredentialWithoutX5u_AcceptedWhenDisabled() {
         credentialStrategy.gaiaxTrustFrameworkEnabled = false;
 
@@ -146,7 +146,7 @@ public class GaiaxTrustFrameworkTest {
     }
 
     @Test
-    @DisplayName("AC-1: Non-Gaia-X credential claims should be extractable")
+    @DisplayName("Non-Gaia-X credential claims should be extractable")
     void testClaimsExtractable_WhenDisabled() {
         credentialStrategy.gaiaxTrustFrameworkEnabled = false;
 
@@ -161,10 +161,10 @@ public class GaiaxTrustFrameworkTest {
         assertFalse(result.getClaims().isEmpty(), "Should have claims");
     }
 
-    // ==================== AC-4: Enabled Behavior Tests ====================
+    // ==================== Enabled Behavior Tests ====================
 
     @Test
-    @DisplayName("AC-4: Credential without x5u URL should be REJECTED when Gaia-X is enabled")
+    @DisplayName("Credential without x5u URL should be REJECTED when Gaia-X is enabled")
     void testCredentialWithoutX5u_RejectedWhenEnabled() {
         credentialStrategy.gaiaxTrustFrameworkEnabled = true;
 
@@ -179,7 +179,7 @@ public class GaiaxTrustFrameworkTest {
     }
 
     @Test
-    @DisplayName("AC-4: Gaia-X compliant credential should still work when enabled")
+    @DisplayName("Gaia-X compliant credential should still work when enabled")
     void testGaiaxCredentialWorks_WhenEnabled() {
         credentialStrategy.gaiaxTrustFrameworkEnabled = true;
 

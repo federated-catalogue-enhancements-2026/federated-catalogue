@@ -33,7 +33,6 @@ import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
 import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.CatalogueNamespaces;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SdClaim;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
@@ -67,6 +66,9 @@ public class VerificationServiceTest {
 
   @Autowired
   private VerificationServiceImpl verificationService;
+
+  @Autowired
+  private ProtectedNamespaceProperties protectedNsProps;
 
   @Autowired
   private SchemaStoreImpl schemaStore;
@@ -624,14 +626,13 @@ public class VerificationServiceTest {
     List<SdClaim> actualClaims = result.getClaims();
     log.debug("extractClaims_protectedNamespaceFilteredTest; actual claims: {}", actualClaims);
 
-    String fcmetaNs = CatalogueNamespaces.FC_META_NAMESPACE;
     for (SdClaim claim : actualClaims) {
-      assertFalse(claim.getPredicateString().contains(fcmetaNs),
+      assertFalse(claim.getPredicateString().contains(protectedNsProps.getNamespace()),
           "Protected namespace predicate should have been filtered: " + claim);
-      assertFalse(claim.getSubjectString().contains(fcmetaNs),
+      assertFalse(claim.getSubjectString().contains(protectedNsProps.getNamespace()),
           "Protected namespace subject should have been filtered: " + claim);
       if (claim.getObjectString().startsWith("<")) {
-        assertFalse(claim.getObjectString().contains(fcmetaNs),
+        assertFalse(claim.getObjectString().contains(protectedNsProps.getNamespace()),
             "Protected namespace object IRI should have been filtered: " + claim);
       }
     }

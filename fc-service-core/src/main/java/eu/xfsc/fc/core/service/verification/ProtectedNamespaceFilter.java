@@ -47,12 +47,12 @@ public class ProtectedNamespaceFilter {
     }
 
     String ns = properties.getNamespace();
-    String angleBracketNs = "<" + ns;
+    String namespaceIdentifier = "<" + ns;
     List<SdClaim> allowed = new ArrayList<>(claims.size());
     int rejectedCount = 0;
 
     for (SdClaim claim : claims) {
-      if (claimUsesProtectedNamespace(claim, angleBracketNs)) {
+      if (claimUsesProtectedNamespace(claim, namespaceIdentifier)) {
         rejectedCount++;
         log.debug("filterClaims; rejected triple from {}: {}", source, claim);
       } else {
