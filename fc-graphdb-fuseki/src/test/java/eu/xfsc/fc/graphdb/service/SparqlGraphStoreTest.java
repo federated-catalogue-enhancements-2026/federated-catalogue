@@ -404,6 +404,9 @@ public class SparqlGraphStoreTest {
         assertEquals(1, rows.size(), "Filter by credA should return only credA's claim");
         assertEquals("http://example.org/filterSubjectA", rows.getFirst().get("s"),
             "Returned triple subject should belong to credA");
+        assertTrue(rows.stream().noneMatch(r ->
+                "http://example.org/filterSubjectB".equals(r.get("s"))),
+            "Filter by credA should not return credB's claims");
     }
 
     // --- Helpers ---
