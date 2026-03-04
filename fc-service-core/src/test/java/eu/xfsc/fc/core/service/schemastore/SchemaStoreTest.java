@@ -48,7 +48,6 @@ import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.exception.ConflictException;
-import eu.xfsc.fc.core.pojo.CatalogueNamespaces;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -79,6 +78,9 @@ public class SchemaStoreTest {
 
   @Autowired
   private SchemaStoreImpl schemaStore;
+
+  @Autowired
+  private ProtectedNamespaceProperties protectedNsProps;
 
   @Autowired
   private JdbcTemplate jdbc;
@@ -464,9 +466,9 @@ public class SchemaStoreTest {
   @Test
   void analyzeSchema_fcmetaStatementsFiltered() {
     // Schema with a valid OWL Ontology declaration plus an injected fcmeta: triple.
-    // The filter must strip the fcmeta: triple before type detection runs (AC-4).
+    // The filter must strip the fcmeta: triple before type detection runs.
     String ttl = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
-        + "@prefix fcmeta: <" + CatalogueNamespaces.FC_META_NAMESPACE + "> .\n"
+        + "@prefix fcmeta: <" + protectedNsProps.getNamespace() + "> .\n"
         + "<https://example.org/TestOntology> a owl:Ontology .\n"
         + "<https://example.org/Subject1> fcmeta:complianceResult \"injected-by-attacker\" .\n";
     ContentAccessor content = new ContentAccessorDirect(ttl);
@@ -478,14 +480,14 @@ public class SchemaStoreTest {
         "Ontology IRI should be detected correctly from the filtered model");
     assertTrue(schemaStore.isSchemaType(content, ONTOLOGY));
     result.getExtractedUrls().forEach(term ->
-        assertFalse(term.contains(CatalogueNamespaces.FC_META_NAMESPACE),
+        assertFalse(term.contains(protectedNsProps.getNamespace()),
             "Protected namespace term must not appear in extracted URLs: " + term));
   }
 
   @Test
   void analyzeSchema_onlyFcmetaStatements_invalidSchema() {
     // After filtering all fcmeta: triples the model is empty — no schema type can be detected.
-    String ttl = "@prefix fcmeta: <" + CatalogueNamespaces.FC_META_NAMESPACE + "> .\n"
+    String ttl = "@prefix fcmeta: <" + protectedNsProps.getNamespace() + "> .\n"
         + "<https://example.org/Subject1> fcmeta:complianceResult \"injected\" .\n"
         + "<https://example.org/Subject2> fcmeta:validationTimestamp \"2024-01-01\" .\n";
     SchemaAnalysisResult result = schemaStore.analyzeSchema(new ContentAccessorDirect(ttl));

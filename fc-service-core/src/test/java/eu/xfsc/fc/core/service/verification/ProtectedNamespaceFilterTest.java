@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.pojo.CatalogueNamespaces;
 import eu.xfsc.fc.core.pojo.SdClaim;
 
 /**
@@ -22,7 +21,9 @@ import eu.xfsc.fc.core.pojo.SdClaim;
  */
 class ProtectedNamespaceFilterTest {
 
-  private static final String NS = CatalogueNamespaces.FC_META_NAMESPACE;
+  private static final String NS =
+      "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
+  private static final String PREFIX = "fcmeta";
   private static final String NORMAL_SUBJ = "<https://example.org/subject1>";
   private static final String NORMAL_PRED = "<https://example.org/predicate1>";
   private static final String NORMAL_OBJ = "<https://example.org/object1>";
@@ -33,6 +34,8 @@ class ProtectedNamespaceFilterTest {
   @BeforeEach
   void setUp() {
     properties = new ProtectedNamespaceProperties();
+    properties.setNamespace(NS);
+    properties.setPrefix(PREFIX);
     filter = new ProtectedNamespaceFilter(properties);
   }
 
