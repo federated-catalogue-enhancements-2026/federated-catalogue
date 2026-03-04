@@ -12,6 +12,7 @@ import eu.xfsc.fc.api.generated.model.RebuildStatus;
 import eu.xfsc.fc.api.generated.model.SelfDescriptionStatus;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.SdFilter;
+import eu.xfsc.fc.core.service.graphdb.GraphRebuildProgress;
 import eu.xfsc.fc.core.service.graphdb.GraphRebuildService;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
@@ -129,7 +130,7 @@ public class GraphAdminService implements GraphAdminApiDelegate {
    * @param internal the internal status from {@link GraphRebuildService}
    * @return the API-facing {@link RebuildStatus} DTO
    */
-  private RebuildStatus toRebuildStatusDto(GraphRebuildService.RebuildStatus internal) {
+  private RebuildStatus toRebuildStatusDto(GraphRebuildProgress internal) {
     RebuildStatus dto = new RebuildStatus();
     dto.setTotal(internal.getTotal());
     dto.setProcessed(internal.getProcessedCount());

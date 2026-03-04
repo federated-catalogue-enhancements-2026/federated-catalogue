@@ -19,6 +19,7 @@ import eu.xfsc.fc.api.generated.model.RebuildStatus;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.SdFilter;
+import eu.xfsc.fc.core.service.graphdb.GraphRebuildProgress;
 import eu.xfsc.fc.core.service.graphdb.GraphRebuildService;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
@@ -50,7 +51,7 @@ class GraphAdminServiceTest {
   void triggerGraphRebuild_started_returns202Accepted() {
     when(graphRebuildService.triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt())).thenReturn(true);
     when(graphRebuildService.getStatus())
-        .thenReturn(GraphRebuildService.RebuildStatus.idle());
+        .thenReturn(GraphRebuildProgress.idle());
 
     ResponseEntity<RebuildStatus> response = service.triggerGraphRebuild();
 
@@ -61,7 +62,7 @@ class GraphAdminServiceTest {
   void triggerGraphRebuild_alreadyRunning_returns409Conflict() {
     when(graphRebuildService.triggerRebuild(anyInt(), anyInt(), anyInt(), anyInt())).thenReturn(false);
     when(graphRebuildService.getStatus())
-        .thenReturn(GraphRebuildService.RebuildStatus.idle());
+        .thenReturn(GraphRebuildProgress.idle());
 
     ResponseEntity<RebuildStatus> response = service.triggerGraphRebuild();
 
@@ -71,7 +72,7 @@ class GraphAdminServiceTest {
   @Test
   void getGraphRebuildStatus_idle_returnsCompletedStatus() {
     when(graphRebuildService.getStatus())
-        .thenReturn(GraphRebuildService.RebuildStatus.idle());
+        .thenReturn(GraphRebuildProgress.idle());
     when(graphRebuildService.isRunning()).thenReturn(false);
 
     ResponseEntity<RebuildStatus> response = service.getGraphRebuildStatus();

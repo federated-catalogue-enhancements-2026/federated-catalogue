@@ -8,10 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import eu.xfsc.fc.core.exception.GraphStoreDisabledException;
-import eu.xfsc.fc.core.service.graphdb.GraphRebuildService.RebuildStatus;
 
 /**
- * Tests for {@link GraphRebuildService} and its inner {@link RebuildStatus} class.
+ * Tests for {@link GraphRebuildService} and {@link GraphRebuildProgress}.
  * Tests that do not require a full Spring context.
  */
 public class GraphRebuildServiceTest {
@@ -27,7 +26,7 @@ public class GraphRebuildServiceTest {
 
   @Test
   public void idle_newInstance_isComplete() {
-    RebuildStatus idle = RebuildStatus.idle();
+    GraphRebuildProgress idle = GraphRebuildProgress.idle();
 
     assertTrue(idle.isComplete());
     assertEquals(0, idle.getTotal());
@@ -36,7 +35,7 @@ public class GraphRebuildServiceTest {
 
   @Test
   public void incrementProcessed_multipleCalls_tracksProgress() {
-    RebuildStatus status = new RebuildStatus(10);
+    GraphRebuildProgress status = new GraphRebuildProgress(10);
     assertEquals(10, status.getTotal());
     assertEquals(0, status.getProcessedCount());
     assertEquals(0, status.getPercentComplete());
@@ -55,7 +54,7 @@ public class GraphRebuildServiceTest {
 
   @Test
   public void markFailed_withMessage_setsErrorAndComplete() {
-    RebuildStatus status = new RebuildStatus(5);
+    GraphRebuildProgress status = new GraphRebuildProgress(5);
     status.markFailed("test error");
 
     assertTrue(status.isFailed());
@@ -65,7 +64,7 @@ public class GraphRebuildServiceTest {
 
   @Test
   public void incrementErrors_multipleCalls_tracksErrorCount() {
-    RebuildStatus status = new RebuildStatus(5);
+    GraphRebuildProgress status = new GraphRebuildProgress(5);
     assertEquals(0, status.getErrorCount());
 
     status.incrementErrors();
@@ -75,7 +74,7 @@ public class GraphRebuildServiceTest {
 
   @Test
   public void getDurationMs_newInstance_returnsNonNegative() {
-    RebuildStatus status = new RebuildStatus(1);
+    GraphRebuildProgress status = new GraphRebuildProgress(1);
 
     assertTrue(status.getDurationMs() >= 0);
   }

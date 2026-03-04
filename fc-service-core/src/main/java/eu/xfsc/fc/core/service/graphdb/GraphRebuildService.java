@@ -7,7 +7,6 @@ import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import jakarta.annotation.PreDestroy;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,7 +16,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Wraps {@link GraphRebuilder} with async execution and rebuild status tracking.
@@ -34,7 +32,7 @@ public class GraphRebuildService {
   private final AtomicBoolean running = new AtomicBoolean(false);
 
   @Getter
-  private volatile RebuildStatus status = RebuildStatus.idle();
+  private volatile GraphRebuildProgress status = GraphRebuildProgress.idle();
 
   public GraphRebuildService(GraphRebuilder graphRebuilder, SelfDescriptionStore sdStore,
                              GraphStore graphStore) {
@@ -61,7 +59,7 @@ public class GraphRebuildService {
     if (!running.compareAndSet(false, true)) {
       return false;
     }
-    status = new RebuildStatus(0);
+    status = new GraphRebuildProgress(0);
     try {
       executor.submit(() -> {
         try {
@@ -115,123 +113,6 @@ public class GraphRebuildService {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    }
-  }
-
-  /**
-   * Tracks the progress of a graph rebuild operation.
-   */
-  @Getter
-  public static class RebuildStatus {
-    private volatile long total;
-    @Getter(AccessLevel.NONE)
-    private final AtomicLong processed = new AtomicLong(0);
-    @Getter(AccessLevel.NONE)
-    private final AtomicLong errors = new AtomicLong(0);
-    private final long startTimeMs;
-    private volatile boolean complete;
-    private volatile boolean failed;
-    private volatile String errorMessage;
-
-    /**
-     * Creates a new status tracker for a rebuild with the given total SD count.
-     *
-     * @param total the total number of SDs to process
-     */
-    public RebuildStatus(long total) {
-      this.total = total;
-      this.startTimeMs = System.currentTimeMillis();
-    }
-
-    /**
-     * Creates an idle status indicating no rebuild is in progress.
-     *
-     * @return an idle RebuildStatus
-     */
-    public static RebuildStatus idle() {
-      RebuildStatus idle = new RebuildStatus(0);
-      idle.complete = true;
-      return idle;
-    }
-
-    /**
-     * Sets the total SD count. Used when the count is determined asynchronously.
-     *
-     * @param total the total number of SDs to process
-     */
-    void setTotal(long total) {
-      this.total = total;
-    }
-
-    /**
-     * Returns the number of SDs processed so far.
-     *
-     * @return the processed count
-     */
-    public long getProcessedCount() {
-      return processed.get();
-    }
-
-    /**
-     * Returns the number of SDs that failed during processing.
-     *
-     * @return the error count
-     */
-    public long getErrorCount() {
-      return errors.get();
-    }
-
-    /**
-     * Increments the processed count by one.
-     */
-    public void incrementProcessed() {
-      processed.incrementAndGet();
-    }
-
-    /**
-     * Increments the error count by one.
-     */
-    public void incrementErrors() {
-      errors.incrementAndGet();
-    }
-
-    /**
-     * Marks the rebuild as complete.
-     */
-    public void markComplete() {
-      this.complete = true;
-    }
-
-    /**
-     * Marks the rebuild as failed with the given error message.
-     *
-     * @param message the error message
-     */
-    public void markFailed(String message) {
-      this.failed = true;
-      this.errorMessage = message;
-      this.complete = true;
-    }
-
-    /**
-     * Returns the completion percentage (0-100).
-     *
-     * @return the percentage complete
-     */
-    public int getPercentComplete() {
-      if (total == 0) {
-        return complete ? 100 : 0;
-      }
-      return (int) (processed.get() * 100 / total);
-    }
-
-    /**
-     * Returns the elapsed duration in milliseconds since the rebuild started.
-     *
-     * @return duration in milliseconds
-     */
-    public long getDurationMs() {
-      return System.currentTimeMillis() - startTimeMs;
     }
   }
 }
