@@ -120,6 +120,14 @@ subscriber:
 
 federated-catalogue:
   scope: runtime
+  rdf:
+    content-types:
+      - application/ld+json
+      - text/turtle
+      - application/n-triples
+      - application/rdf+xml
+      - application/n-quads
+      - application/trig
   file-store:
     cached: true
     cache-size: 128
