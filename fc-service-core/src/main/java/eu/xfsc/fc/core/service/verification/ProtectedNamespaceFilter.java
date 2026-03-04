@@ -11,6 +11,7 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.SdClaim;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,32 +40,47 @@ public class ProtectedNamespaceFilter {
    *
    * @param claims the list of claims to filter
    * @param source description of the source for logging (e.g. "self-description upload")
-   * @return filtered list with protected claims removed
+   * @return {@link FilteredClaims} containing the allowed claims and an optional user-visible warning
    */
-  public List<SdClaim> filterClaims(List<SdClaim> claims, String source) {
+  public FilteredClaims filterClaims(List<SdClaim> claims, String source) {
     if (claims == null || claims.isEmpty()) {
-      return claims;
+      return new FilteredClaims(claims, null);
     }
 
     String ns = properties.getNamespace();
     String namespaceIdentifier = "<" + ns;
     List<SdClaim> allowed = new ArrayList<>(claims.size());
-    int rejectedCount = 0;
+    List<SdClaim> rejected = new ArrayList<>();
 
     for (SdClaim claim : claims) {
       if (claimUsesProtectedNamespace(claim, namespaceIdentifier)) {
-        rejectedCount++;
+        rejected.add(claim);
         log.debug("filterClaims; rejected triple from {}: {}", source, claim);
       } else {
         allowed.add(claim);
       }
     }
 
-    if (rejectedCount > 0) {
+    if (!rejected.isEmpty()) {
       log.warn("filterClaims; filtered {} triple(s) using protected namespace '{}:' from {}",
-          rejectedCount, properties.getPrefix(), source);
+          rejected.size(), properties.getPrefix(), source);
+      return new FilteredClaims(allowed, buildUserWarning(rejected));
     }
-    return allowed;
+    return new FilteredClaims(allowed, null);
+  }
+
+  private String buildUserWarning(List<SdClaim> rejected) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(rejected.size()).append(" triple(s) were removed from your upload because they use the reserved")
+        .append(" internal namespace <").append(properties.getNamespace()).append(">.")
+        .append(" Removed triples:");
+    for (SdClaim claim : rejected) {
+      sb.append("\n  · ").append(claim.getSubjectString())
+        .append(" ").append(claim.getPredicateString())
+        .append(" ").append(claim.getObjectString());
+    }
+    sb.append("\nThis namespace is reserved for internal catalogue use only and cannot be set by external clients.");
+    return sb.toString();
   }
 
   /**
