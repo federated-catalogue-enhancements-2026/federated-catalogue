@@ -77,7 +77,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class CredentialVerificationStrategy extends AbstractVerificationStrategy {
+public class CredentialVerificationStrategy implements VerificationStrategy {
 
   private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new TitaniumClaimExtractor(), new DanubeTechClaimExtractor()};
 
@@ -101,7 +101,8 @@ public class CredentialVerificationStrategy extends AbstractVerificationStrategy
   private String resourceType;
 
   private Map<TrustFrameworkBaseClass, String> trustFrameworkBaseClassUris;
-
+  @Autowired
+  private ProtectedNamespaceFilter protectedNamespaceFilter;
   @Autowired
   private SchemaStore schemaStore;
   @Autowired
@@ -149,7 +150,6 @@ public class CredentialVerificationStrategy extends AbstractVerificationStrategy
     trustFrameworkBaseClassUris.put(PARTICIPANT, participantType);
   }
 
-  @Override
   public VerificationResult verifySelfDescription(ContentAccessor payload, boolean strict, TrustFrameworkBaseClass expectedClass,
       boolean verifySemantics, boolean verifySchema, boolean verifyVPSignatures,
       boolean verifyVCSignatures) throws VerificationException {
@@ -212,6 +212,9 @@ public class CredentialVerificationStrategy extends AbstractVerificationStrategy
 
     stamp2 = System.currentTimeMillis();
     List<SdClaim> claims = extractClaims(payload);
+
+    claims = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
+
     log.debug("verifySelfDescription; claims extracted: {}, time taken: {}", (claims == null ? "null" : claims.size()),
    		System.currentTimeMillis() - stamp2);
 
@@ -404,8 +407,7 @@ public class CredentialVerificationStrategy extends AbstractVerificationStrategy
     return tcs;
   }
 
-  @Override
-  protected List<SdClaim> doExtractClaims(ContentAccessor payload) {
+  public List<SdClaim> extractClaims(ContentAccessor payload) {
     // Make sure our interceptors are in place.
     initLoaders();
     List<SdClaim> claims = null;
@@ -454,7 +456,6 @@ public class CredentialVerificationStrategy extends AbstractVerificationStrategy
     return streamManager;
   }
 
-  @Override
   public void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
     trustFrameworkBaseClassUris.put(baseClass, uri);
   }
