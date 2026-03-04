@@ -14,8 +14,11 @@ import eu.xfsc.fc.core.pojo.VerificationResult;
  * Database record for SdMetaData table.
  */
 public class SdMetaRecord extends SelfDescriptionMetadata {
-	
-  private Instant expirationTime;	
+
+  private Instant expirationTime;
+  private String contentType;
+  private Long fileSize;
+  private String originalFilename;
 
   public SdMetaRecord(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor, Instant expirationTime) {
     super(id, issuer, validators, contentAccessor);
@@ -30,10 +33,15 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
   }
-  
-  public SdMetaRecord(String sdHash, String id, SelfDescriptionStatus status, String issuer, List<String> validatorDids, Instant uploadTime, Instant statusTime, ContentAccessor content, Instant expirationTime) {
+
+  public SdMetaRecord(String sdHash, String id, SelfDescriptionStatus status, String issuer, List<String> validatorDids,
+      Instant uploadTime, Instant statusTime, ContentAccessor content, Instant expirationTime,
+      String contentType, Long fileSize, String originalFilename) {
 	super(sdHash, id, status, issuer, validatorDids, uploadTime, statusTime, content);
 	this.expirationTime = expirationTime;
+	this.contentType = contentType;
+	this.fileSize = fileSize;
+	this.originalFilename = originalFilename;
   }
 
   public String getContent() {
@@ -43,9 +51,33 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
     }
     return selfDescription.getContentAsString();
   }
-  
+
   public Instant getExpirationTime() {
-	return this.expirationTime;  
+	return this.expirationTime;
+  }
+
+  public String getContentType() {
+    return contentType;
+  }
+
+  public void setContentType(String contentType) {
+    this.contentType = contentType;
+  }
+
+  public Long getFileSize() {
+    return fileSize;
+  }
+
+  public void setFileSize(Long fileSize) {
+    this.fileSize = fileSize;
+  }
+
+  public String getOriginalFilename() {
+    return originalFilename;
+  }
+
+  public void setOriginalFilename(String originalFilename) {
+    this.originalFilename = originalFilename;
   }
 
   public String[] getValidators() {

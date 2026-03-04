@@ -80,8 +80,9 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
       Validator minVal = validators.stream().min(new Validator.ExpirationComparator()).orElse(null);
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
-    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), sdMetadata.getId(), sdMetadata.getStatus(), sdMetadata.getIssuer(), sdMetadata.getValidatorDids(), 
-    		sdMetadata.getUploadDatetime(), sdMetadata.getStatusDatetime(), sdMetadata.getSelfDescription(), expirationTime); // sdMetadata.getSelfDescription(), verificationResult);
+    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), sdMetadata.getId(), sdMetadata.getStatus(), sdMetadata.getIssuer(), sdMetadata.getValidatorDids(),
+    		sdMetadata.getUploadDatetime(), sdMetadata.getStatusDatetime(), sdMetadata.getSelfDescription(), expirationTime,
+    		"application/ld+json", null, null);
 
     SubjectHashRecord subjectHash = null;
     try {
