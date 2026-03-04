@@ -50,6 +50,7 @@ import eu.xfsc.fc.core.dao.ValidatorCacheDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.SdClaim;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.VerificationResult;
@@ -213,7 +214,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     stamp2 = System.currentTimeMillis();
     List<SdClaim> claims = extractClaims(payload);
 
-    claims = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
+    FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
+    claims = filtered.claims();
 
     log.debug("verifySelfDescription; claims extracted: {}, time taken: {}", (claims == null ? "null" : claims.size()),
    		System.currentTimeMillis() - stamp2);
@@ -280,6 +282,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     } else {
       result = new VerificationResult(Instant.now(), SelfDescriptionStatus.ACTIVE.getValue(), issuer, issuedDate,
               id, claims, validators);
+    }
+
+    if (filtered.hasWarning()) {
+      result.setWarnings(List.of(filtered.warning()));
     }
 
     stamp = System.currentTimeMillis() - stamp;
