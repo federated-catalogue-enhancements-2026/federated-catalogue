@@ -17,6 +17,11 @@ public interface VerificationStrategy {
   /**
    * Verifies a Self-Description payload according to the implementation's logic.
    *
+   * <p>All implementations of that method must apply namespace filtering according to
+   * requirement CAT-FR-GD-09 as specified in
+   * https://github.com/eclipse-xfsc/docs/blob/f3c6e6b6fbcc87732a1dfe83f060fa58a9a97873/federated-catalogue/src/docs/CAT%20Enhancement/CAT_Enhancement_Specifications%20v1.0.pdf
+   * before returning claims.</p>
+   *
    * @param payload            the Self-Description content to verify
    * @param strict             whether strict mode is enabled (typed endpoints)
    * @param expectedClass      the expected Trust Framework base class, or UNKNOWN
@@ -33,13 +38,6 @@ public interface VerificationStrategy {
 
   /**
    * Extracts claims from the given payload without performing verification.
-   *
-   * <p>Implementations that extend {@link AbstractVerificationStrategy} must implement
-   * {@code doExtractClaims} instead of this method. The base class applies
-   * {@link ProtectedNamespaceFilter} automatically.</p>
-   *
-   * <p>Implementations that do NOT extend {@link AbstractVerificationStrategy} are
-   * responsible for applying namespace filtering themselves before returning claims.</p>
    *
    * @param payload the Self-Description content to extract claims from
    * @return the list of extracted claims
