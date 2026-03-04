@@ -330,7 +330,7 @@ public class SparqlGraphStoreTest {
         List<Map<String, Object>> afterDelete = querySparql(sharedTripleQuery).getResults();
 
         assertEquals(1, afterDelete.size(), "After deleting credA, only credB's wrapping should remain");
-        assertEquals(credB, afterDelete.get(0).get("mo"));
+        assertEquals(credB, afterDelete.getFirst().get("mo"));
     }
 
     @Test
@@ -402,7 +402,7 @@ public class SparqlGraphStoreTest {
         List<Map<String, Object>> rows = queryBySpecificCredentialSubject(credA).getResults();
 
         assertEquals(1, rows.size(), "Filter by credA should return only credA's claim");
-        assertEquals("http://example.org/filterSubjectA", rows.get(0).get("s"),
+        assertEquals("http://example.org/filterSubjectA", rows.getFirst().get("s"),
             "Returned triple subject should belong to credA");
     }
 

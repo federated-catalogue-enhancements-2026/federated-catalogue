@@ -1066,7 +1066,7 @@ public class Neo4jGraphStoreTest {
     }
 
     @Test
-    void testZ_addClaimsSetsClaimsGraphUriToCredentialSubject() {
+    void addClaims_withKnownCredentialSubject_setsClaimsGraphUriToCredentialSubject() {
         String credentialSubject = "http://example.org/testZ_credSubject1";
         List<SdClaim> sdClaimList = Arrays.asList(
                 new SdClaim(
@@ -1107,7 +1107,7 @@ public class Neo4jGraphStoreTest {
     }
 
     @Test
-    void testZ_multipleCredentialsShareNode_deleteOneLeavesOther() {
+    void deleteClaims_multipleCredentialsShareNode_deleteOneLeavesOther() {
         String credC = "http://example.org/testZ_credC";
         String credD = "http://example.org/testZ_credD";
 
