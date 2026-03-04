@@ -1064,4 +1064,95 @@ public class Neo4jGraphStoreTest {
                 )
         );
     }
+
+    @Test
+    void testZ_addClaimsSetsClaimsGraphUriToCredentialSubject() {
+        String credentialSubject = "http://example.org/testZ_credSubject1";
+        List<SdClaim> sdClaimList = Arrays.asList(
+                new SdClaim(
+                        "<http://example.org/testZ_node1>",
+                        "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+                        "<http://w3id.org/gaia-x/service#ServiceOffering>"
+                ),
+                new SdClaim(
+                        "<http://example.org/testZ_node1>",
+                        "<http://example.org/testZ_name>",
+                        "\"TestZ Service\""
+                )
+        );
+
+        try {
+            graphGaia.addClaims(sdClaimList, credentialSubject);
+
+            // Query nodes whose claimsGraphUri array contains the credential subject
+            GraphQuery query = new GraphQuery(
+                    "MATCH (n) WHERE $uri IN n.claimsGraphUri RETURN n.claimsGraphUri AS uris",
+                    Map.of("uri", credentialSubject));
+            List<Map<String, Object>> results = graphGaia.queryData(query).getResults();
+
+            Assertions.assertFalse(results.isEmpty(),
+                    "At least one node should have the credential subject in claimsGraphUri");
+            for (Map<String, Object> row : results) {
+                Object uris = row.get("uris");
+                Assertions.assertNotNull(uris, "claimsGraphUri should not be null");
+                Assertions.assertInstanceOf(List.class, uris, "claimsGraphUri should be a list");
+                @SuppressWarnings("unchecked")
+                List<String> uriList = (List<String>) uris;
+                Assertions.assertTrue(uriList.contains(credentialSubject),
+                        "claimsGraphUri array should contain the credential subject used in addClaims");
+            }
+        } finally {
+            graphGaia.deleteClaims(credentialSubject);
+        }
+    }
+
+    @Test
+    void testZ_multipleCredentialsShareNode_deleteOneLeavesOther() {
+        String credC = "http://example.org/testZ_credC";
+        String credD = "http://example.org/testZ_credD";
+
+        // Both credentials share the same subject node
+        SdClaim sharedClaim = new SdClaim(
+                "<http://example.org/testZ_sharedNode>",
+                "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+                "<http://w3id.org/gaia-x/service#ServiceOffering>"
+        );
+
+        try {
+            graphGaia.addClaims(Collections.singletonList(sharedClaim), credC);
+            graphGaia.addClaims(Collections.singletonList(sharedClaim), credD);
+
+            // Query the shared node by its URI and check claimsGraphUri contains both
+            GraphQuery queryBoth = new GraphQuery(
+                    "MATCH (n {uri: $uri}) RETURN n.claimsGraphUri AS uris",
+                    Map.of("uri", "http://example.org/testZ_sharedNode"));
+            List<Map<String, Object>> resultsBoth = graphGaia.queryData(queryBoth).getResults();
+
+            Assertions.assertEquals(1, resultsBoth.size(),
+                    "There should be exactly one node for the shared URI");
+            @SuppressWarnings("unchecked")
+            List<String> urisBoth = (List<String>) resultsBoth.getFirst().get("uris");
+            Assertions.assertTrue(urisBoth.contains(credC),
+                    "claimsGraphUri should contain credC");
+            Assertions.assertTrue(urisBoth.contains(credD),
+                    "claimsGraphUri should contain credD");
+
+            // Delete credC -- this exercises queryUpdate (removes URI from shared array)
+            graphGaia.deleteClaims(credC);
+
+            // Re-query: claimsGraphUri should contain only credD
+            List<Map<String, Object>> resultsAfter = graphGaia.queryData(queryBoth).getResults();
+            Assertions.assertEquals(1, resultsAfter.size(),
+                    "Shared node should still exist after deleting one credential");
+            @SuppressWarnings("unchecked")
+            List<String> urisAfter = (List<String>) resultsAfter.getFirst().get("uris");
+            Assertions.assertFalse(urisAfter.contains(credC),
+                    "credC should no longer be in claimsGraphUri after deletion");
+            Assertions.assertTrue(urisAfter.contains(credD),
+                    "credD should still be in claimsGraphUri after deleting credC");
+        } finally {
+            graphGaia.deleteClaims(credC);
+            graphGaia.deleteClaims(credD);
+        }
+    }
 }
