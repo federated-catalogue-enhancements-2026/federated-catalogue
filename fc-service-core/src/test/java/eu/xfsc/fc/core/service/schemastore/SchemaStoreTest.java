@@ -5,6 +5,7 @@ import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.SHAPE;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.VOCABULARY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -478,6 +479,9 @@ public class SchemaStoreTest {
     assertTrue(result.isValid(), "Schema with fcmeta: triple should be accepted after filtering");
     assertEquals("https://example.org/TestOntology", result.getExtractedId(),
         "Ontology IRI should be detected correctly from the filtered model");
+    assertNotNull(result.getWarning(), "Warning should be set when fcmeta: statements are filtered");
+    assertTrue(result.getWarning().contains("removed from your schema"),
+        "Warning should describe the filtered statements");
     assertTrue(schemaStore.isSchemaType(content, ONTOLOGY));
     result.getExtractedUrls().forEach(term ->
         assertFalse(term.contains(protectedNsProps.getNamespace()),
