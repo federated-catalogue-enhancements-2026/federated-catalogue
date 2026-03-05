@@ -123,11 +123,12 @@ federated-catalogue:
   rdf:
     content-types:
       - application/ld+json
-      - text/turtle
-      - application/n-triples
-      - application/rdf+xml
-      - application/n-quads
-      - application/trig
+      # Uncomment as VerificationService gains support for these formats:
+      # - text/turtle
+      # - application/n-triples
+      # - application/rdf+xml
+      # - application/n-quads
+      # - application/trig
   file-store:
     cached: true
     cache-size: 128
