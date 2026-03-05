@@ -45,6 +45,7 @@ import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.filestore.FileStore;
+import eu.xfsc.fc.core.pojo.FilteredModel;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.util.HashUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -126,7 +127,11 @@ public class SchemaStoreImpl implements SchemaStore {
       }
     }
     if (result.isValid()) {
-      model = protectedNamespaceFilter.filterModel(model, "schema import");
+      FilteredModel filteredModel = protectedNamespaceFilter.filterModel(model, "schema import");
+      model = filteredModel.model();
+      if (filteredModel.hasWarning()) {
+        result.setWarning(filteredModel.warning());
+      }
     }
     if (model.contains(null, RDF.type, SHACLM.NodeShape)
         || model.contains(null, RDF.type, SHACLM.PropertyShape)) {

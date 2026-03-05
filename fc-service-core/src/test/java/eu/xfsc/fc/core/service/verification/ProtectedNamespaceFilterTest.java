@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
+import eu.xfsc.fc.core.pojo.FilteredModel;
 import eu.xfsc.fc.core.pojo.SdClaim;
 
 /**
@@ -146,8 +147,12 @@ class ProtectedNamespaceFilterTest {
         ResourceFactory.createProperty(NS + "complianceResult"),
         ResourceFactory.createPlainLiteral("true"));
 
-    Model result = filter.filterModel(model, "test");
-    assertEquals(1, result.size());
+    FilteredModel result = filter.filterModel(model, "test");
+    assertEquals(1, result.model().size());
+    assertTrue(result.hasWarning());
+    assertTrue(result.warning().contains("1 statement(s)"));
+    assertTrue(result.warning().contains(NS));
+    assertTrue(result.warning().contains("complianceResult"));
   }
 
   @Test
@@ -162,19 +167,24 @@ class ProtectedNamespaceFilterTest {
         ResourceFactory.createProperty("https://example.org/p2"),
         ResourceFactory.createPlainLiteral("value"));
 
-    Model result = filter.filterModel(model, "test");
-    assertEquals(2, result.size());
+    FilteredModel result = filter.filterModel(model, "test");
+    assertEquals(2, result.model().size());
+    assertFalse(result.hasWarning());
   }
 
   @Test
   void filterModelNullModel() {
-    assertNull(filter.filterModel(null, "test"));
+    FilteredModel result = filter.filterModel(null, "test");
+    assertNull(result.model());
+    assertFalse(result.hasWarning());
   }
 
   @Test
   void filterModelEmptyModel() {
     Model empty = ModelFactory.createDefaultModel();
-    assertSame(empty, filter.filterModel(empty, "test"));
+    FilteredModel result = filter.filterModel(empty, "test");
+    assertSame(empty, result.model());
+    assertFalse(result.hasWarning());
   }
 
   @Test
@@ -191,7 +201,9 @@ class ProtectedNamespaceFilterTest {
         ResourceFactory.createProperty("https://example.org/p1"),
         ResourceFactory.createResource("https://example.org/o1"));
 
-    assertEquals(1, filter.filterModel(model, "test").size());
+    FilteredModel result = filter.filterModel(model, "test");
+    assertEquals(1, result.model().size());
+    assertTrue(result.hasWarning());
   }
 
   @Test
@@ -208,6 +220,8 @@ class ProtectedNamespaceFilterTest {
         ResourceFactory.createProperty("https://example.org/p2"),
         ResourceFactory.createResource("https://example.org/o2"));
 
-    assertEquals(1, filter.filterModel(model, "test").size());
+    FilteredModel result = filter.filterModel(model, "test");
+    assertEquals(1, result.model().size());
+    assertTrue(result.hasWarning());
   }
 }
