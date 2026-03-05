@@ -281,7 +281,7 @@ public class SchemaStoreTest {
     String path = "Schema-Tests/valid-schemaShape.ttl";
     ContentAccessor content = TestUtil.getAccessor(path);
 
-    String schemaId1 = schemaStore.addSchema(content);
+    String schemaId1 = schemaStore.addSchema(content).id();
 
     Map<SchemaStore.SchemaType, List<String>> expected = new HashMap<>();
     expected.computeIfAbsent(SHAPE, t -> new ArrayList<>()).add(schemaId1);
@@ -316,7 +316,7 @@ public class SchemaStoreTest {
 
     String schema1 = TestUtil.getAccessor(getClass(), path).getContentAsString();
 
-    String schemaId1 = schemaStore.addSchema(new ContentAccessorDirect(schema1));
+    String schemaId1 = schemaStore.addSchema(new ContentAccessorDirect(schema1)).id();
 
     ContentAccessor ContentAccessor = schemaStore.getSchema(schemaId1);
 
@@ -375,7 +375,7 @@ public class SchemaStoreTest {
     String path1 = "Schema-Tests/valid-schemaShapeReduced.ttl";
     String path2 = "Schema-Tests/valid-schemaShape.ttl";
 
-    String schemaId = schemaStore.addSchema(TestUtil.getAccessor(getClass(), path1));
+    String schemaId = schemaStore.addSchema(TestUtil.getAccessor(getClass(), path1)).id();
     assertTermCountEquals(1);
     assertTermsEquals("http://w3id.org/gaia-x/validation#PhysicalResourceShape");
 
