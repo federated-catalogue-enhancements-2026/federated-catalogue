@@ -16,8 +16,6 @@ import eu.xfsc.fc.core.pojo.VerificationResult;
 public class SdMetaRecord extends SelfDescriptionMetadata {
 
   private Instant expirationTime;
-  private String contentType;
-  private Long fileSize;
   private String originalFilename;
 
   public SdMetaRecord(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor, Instant expirationTime) {
@@ -39,8 +37,8 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
       String contentType, Long fileSize, String originalFilename) {
 	super(sdHash, id, status, issuer, validatorDids, uploadTime, statusTime, content);
 	this.expirationTime = expirationTime;
-	this.contentType = contentType;
-	this.fileSize = fileSize;
+	setContentType(contentType);
+	setFileSize(fileSize);
 	this.originalFilename = originalFilename;
   }
 
@@ -54,22 +52,6 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
 
   public Instant getExpirationTime() {
 	return this.expirationTime;
-  }
-
-  public String getContentType() {
-    return contentType;
-  }
-
-  public void setContentType(String contentType) {
-    this.contentType = contentType;
-  }
-
-  public Long getFileSize() {
-    return fileSize;
-  }
-
-  public void setFileSize(Long fileSize) {
-    this.fileSize = fileSize;
   }
 
   public String getOriginalFilename() {
