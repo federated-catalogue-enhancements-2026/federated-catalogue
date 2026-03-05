@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
+import eu.xfsc.fc.core.pojo.FilteredModel;
 import eu.xfsc.fc.core.pojo.SdClaim;
 import lombok.extern.slf4j.Slf4j;
 
@@ -88,34 +89,49 @@ public class ProtectedNamespaceFilter {
    *
    * @param model the Jena model to filter
    * @param source description of the source for logging (e.g. "schema import")
-   * @return new model with protected statements removed
+   * @return {@link FilteredModel} containing the filtered model and an optional warning
    */
-  public Model filterModel(Model model, String source) {
+  public FilteredModel filterModel(Model model, String source) {
     if (model == null || model.isEmpty()) {
-      return model;
+      return new FilteredModel(model, null);
     }
 
     String ns = properties.getNamespace();
     Model filtered = ModelFactory.createDefaultModel();
     filtered.setNsPrefixes(model.getNsPrefixMap());
-    int rejectedCount = 0;
+    List<Statement> rejected = new ArrayList<>();
 
     StmtIterator iter = model.listStatements();
     while (iter.hasNext()) {
       Statement stmt = iter.nextStatement();
       if (statementUsesProtectedNamespace(stmt, ns)) {
-        rejectedCount++;
+        rejected.add(stmt);
         log.debug("filterModel; rejected statement from {}: {}", source, stmt);
       } else {
         filtered.add(stmt);
       }
     }
 
-    if (rejectedCount > 0) {
+    if (!rejected.isEmpty()) {
       log.warn("filterModel; filtered {} statement(s) using protected namespace '{}:' from {}",
-          rejectedCount, properties.getPrefix(), source);
+          rejected.size(), properties.getPrefix(), source);
+      return new FilteredModel(filtered, buildModelWarning(rejected));
     }
-    return filtered;
+    return new FilteredModel(filtered, null);
+  }
+
+  private String buildModelWarning(List<Statement> rejected) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(rejected.size()).append(" statement(s) were removed from your schema because they use the reserved")
+        .append(" internal namespace <").append(properties.getNamespace()).append(">.")
+        .append(" Removed statements:");
+    for (Statement stmt : rejected) {
+      sb.append("\n  · ").append(stmt.getSubject())
+        .append(" ").append(stmt.getPredicate())
+        .append(" ").append(stmt.getObject());
+    }
+    sb.append("\nThis namespace is reserved for internal catalogue use only and cannot be set by external clients.");
+    return sb.toString();
   }
 
   private boolean claimUsesProtectedNamespace(SdClaim claim, String angleBracketNs) {
