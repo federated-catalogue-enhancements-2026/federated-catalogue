@@ -91,14 +91,16 @@ public interface SelfDescriptionStore {
   /**
    * Store a non-RDF asset. The content is stored in the FileStore and metadata
    * (with content=NULL) is inserted into the database. No verification or graph
-   * interaction is performed.
+   * interaction is performed. If the metadata has no subject ID, one is generated
+   * from the configured prefix and the content hash.
    *
    * @param sdMetadata The asset metadata to store.
    * @param originalFilename The original filename from the upload, or null.
+   * @return the stored metadata, including the generated subject ID.
    * @throws eu.xfsc.fc.core.exception.ServerException if the file store write fails.
    * @throws eu.xfsc.fc.core.exception.ConflictException if an asset with the same hash already exists.
    */
-  void storeAsset(SelfDescriptionMetadata sdMetadata, String originalFilename);
+  SelfDescriptionMetadata storeAsset(SelfDescriptionMetadata sdMetadata, String originalFilename);
 
   /**
    * Remove all SelfDescriptions from the SelfDescriptionStore.

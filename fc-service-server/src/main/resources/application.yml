@@ -132,11 +132,11 @@ federated-catalogue:
     cached: true
     cache-size: 128
     schema:
-      location: schemaFiles
+      location: schemaFiles        # RDF schema definitions used for SD validation
     asset:
-      location: assetFiles
+      location: assetFiles         # Non-RDF file content (PDFs, images, binaries)
     context-cache:
-      location: contextCacheFiles
+      location: contextCacheFiles  # Cached JSON-LD context documents
   query:
     partners:
     self: "http://localhost:${server.port}"

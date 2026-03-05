@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,10 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
   @Autowired
   @Qualifier("assetFileStore")
   private FileStore fileStore;
+
+  /** Prefix for generating asset subject IDs from content hashes. */
+  @Value("${federated-catalogue.asset.subject-id-prefix:urn:asset:sha256:}")
+  private String assetSubjectIdPrefix;
 
   @Override
   public ContentAccessor getSDFileByHash(final String hash) {
@@ -112,9 +117,10 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
   }
 
   @Override
-  public void storeAsset(final SelfDescriptionMetadata sdMetadata, final String originalFilename) {
+  public SelfDescriptionMetadata storeAsset(final SelfDescriptionMetadata sdMetadata, final String originalFilename) {
     log.debug("storeAsset.enter; got meta: {}", sdMetadata);
-    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), sdMetadata.getId(), sdMetadata.getStatus(),
+    String subjectId = sdMetadata.getId() != null ? sdMetadata.getId() : assetSubjectIdPrefix + sdMetadata.getSdHash();
+    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), subjectId, sdMetadata.getStatus(),
         sdMetadata.getIssuer(), sdMetadata.getValidatorDids(), sdMetadata.getUploadDatetime(),
         sdMetadata.getStatusDatetime(), null, null,
         sdMetadata.getContentType(), sdMetadata.getFileSize(), originalFilename);
@@ -132,6 +138,7 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
       throw new ServerException("Failed to store asset content in file store", ex);
     }
     log.debug("storeAsset.exit; stored asset with hash: {}", sdMetadata.getSdHash());
+    return sd;
   }
 
   @Override

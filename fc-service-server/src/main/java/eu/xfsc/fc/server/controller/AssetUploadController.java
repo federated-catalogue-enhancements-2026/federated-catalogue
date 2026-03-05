@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AssetUploadController {
 
     public static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
     @Autowired
     private VerificationService verificationService;
 
@@ -127,9 +128,9 @@ public class AssetUploadController {
         sdMetadata.setContentType(contentType);
         sdMetadata.setFileSize((long) content.length);
 
-        sdStorePublisher.storeAsset(sdMetadata, originalFilename);
+        SelfDescriptionMetadata stored = sdStorePublisher.storeAsset(sdMetadata, originalFilename);
 
         log.debug("handleNonRdfUpload.exit; stored asset with hash: {}", sdHash);
-        return ResponseEntity.created(URI.create("/self-descriptions/" + sdHash)).body(sdMetadata);
+        return ResponseEntity.created(URI.create("/self-descriptions/" + sdHash)).body(stored);
     }
 }
