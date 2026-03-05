@@ -133,6 +133,8 @@ federated-catalogue:
     cache-size: 128
     schema:
       location: schemaFiles
+    asset:
+      location: assetFiles
     context-cache:
       location: contextCacheFiles
   query:

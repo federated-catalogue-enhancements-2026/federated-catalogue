@@ -1,10 +1,12 @@
 package eu.xfsc.fc.core.service.sdstore;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import eu.xfsc.fc.core.pojo.SdFilter;
 import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.VerificationResult;
+import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,6 +42,10 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
 
   @Autowired
   private GraphStore graphDb;
+
+  @Autowired
+  @Qualifier("assetFileStore")
+  private FileStore fileStore;
 
   @Override
   public ContentAccessor getSDFileByHash(final String hash) {
@@ -102,6 +109,29 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
     }
     graphDb.addClaims(verificationResult.getClaims(), sdMetadata.getId());
     return subjectHash;
+  }
+
+  @Override
+  public void storeAsset(final SelfDescriptionMetadata sdMetadata, final String originalFilename) {
+    log.debug("storeAsset.enter; got meta: {}", sdMetadata);
+    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), sdMetadata.getId(), sdMetadata.getStatus(),
+        sdMetadata.getIssuer(), sdMetadata.getValidatorDids(), sdMetadata.getUploadDatetime(),
+        sdMetadata.getStatusDatetime(), null, null,
+        sdMetadata.getContentType(), sdMetadata.getFileSize(), originalFilename);
+    try {
+      dao.insert(sd);
+    } catch (DuplicateKeyException ex) {
+      if (ex.getMessage().contains("sdfiles_pkey")) {
+        throw new ConflictException(String.format("asset with hash %s already exists", sdMetadata.getSdHash()));
+      }
+      throw new ServerException(ex);
+    }
+    try {
+      fileStore.storeFile(sdMetadata.getSdHash(), sdMetadata.getSelfDescription());
+    } catch (IOException ex) {
+      throw new ServerException("Failed to store asset content in file store", ex);
+    }
+    log.debug("storeAsset.exit; stored asset with hash: {}", sdMetadata.getSdHash());
   }
 
   @Override
