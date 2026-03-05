@@ -356,6 +356,17 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Result'
+    SchemaResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'The internal identifier of the schema.'
+        warnings:
+          type: array
+          items:
+            type: string
+          description: 'Warnings generated during schema import (e.g. filtered protected namespace statements).'
     QueryInfo:
       type: object
       properties:
@@ -862,6 +873,10 @@ paths:
               description: 'URL of the added Schema.'
               schema:
                 type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResult'
         '400':
           $ref: '#/components/responses/ClientError'
         '403':
@@ -938,6 +953,10 @@ paths:
       responses:
         '200':
           description: 'Updated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResult'
         '400':
           $ref: '#/components/responses/ClientError'
         '403':

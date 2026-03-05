@@ -13,14 +13,31 @@ import lombok.Setter;
  * is filtered at ingestion boundaries. Configured via
  * {@code federated-catalogue.verification.protected-namespace.namespace} in
  * {@code application.yml}.</p>
+ *
+ * <p>In production the values are set by {@code application.yml}
+ * ({@code fc-service-server/src/main/resources}) and by each module's test
+ * {@code application.yml}. The defaults below act as a safety net so the
+ * namespace filter never silently becomes a no-op if the configuration entry
+ * is accidentally removed or misspelled.</p>
  */
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "federated-catalogue.verification.protected-namespace", ignoreInvalidFields = true)
+@ConfigurationProperties(prefix = "federated-catalogue.verification.protected-namespace")
 public class ProtectedNamespaceProperties {
 
-  private String namespace;
+  /**
+   * Full namespace URI that is filtered at ingestion boundaries.
+   * Overridden by {@code federated-catalogue.verification.protected-namespace.namespace}
+   * in {@code application.yml}; default ensures filtering is always active.
+   */
+  private String namespace =
+      "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
 
-  private String prefix;
+  /**
+   * Short prefix used in log and warning messages (e.g. "fcmeta").
+   * Overridden by {@code federated-catalogue.verification.protected-namespace.prefix}
+   * in {@code application.yml}; not used in the actual filtering logic.
+   */
+  private String prefix = "fcmeta";
 }

@@ -250,12 +250,14 @@ public class SchemaStoreImpl implements SchemaStore {
     return result.isValid();
   }
 
-  private SchemaRecord analyzeSchemaRecord(ContentAccessor schema) {
+  private record AnalyzedSchema(SchemaRecord record, String warning) {}
+
+  private AnalyzedSchema analyzeSchemaRecord(ContentAccessor schema) {
     SchemaAnalysisResult result = analyzeSchema(schema);
 	if (!result.isValid()) {
 	  throw new VerificationException("Schema is not valid: " + result.getErrorMessage());
 	}
-		    
+
     String nameHash;
 	String schemaId = result.getExtractedId();
 	if (Strings.isNullOrEmpty(schemaId)) {
@@ -263,12 +265,14 @@ public class SchemaStoreImpl implements SchemaStore {
 	} else {
 	  nameHash = HashUtils.calculateSha256AsHex(schemaId);
 	}
-    return new SchemaRecord(schemaId, nameHash, result.getSchemaType(), schema.getContentAsString(), result.getExtractedUrls());  
+    SchemaRecord rec = new SchemaRecord(schemaId, nameHash, result.getSchemaType(), schema.getContentAsString(), result.getExtractedUrls());
+    return new AnalyzedSchema(rec, result.getWarning());
   }
 
   @Override
-  public String addSchema(ContentAccessor schema) {
-    SchemaRecord newRecord = analyzeSchemaRecord(schema);
+  public SchemaStoreResult addSchema(ContentAccessor schema) {
+    AnalyzedSchema analyzed = analyzeSchemaRecord(schema);
+    SchemaRecord newRecord = analyzed.record();
     try {
       if (!dao.insert(newRecord)) {
         throw new ServerException("DB error, schema not inserted");
@@ -283,14 +287,15 @@ public class SchemaStoreImpl implements SchemaStore {
       log.info("addSchema; conflict: {}", ex.getMessage());
       throw new ServerException(ex);
     }
-    
+
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    return newRecord.getId();
+    return new SchemaStoreResult(newRecord.getId(), analyzed.warning());
   }
   
   @Override
-  public void updateSchema(String identifier, ContentAccessor schema) {
-    SchemaRecord newRecord = analyzeSchemaRecord(schema);
+  public SchemaStoreResult updateSchema(String identifier, ContentAccessor schema) {
+    AnalyzedSchema analyzed = analyzeSchemaRecord(schema);
+    SchemaRecord newRecord = analyzed.record();
     if (newRecord.schemaId() != null && !identifier.equals(newRecord.schemaId())) {
       throw new ClientException("Given schema does not have the same Identifier as the old schema: " + identifier + " <> " + newRecord.schemaId());
     }
@@ -314,6 +319,7 @@ public class SchemaStoreImpl implements SchemaStore {
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
     // SDs will be revalidated in a separate thread.
+    return new SchemaStoreResult(identifier, analyzed.warning());
   }
 
   @Override

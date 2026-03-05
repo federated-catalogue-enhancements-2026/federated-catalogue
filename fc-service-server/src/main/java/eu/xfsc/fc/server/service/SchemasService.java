@@ -1,18 +1,21 @@
 package eu.xfsc.fc.server.service;
 
 import eu.xfsc.fc.api.generated.model.OntologySchema;
+import eu.xfsc.fc.api.generated.model.SchemaResult;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
+import eu.xfsc.fc.core.service.schemastore.SchemaStoreResult;
 import eu.xfsc.fc.server.generated.controller.SchemasApiDelegate;
 
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -113,11 +116,12 @@ public class SchemasService implements SchemasApiDelegate {
    *         Must not outline any information about the internal structure of the server. (status code 500)
    */
   @Override
-  public ResponseEntity<Void> addSchema(String schema) {
+  public ResponseEntity<SchemaResult> addSchema(String schema) {
     log.debug("addSchema.enter; got schema of length: {}", schema == null ? "null" : schema.length());
-    String id = schemaStore.addSchema(new ContentAccessorDirect(schema));
-    log.debug("addSchema.exit; returning schema id {}", id);
-    return ResponseEntity.created(URI.create("/schemas/" + id)).body(null);
+    SchemaStoreResult storeResult = schemaStore.addSchema(new ContentAccessorDirect(schema));
+    log.debug("addSchema.exit; returning schema id {}", storeResult.id());
+    SchemaResult result = toSchemaResult(storeResult);
+    return ResponseEntity.created(URI.create("/schemas/" + storeResult.id())).body(result);
   }
 
   /**
@@ -153,10 +157,22 @@ public class SchemasService implements SchemasApiDelegate {
    *         Must not outline any information about the internal structure of the server. (status code 500)
    */
   @Override
-  public ResponseEntity<Void> updateSchema(String id, String schema) {
+  public ResponseEntity<SchemaResult> updateSchema(String id, String schema) {
     String schemaId = URLDecoder.decode(id, Charset.defaultCharset());
     log.debug("updateSchema.enter; got id: {}, schemaId: {}, schema of length: {}", id, schemaId, schema == null ? "null" : schema.length());
-    schemaStore.updateSchema(schemaId, new ContentAccessorDirect(schema));
-    return ResponseEntity.ok(null);
+    SchemaStoreResult storeResult = schemaStore.updateSchema(schemaId, new ContentAccessorDirect(schema));
+    SchemaResult result = toSchemaResult(storeResult);
+    return ResponseEntity.ok(result);
+  }
+
+  private SchemaResult toSchemaResult(SchemaStoreResult storeResult) {
+    SchemaResult result = new SchemaResult();
+    result.setId(storeResult.id());
+    if (storeResult.warning() != null) {
+      result.setWarnings(List.of(storeResult.warning()));
+    } else {
+      result.setWarnings(Collections.emptyList());
+    }
+    return result;
   }
 }
