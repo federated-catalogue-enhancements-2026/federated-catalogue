@@ -163,9 +163,14 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
     if (ssr == null) {
       throw new NotFoundException("no self-description found for hash " + hash);
     }
-    
+
     if (ssr.getSdStatus() == SelfDescriptionStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
+    }
+    try {
+      fileStore.deleteFile(hash);
+    } catch (IOException ex) {
+      log.debug("deleteSelfDescription; file store cleanup skipped for hash {}: {}", hash, ex.getMessage());
     }
   }
 
