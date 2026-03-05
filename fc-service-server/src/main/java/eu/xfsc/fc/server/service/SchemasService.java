@@ -48,14 +48,12 @@ public class SchemasService implements SchemasApiDelegate {
   @Override
   public ResponseEntity<String> getSchema(String id) {
     String schemaId = URLDecoder.decode(id, Charset.defaultCharset());
-    log.debug("getSchema.enter; got schemaId: {}; decode: {}", id, schemaId);
-    ContentAccessor accessor = schemaStore.getSchema(schemaId);
+   ContentAccessor accessor = schemaStore.getSchema(schemaId);
     if (accessor == null) {
       throw new NotFoundException("There is no Schema with id " + schemaId);
     }
     String schema = accessor.getContentAsString();
-    log.debug("getSchema.exit; returning schema of length: {}", schema.length());
-    return ResponseEntity.ok(schema);
+     return ResponseEntity.ok(schema);
   }
 
   /**
@@ -69,15 +67,13 @@ public class SchemasService implements SchemasApiDelegate {
    */
   @Override
   public ResponseEntity<OntologySchema> getSchemas() {
-    log.debug("getSchemas.enter");
-    Map<SchemaType, List<String>> schemaListMap = schemaStore.getSchemaList();
+     Map<SchemaType, List<String>> schemaListMap = schemaStore.getSchemaList();
 
     OntologySchema schema = new OntologySchema();
     schema.setOntologies(schemaListMap.get(SchemaType.ONTOLOGY));
     schema.setShapes(schemaListMap.get(SchemaType.SHAPE));
     schema.setVocabularies(schemaListMap.get(SchemaType.VOCABULARY));
-    log.debug("getSchema.exit, returning {}", schema);
-    return ResponseEntity.ok(schema);
+     return ResponseEntity.ok(schema);
   }
 
   /**
@@ -94,13 +90,11 @@ public class SchemasService implements SchemasApiDelegate {
    */
   @Override
   public ResponseEntity<String> getLatestSchema(String type, String term) {
-    log.debug("getLatestSchemas.enter; got type: {}, term: {}", type, term);
     if (type == null || Arrays.stream(SchemaType.values()).noneMatch(x -> x.name().equalsIgnoreCase(type))) {
       throw new ClientException("Please check the value of the type query parameter!");
     }
     // TODO: 31.08.2022 Why is the term parameter used here (not passed anywhere, not specified in the doс)?
     String schema = schemaStore.getCompositeSchema(SchemaType.valueOf(type.toUpperCase())).getContentAsString();
-    log.debug("getLatestSchemas.exit; returning schema by type: {}", schema);
     return ResponseEntity.ok(schema);
   }
 
@@ -117,11 +111,9 @@ public class SchemasService implements SchemasApiDelegate {
    */
   @Override
   public ResponseEntity<SchemaResult> addSchema(String schema) {
-    log.debug("addSchema.enter; got schema of length: {}", schema == null ? "null" : schema.length());
     SchemaStoreResult storeResult = schemaStore.addSchema(new ContentAccessorDirect(schema));
-    log.debug("addSchema.exit; returning schema id {}", storeResult.id());
     SchemaResult result = toSchemaResult(storeResult);
-    return ResponseEntity.created(URI.create("/schemas/" + storeResult.id())).body(result);
+    return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);
   }
 
   /**
@@ -138,7 +130,6 @@ public class SchemasService implements SchemasApiDelegate {
   @Override
   public ResponseEntity<Void> deleteSchema(String id)  {
     String schemaId = URLDecoder.decode(id, Charset.defaultCharset());
-    log.debug("deleteSchema.enter; got id: {}, schemaId: {}", id, schemaId);
     schemaStore.deleteSchema(schemaId);
     return ResponseEntity.ok(null);
   }
@@ -159,20 +150,14 @@ public class SchemasService implements SchemasApiDelegate {
   @Override
   public ResponseEntity<SchemaResult> updateSchema(String id, String schema) {
     String schemaId = URLDecoder.decode(id, Charset.defaultCharset());
-    log.debug("updateSchema.enter; got id: {}, schemaId: {}, schema of length: {}", id, schemaId, schema == null ? "null" : schema.length());
     SchemaStoreResult storeResult = schemaStore.updateSchema(schemaId, new ContentAccessorDirect(schema));
-    SchemaResult result = toSchemaResult(storeResult);
-    return ResponseEntity.ok(result);
+    return ResponseEntity.ok(toSchemaResult(storeResult));
   }
 
   private SchemaResult toSchemaResult(SchemaStoreResult storeResult) {
     SchemaResult result = new SchemaResult();
     result.setId(storeResult.id());
-    if (storeResult.warning() != null) {
-      result.setWarnings(List.of(storeResult.warning()));
-    } else {
-      result.setWarnings(Collections.emptyList());
-    }
+    result.setWarnings(storeResult.warning() != null ? List.of(storeResult.warning()) : Collections.emptyList());
     return result;
   }
 }
