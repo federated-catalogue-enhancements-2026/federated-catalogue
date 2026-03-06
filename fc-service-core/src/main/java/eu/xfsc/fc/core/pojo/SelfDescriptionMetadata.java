@@ -39,7 +39,7 @@ public class SelfDescriptionMetadata extends SelfDescription {
   public SelfDescriptionMetadata(ContentAccessor contentAccessor, VerificationResult verificationResult) {
     super(calculateSha256AsHex(contentAccessor.getContentAsString()), verificationResult.getId(), SelfDescriptionStatus.ACTIVE,
             verificationResult.getIssuer(), verificationResult.getValidatorDids(), verificationResult.getIssuedDateTime(),
-            verificationResult.getVerificationTimestamp(), null, null); //upload, status
+            verificationResult.getVerificationTimestamp(), null, null); // null: contentType, fileSize
     this.selfDescription = contentAccessor;
   }
 
