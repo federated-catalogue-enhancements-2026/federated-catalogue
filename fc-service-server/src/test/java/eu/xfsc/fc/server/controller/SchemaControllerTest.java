@@ -28,8 +28,10 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
-import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE;
-import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
+import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_CREATE;
+import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_DELETE;
+import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,7 +64,7 @@ public class SchemaControllerTest {
   }
   
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_READ})
   public void getSchemaByIdShouldReturnSuccessResponse() throws Exception {
     String id = schemaStore.addSchema(new ContentAccessorDirect(getMockFileDataAsString("test-schema.ttl")));
     String schemaId = URLEncoder.encode(id, Charset.defaultCharset());
@@ -82,7 +84,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_READ})
   public void getSchemasShouldReturnSuccessResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
             .with(csrf())
@@ -101,7 +103,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_READ})
   public void getLatestSchemaShouldReturnSuccessResponse() throws Exception {
     String id = schemaStore.addSchema(new ContentAccessorDirect(getMockFileDataAsString("test-schema.ttl")));
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/latest?type=SHAPE")
@@ -120,7 +122,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_READ})
   public void getLatestSchemaWithoutTypeShouldReturnBadRequest() throws Exception {
     String id = schemaStore.addSchema(new ContentAccessorDirect(getMockFileDataAsString("test-schema.ttl")));
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/latest")
@@ -131,7 +133,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_READ})
   public void getLatestSchemaWithUncorrectedTypeShouldReturnBadRequest() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/latest?type=testType")
             .with(csrf())
@@ -160,7 +162,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {ASSET_READ})
   public void addSchemaWithoutRoleAccessShouldReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
             .content(SCHEMA_REQUEST)
@@ -171,7 +173,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_CREATE})
   public void addSchemaShouldReturnSuccessResponse() throws Exception {
     ResultActions resultActions = mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
             .content(getMockFileDataAsString("test-schema.ttl"))
@@ -193,7 +195,7 @@ public class SchemaControllerTest {
 
 
   @Test
-  @WithMockUser(roles = {PARTICIPANT_ADMIN_ROLE})
+  @WithMockUser(roles = {ASSET_READ})
   public void deleteSchemasWithDifferentRoleReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.delete("/schemas/schemaID")
             .with(csrf())
@@ -202,7 +204,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {CATALOGUE_ADMIN_ROLE})
+  @WithMockUser(roles = {SCHEMA_DELETE})
   public void deleteSchemasReturnSuccessResponse() throws Exception {
     String id = schemaStore.addSchema(new ContentAccessorDirect(getMockFileDataAsString("test-schema.ttl")));
     String schemaId = URLEncoder.encode(id, Charset.defaultCharset());
@@ -210,5 +212,25 @@ public class SchemaControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_READ})
+  public void addSchemaWithReadOnlyRoleShouldReturnForbiddenResponse() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(SCHEMA_REQUEST)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithMockUser
+  public void getSchemaWithoutPermissionRoleShouldReturnForbiddenResponse() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isForbidden());
   }
 }

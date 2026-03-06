@@ -1,8 +1,12 @@
 package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
-import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestCommonConstants.SD_ADMIN_ROLE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_DELETE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_UPDATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -130,7 +134,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = {ASSET_READ})
     public void readSDsShouldReturnBadRequestResponse() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions?statuses=123")
               .with(csrf())
@@ -139,7 +143,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = {ASSET_READ})
     public void readSDsShouldReturnSuccessResponse() throws Exception {
         sdStorePublisher.storeSelfDescription(sdMeta, getStaticVerificationResult());
         MvcResult result =  mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions")
@@ -155,7 +159,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = {ASSET_READ})
     public void readSDsByFilterShouldReturnSuccessResponse() throws Exception {
         sdStorePublisher.storeSelfDescription(sdMeta, getStaticVerificationResult());
         
@@ -241,14 +245,14 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = {ASSET_READ})
     public void readSDByHashShouldReturnNotFoundResponse() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions/123").with(csrf()))
           .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = {ASSET_READ})
     public void readSDByHashShouldReturnSuccessResponse() throws Exception {
         sdStorePublisher.storeSelfDescription(sdMeta, getStaticVerificationResult());
 
@@ -278,7 +282,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = SD_ADMIN_ROLE_WITH_PREFIX, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = ASSET_DELETE_WITH_PREFIX, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = "")})))
     public void deleteSdWithoutIssuerReturnForbiddenResponse() throws Exception {
       sdStorePublisher.storeSelfDescription(sdMeta, getStaticVerificationResult());
@@ -290,7 +294,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_DELETE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteSDReturnNotFoundResponse() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.delete("/self-descriptions/" + sdMeta.getSdHash())
@@ -301,7 +305,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_DELETE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteSDReturnSuccessResponse() throws Exception {
         sdStorePublisher.storeSelfDescription(sdMeta, getStaticVerificationResult());
@@ -334,7 +338,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addSDWithoutIssuerReturnUnprocessableEntity() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
@@ -346,7 +350,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addSDReturnCreatedResponse() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
@@ -362,7 +366,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addResourceReturnCreatedResponse() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
@@ -378,7 +382,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addParicipantReturnCreatedResponse() throws Exception {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
@@ -401,7 +405,7 @@ public class SelfDescriptionControllerTest {
      * Proves that schema validation is disabled in the upload flow.
      */
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addShaclInvalidSDReturnCreatedResponse() throws Exception {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
@@ -420,7 +424,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addDuplicateSDReturnConflictWithSdStorage() throws Exception {
       String sd = getMockFileDataAsString(SD_FILE_NAME);
@@ -442,7 +446,7 @@ public class SelfDescriptionControllerTest {
 
     // TODO: 05.09.2022 Need to add a test to check the correct scenario with graph storage when it is added
     //@Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addSDFailedThenAllTransactionRolledBack() throws Exception {
         ArgumentCaptor<String> hashCaptor = ArgumentCaptor.forClass(String.class);
@@ -483,7 +487,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeSDReturnNotFound() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions/" + sdMeta.getSdHash() + "/revoke")
@@ -494,7 +498,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeSDReturnSuccessResponse() throws Exception {
         final VerificationResult vr = new VerificationResult(Instant.now(), SelfDescriptionStatus.ACTIVE.getValue(), "issuer", 
@@ -509,7 +513,7 @@ public class SelfDescriptionControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeThenAddSDReturnCorrectResponse() throws Exception {
         String content = getMockFileDataAsString(SD_FILE_NAME);
@@ -568,7 +572,7 @@ public class SelfDescriptionControllerTest {
     }
     
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeSdWithNotActiveStatusReturnConflictResponse() throws Exception {
         final VerificationResult vr = new VerificationResult(Instant.now(), SelfDescriptionStatus.ACTIVE.getValue(), "issuer", 
@@ -585,6 +589,27 @@ public class SelfDescriptionControllerTest {
         Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
         assertEquals("The SD status cannot be changed because the SD Metadata status is deprecated", error.getMessage());
         sdStorePublisher.deleteSelfDescription(metadata.getSdHash());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void addSDWithReadOnlyPermissionReturnForbiddenResponse() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
+                        .content(getMockFileDataAsString(SD_FILE_NAME))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    public void readSDsWithoutPermissionRoleShouldReturnForbiddenResponse() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions")
+                        .with(csrf())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
     }
 
     private static SelfDescriptionMetadata createSdMetadata() throws IOException {
