@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * stored in the catalogue. Two paths exist:
  * <ul>
  *   <li><b>Credential</b> (RDF) — verified via {@link VerificationService}, indexed in the graph store.</li>
- *   <li><b>Attachment</b> (non-RDF) — stored as-is in the file store, no verification.</li>
+ *   <li><b>Non-RDF Asset</b> (read "attachment") — stored as-is in the file store, no verification.</li>
  * </ul>
  * Methods named "attachment" concern the non-RDF path specifically.
  *
@@ -49,7 +49,7 @@ public class AssetUploadService {
         if (rdfDetector.isRdf(contentType, content)) {
             return handleCredential(content, contentType);
         }
-        return handleAttachment(content, contentType, originalFilename);
+        return handleNonRdfAsset(content, contentType, originalFilename);
     }
 
     private SelfDescriptionMetadata handleCredential(byte[] content, String contentType) {
@@ -71,8 +71,8 @@ public class AssetUploadService {
         return sdMetadata;
     }
 
-    private SelfDescriptionMetadata handleAttachment(byte[] content, String contentType, String originalFilename) {
-        log.debug("handleAttachment; non-RDF attachment, skipping verification");
+    private SelfDescriptionMetadata handleNonRdfAsset(byte[] content, String contentType, String originalFilename) {
+        log.debug("handleNonRdfAsset; non-RDF asset, skipping verification");
         String sdHash = calculateSha256AsHex(content);
         String participantId = getSessionParticipantId();
         Instant now = Instant.now();
