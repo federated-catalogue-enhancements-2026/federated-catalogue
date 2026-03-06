@@ -2,13 +2,13 @@ package eu.xfsc.fc.core.pojo;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
  * A byte-array implementation of the ContentAccessor interface for binary content.
  * Unlike {@link ContentAccessorDirect}, this preserves raw bytes without assuming
- * UTF-8 text encoding.
+ * UTF-8 text encoding. Use {@link #getContentAsStream()} or {@link #getContentAsBytes()}
+ * to access the content; {@link #getContentAsString()} is not supported.
  */
 @lombok.AllArgsConstructor
 public class ContentAccessorBinary implements ContentAccessor {
@@ -17,7 +17,8 @@ public class ContentAccessorBinary implements ContentAccessor {
 
     @Override
     public String getContentAsString() {
-        return new String(content, StandardCharsets.UTF_8);
+        throw new UnsupportedOperationException(
+                "ContentAccessorBinary holds raw binary data. Use getContentAsStream() or getContentAsBytes() instead.");
     }
 
     @Override
