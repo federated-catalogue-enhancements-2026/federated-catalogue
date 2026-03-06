@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.sdstore;
 import static eu.xfsc.fc.core.util.TestUtil.assertThatSdHasTheSameData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

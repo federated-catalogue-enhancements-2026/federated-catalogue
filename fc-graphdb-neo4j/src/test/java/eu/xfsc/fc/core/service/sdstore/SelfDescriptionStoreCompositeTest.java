@@ -117,7 +117,7 @@ public class SelfDescriptionStoreCompositeTest {
     String uri = "http://example.org/test-issuer";
     List<Map<String, Object>> claims = graphStore.queryData(
         new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", uri))).getResults();
-    Assertions.assertTrue(!claims.isEmpty());
+      Assertions.assertFalse(claims.isEmpty());
 
     List<Map<String, Object>> hNodes = graphStore.queryData(
         new GraphQuery("MATCH (n)-[r:legalAddress]->(a {locality: $locality}) RETURN n, r, a", Map.of("locality", "Hamburg"))).getResults();
