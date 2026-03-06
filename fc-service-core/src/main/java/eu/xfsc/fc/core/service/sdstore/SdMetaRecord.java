@@ -8,6 +8,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.VerificationResult;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,6 +36,7 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
     }
   }
 
+  @Builder
   public SdMetaRecord(String sdHash, String id, SelfDescriptionStatus status, String issuer, List<String> validatorDids,
       Instant uploadTime, Instant statusTime, ContentAccessor content, Instant expirationTime,
       String contentType, Long fileSize, String originalFilename) {

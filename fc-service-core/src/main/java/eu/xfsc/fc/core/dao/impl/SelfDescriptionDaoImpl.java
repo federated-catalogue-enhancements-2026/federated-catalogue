@@ -286,13 +286,20 @@ public class SelfDescriptionDaoImpl implements SelfDescriptionDao {
 			String contentType = rs.getString("content_type");
 			long fileSize = rs.getLong("file_size");
 			String originalFilename = rs.getString("original_filename");
-			return new SdMetaRecord(rs.getString("sdhash"), rs.getString("subjectid"),
-				SelfDescriptionStatus.values()[rs.getInt("status")], rs.getString("issuer"),
-				arr == null ? null : Arrays.asList((String[]) arr.getArray()),
-				upt == null ? null : upt.toInstant(), stt == null ? null : stt.toInstant(),
-				content == null ? null : new ContentAccessorDirect(content),
-				exp == null ? null : exp.toInstant(),
-				contentType, rs.wasNull() ? null : fileSize, originalFilename);
+			return SdMetaRecord.builder()
+				.sdHash(rs.getString("sdhash"))
+				.id(rs.getString("subjectid"))
+				.status(SelfDescriptionStatus.values()[rs.getInt("status")])
+				.issuer(rs.getString("issuer"))
+				.validatorDids(arr == null ? null : Arrays.asList((String[]) arr.getArray()))
+				.uploadTime(upt == null ? null : upt.toInstant())
+				.statusTime(stt == null ? null : stt.toInstant())
+				.content(content == null ? null : new ContentAccessorDirect(content))
+				.expirationTime(exp == null ? null : exp.toInstant())
+				.contentType(contentType)
+				.fileSize(rs.wasNull() ? null : fileSize)
+				.originalFilename(originalFilename)
+				.build();
 		}
     }
 	

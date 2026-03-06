@@ -92,9 +92,18 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
       Validator minVal = validators.stream().min(new Validator.ExpirationComparator()).orElse(null);
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
-    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), sdMetadata.getId(), sdMetadata.getStatus(), sdMetadata.getIssuer(), sdMetadata.getValidatorDids(),
-    		sdMetadata.getUploadDatetime(), sdMetadata.getStatusDatetime(), sdMetadata.getSelfDescription(), expirationTime,
-    		"application/ld+json", null, null);
+    SdMetaRecord sd = SdMetaRecord.builder()
+        .sdHash(sdMetadata.getSdHash())
+        .id(sdMetadata.getId())
+        .status(sdMetadata.getStatus())
+        .issuer(sdMetadata.getIssuer())
+        .validatorDids(sdMetadata.getValidatorDids())
+        .uploadTime(sdMetadata.getUploadDatetime())
+        .statusTime(sdMetadata.getStatusDatetime())
+        .content(sdMetadata.getSelfDescription())
+        .expirationTime(expirationTime)
+        .contentType("application/ld+json")
+        .build();
 
     SubjectHashRecord subjectHash = null;
     try {
@@ -120,10 +129,18 @@ public class SelfDescriptionStoreImpl implements SelfDescriptionStore {
   public SelfDescriptionMetadata storeAsset(final SelfDescriptionMetadata sdMetadata, final String originalFilename) {
     log.debug("storeAsset.enter; got meta: {}", sdMetadata);
     String subjectId = sdMetadata.getId() != null ? sdMetadata.getId() : assetSubjectIdPrefix + sdMetadata.getSdHash();
-    SdMetaRecord sd = new SdMetaRecord(sdMetadata.getSdHash(), subjectId, sdMetadata.getStatus(),
-        sdMetadata.getIssuer(), sdMetadata.getValidatorDids(), sdMetadata.getUploadDatetime(),
-        sdMetadata.getStatusDatetime(), null, null,
-        sdMetadata.getContentType(), sdMetadata.getFileSize(), originalFilename);
+    SdMetaRecord sd = SdMetaRecord.builder()
+        .sdHash(sdMetadata.getSdHash())
+        .id(subjectId)
+        .status(sdMetadata.getStatus())
+        .issuer(sdMetadata.getIssuer())
+        .validatorDids(sdMetadata.getValidatorDids())
+        .uploadTime(sdMetadata.getUploadDatetime())
+        .statusTime(sdMetadata.getStatusDatetime())
+        .contentType(sdMetadata.getContentType())
+        .fileSize(sdMetadata.getFileSize())
+        .originalFilename(originalFilename)
+        .build();
     try {
       dao.insert(sd);
     } catch (DuplicateKeyException ex) {
