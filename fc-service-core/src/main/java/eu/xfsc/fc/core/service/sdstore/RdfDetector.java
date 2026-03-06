@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.sdstore;
 
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,9 @@ public class RdfDetector {
 
     private static final String APPLICATION_JSON = "application/json";
 
+    // Matches "@context" as a JSON key followed by colon and array/string/http — reduces false positives from "@context" as a value
+    private static final Pattern JSON_LD_CONTEXT_PATTERN = Pattern.compile("\"@context\"\\s*:\\s*[\\[\"h]");
+
     private final RdfContentTypeProperties rdfProperties;
 
     /**
@@ -55,7 +59,7 @@ public class RdfDetector {
         // Special case: application/json needs @context check to distinguish JSON-LD from plain JSON
         if (APPLICATION_JSON.equals(normalized) && content != null) {
             String text = new String(content, StandardCharsets.UTF_8);
-            boolean hasContext = text.contains("\"@context\"");
+            boolean hasContext = JSON_LD_CONTEXT_PATTERN.matcher(text).find();
             log.debug("isRdf; application/json @context check: {}", hasContext);
             return hasContext;
         }
