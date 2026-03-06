@@ -92,7 +92,7 @@ public class AssetUploadControllerTest {
         assertNotNull(sd.getSdHash());
         assertEquals("urn:asset:sha256:" + sd.getSdHash(), sd.getId());
         assertEquals("text/plain", sd.getContentType());
-        assertEquals((long) content.length, sd.getFileSize());
+        assertEquals(content.length, sd.getFileSize());
         assertNull(sd.getValidatorDids());
 
         deleteSdQuietly(sd.getSdHash());
@@ -159,7 +159,7 @@ public class AssetUploadControllerTest {
         SelfDescription sd = objectMapper.readValue(result.getResponse().getContentAsString(), SelfDescription.class);
         assertNotNull(sd.getSdHash());
         assertEquals(HashUtils.calculateSha256AsHex(content), sd.getSdHash());
-        assertEquals((long) content.length, sd.getFileSize());
+        assertEquals(content.length, sd.getFileSize());
 
         deleteSdQuietly(sd.getSdHash());
     }

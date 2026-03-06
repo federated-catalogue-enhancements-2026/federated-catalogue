@@ -2,7 +2,6 @@ package eu.xfsc.fc.core.service.sdstore;
 
 import static eu.xfsc.fc.core.util.TestUtil.assertThatSdHasTheSameData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -84,7 +83,7 @@ public class SelfDescriptionStoreTest {
   private GraphStore graphStore;
 
   @AfterEach
-  public void storageSelfCleaning() throws IOException {
+  public void storageSelfCleaning() {
     sdStorePublisher.clear();
   }
 
@@ -142,7 +141,7 @@ public class SelfDescriptionStoreTest {
    * it again.
    */
   @Test
-  void test01StoreSelfDescription() throws Exception {
+  void test01StoreSelfDescription() {
     log.info("test01StoreSelfDescription");
     final String content = "Some Test Content";
 
@@ -167,8 +166,7 @@ public class SelfDescriptionStoreTest {
     claims = graphStore.queryData(new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", sdMeta.getId()))).getResults();
     Assertions.assertEquals(0, claims.size());
 
-    Assertions.assertThrows(NotFoundException.class, () -> {sdStorePublisher.getByHash(hash);
-    });
+    Assertions.assertThrows(NotFoundException.class, () -> sdStorePublisher.getByHash(hash));
   }
 
   @Test
@@ -190,9 +188,7 @@ public class SelfDescriptionStoreTest {
 
     final SelfDescriptionMetadata sdMeta2 = createSelfDescriptionMeta("TestSd/1", "TestUser/1",
         Instant.parse("2022-01-01T13:00:00Z"), Instant.parse("2022-01-02T13:00:00Z"), content1);
-    Assertions.assertThrows(ConflictException.class, () -> {
-      sdStorePublisher.storeSelfDescription(sdMeta2, createVerificationResult(sdMeta2));
-    });
+    Assertions.assertThrows(ConflictException.class, () -> sdStorePublisher.storeSelfDescription(sdMeta2, createVerificationResult(sdMeta2)));
 
     nodes = graphStore.queryData(new GraphQuery(
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
@@ -207,16 +203,14 @@ public class SelfDescriptionStoreTest {
 
     sdStorePublisher.deleteSelfDescription(hash1);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
-      sdStorePublisher.getByHash(hash1);
-    });
+    Assertions.assertThrows(NotFoundException.class, () -> sdStorePublisher.getByHash(hash1));
   }
 
   /**
    * Test storing a self-description, and updating the status.
    */
   @Test
-  void test04ChangeSelfDescriptionStatus() throws Exception {
+  void test04ChangeSelfDescriptionStatus() {
     log.info("test04ChangeSelfDescriptionStatus");
     final String content = "Some Test Content";
 
@@ -239,9 +233,7 @@ public class SelfDescriptionStoreTest {
     byHash = sdStorePublisher.getByHash(hash);
     assertEquals(SelfDescriptionStatus.REVOKED, byHash.getStatus(), "Status should have been changed to 'revoked'");
 
-    Assertions.assertThrows(ConflictException.class, () -> {
-      sdStorePublisher.changeLifeCycleStatus(hash, SelfDescriptionStatus.ACTIVE);
-    });
+    Assertions.assertThrows(ConflictException.class, () -> sdStorePublisher.changeLifeCycleStatus(hash, SelfDescriptionStatus.ACTIVE));
     byHash = sdStorePublisher.getByHash(hash);
     assertEquals(SelfDescriptionStatus.REVOKED, byHash.getStatus(),
         "Status should not have been changed from 'revoked' to 'active'.");
@@ -253,9 +245,7 @@ public class SelfDescriptionStoreTest {
     log.debug("test04ChangeSelfDescriptionStatus-2; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked SD should not appear in queries");
 
-    Assertions.assertThrows(ConflictException.class, () -> {
-      sdStorePublisher.storeSelfDescription(sdMeta, createVerificationResult(0));
-    }, "Adding the same SD after revokation should not be possible.");
+    Assertions.assertThrows(ConflictException.class, () -> sdStorePublisher.storeSelfDescription(sdMeta, createVerificationResult(0)), "Adding the same SD after revokation should not be possible.");
 
     nodes = graphStore.queryData(new GraphQuery(
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
@@ -266,9 +256,7 @@ public class SelfDescriptionStoreTest {
 
     sdStorePublisher.deleteSelfDescription(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
-      sdStorePublisher.getByHash(hash);
-    });
+    Assertions.assertThrows(NotFoundException.class, () -> sdStorePublisher.getByHash(hash));
   }
 
 }
