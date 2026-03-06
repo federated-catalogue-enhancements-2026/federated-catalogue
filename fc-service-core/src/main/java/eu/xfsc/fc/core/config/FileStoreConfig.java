@@ -61,7 +61,10 @@ public class FileStoreConfig {
     if (cached) {
       return new CacheFileStore(cacheSize);
     }
-    if (scope.equals("runtime") && location != null) {
+    if (scope.equals("runtime")) {
+      if (location == null) {
+        throw new IllegalStateException("File store location must be configured for scope=runtime (missing property for '" + tempFolderName + "')");
+      }
       return new FileStoreImpl(location);
     }
     String tmpPath = TEMPORARY_FOLDER_FILE.getAbsolutePath() + File.separator + tempFolderName;
