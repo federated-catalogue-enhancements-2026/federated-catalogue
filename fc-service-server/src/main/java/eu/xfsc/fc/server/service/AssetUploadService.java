@@ -26,9 +26,8 @@ import lombok.extern.slf4j.Slf4j;
  * stored in the catalogue. Two paths exist:
  * <ul>
  *   <li><b>Credential</b> (RDF) — verified via {@link VerificationService}, indexed in the graph store.</li>
- *   <li><b>Non-RDF Asset</b> (read "attachment") — stored as-is in the file store, no verification.</li>
+ *   <li><b>Non-RDF Asset</b> ("unstructured" data) — stored as-is in the file store, no verification.</li>
  * </ul>
- * Methods named "attachment" concern the non-RDF path specifically.
  *
  * @see eu.xfsc.fc.core.service.sdstore.RdfDetector
  */
