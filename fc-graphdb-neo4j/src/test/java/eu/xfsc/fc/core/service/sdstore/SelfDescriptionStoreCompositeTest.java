@@ -6,6 +6,7 @@ import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 import java.util.List;
 import java.util.Map;
 
+import eu.xfsc.fc.core.config.RdfContentTypeProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -54,8 +55,9 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {SelfDescriptionStoreCompositeTest.TestApplication.class, FileStoreConfig.class, VerificationServiceImpl.class, CredentialVerificationStrategy.class, ValidatorCacheDaoImpl.class,
-  SelfDescriptionStoreImpl.class, SelfDescriptionDaoImpl.class, SelfDescriptionStoreCompositeTest.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class, 
-  Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class, SchemaValidationServiceImpl.class})
+  SelfDescriptionStoreImpl.class, SelfDescriptionDaoImpl.class, SelfDescriptionStoreCompositeTest.class, SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class,
+  Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class, SchemaValidationServiceImpl.class,
+  RdfContentTypeProperties.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)

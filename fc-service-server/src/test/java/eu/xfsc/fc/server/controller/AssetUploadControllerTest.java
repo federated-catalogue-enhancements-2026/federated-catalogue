@@ -21,20 +21,16 @@ import eu.xfsc.fc.api.generated.model.SelfDescription;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
 import eu.xfsc.fc.core.util.HashUtils;
-import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.neo4j.harness.Neo4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -49,16 +45,13 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = {"graphstore.impl=neo4j"})
+@TestPropertySource(properties = {"graphstore.impl=fuseki"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
-@Import(EmbeddedNeo4JConfig.class)
 public class AssetUploadControllerTest {
 
     private static final String TEST_ISSUER = "http://example.org/test-issuer";
 
-    @Autowired
-    private Neo4j embeddedDatabaseServer;
     @Autowired
     private WebApplicationContext context;
     @Autowired
@@ -71,11 +64,6 @@ public class AssetUploadControllerTest {
     @BeforeAll
     public void setup() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    }
-
-    @AfterAll
-    public void cleanup() {
-        embeddedDatabaseServer.close();
     }
 
     private void deleteSdQuietly(String hash) {
