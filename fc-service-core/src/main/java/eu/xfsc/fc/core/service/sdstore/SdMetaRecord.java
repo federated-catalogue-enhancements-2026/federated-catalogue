@@ -1,7 +1,6 @@
 package eu.xfsc.fc.core.service.sdstore;
 
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 
 import eu.xfsc.fc.api.generated.model.SelfDescriptionStatus;
@@ -9,13 +8,17 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.VerificationResult;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Database record for SdMetaData table.
  */
+@Getter
 public class SdMetaRecord extends SelfDescriptionMetadata {
 
   private Instant expirationTime;
+  @Setter
   private String originalFilename;
 
   public SdMetaRecord(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor, Instant expirationTime) {
@@ -50,25 +53,11 @@ public class SdMetaRecord extends SelfDescriptionMetadata {
     return selfDescription.getContentAsString();
   }
 
-  public Instant getExpirationTime() {
-	return this.expirationTime;
-  }
-
-  public String getOriginalFilename() {
-    return originalFilename;
-  }
-
-  public void setOriginalFilename(String originalFilename) {
-    this.originalFilename = originalFilename;
-  }
-
-  public String[] getValidators() {
+    public String[] getValidators() {
     final List<String> validatorDids = getValidatorDids();
     if (validatorDids == null) {
       return null;
     }
     return validatorDids.toArray(String[]::new);
   }
-
-
 }
