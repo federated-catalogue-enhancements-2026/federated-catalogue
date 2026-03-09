@@ -31,7 +31,5 @@ public final class CommonConstants {
   public static final String ASSET_READ_WITH_PREFIX = PREFIX + ASSET_READ;
   public static final String ASSET_UPDATE_WITH_PREFIX = PREFIX + ASSET_UPDATE;
   public static final String ASSET_DELETE_WITH_PREFIX = PREFIX + ASSET_DELETE;
-  public static final String SCHEMA_CREATE_WITH_PREFIX = PREFIX + SCHEMA_CREATE;
-  public static final String SCHEMA_READ_WITH_PREFIX = PREFIX + SCHEMA_READ;
   public static final String ADMIN_ALL_WITH_PREFIX = PREFIX + ADMIN_ALL;
 }

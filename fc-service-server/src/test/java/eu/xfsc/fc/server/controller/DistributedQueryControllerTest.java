@@ -2,6 +2,7 @@ package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static eu.xfsc.fc.server.util.CommonConstants.QUERY_EXECUTE;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
