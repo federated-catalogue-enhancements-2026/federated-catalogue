@@ -29,6 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -556,6 +557,37 @@ public class QueryControllerTest {
   }
 
   
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void postQueryWithWrongRoleReturnsForbidden() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(OPENCYPHER_CONTENT_TYPE)
+            .header("Accept", "application/json"))
+            .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void getQueryWithWrongRoleReturnsForbidden() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/query")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithAnonymousUser
+  public void postQueryWithoutAuthReturnsUnauthorized() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(QUERY_REQUEST_GET)
+            .with(csrf())
+            .contentType(OPENCYPHER_CONTENT_TYPE)
+            .header("Accept", "application/json"))
+            .andExpect(status().isUnauthorized());
+  }
 
   private void initialiseAllDataBaseWithManuallyAddingSDFromRepository() throws Exception {
 

@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
+import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE;
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_DELETE_WITH_PREFIX;
@@ -612,6 +613,31 @@ public class SelfDescriptionControllerTest {
                         .with(csrf())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ADMIN_ALL_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = "admin-participant")})))
+    public void addSDWithAdminAllRoleReturnCreatedResponse() throws Exception {
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
+                .content(getMockFileDataAsString(SD_FILE_NAME))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        SelfDescription sd = objectMapper.readValue(result.getResponse().getContentAsString(), SelfDescription.class);
+        sdStorePublisher.deleteSelfDescription(sd.getSdHash());
+    }
+
+    @Test
+    @WithMockUser(roles = {"ADMIN_ALL"})
+    public void readSDsWithAdminAllRoleReturnSuccessResponse() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions")
+                        .with(csrf())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
     }
 
     private static SelfDescriptionMetadata createSdMetadata() throws IOException {

@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -186,6 +187,20 @@ public class AssetUploadControllerTest {
             .andExpect(status().isConflict());
 
         deleteSdQuietly(sd.getSdHash());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void uploadMultipartWithWrongRoleReturnsForbidden() throws Exception {
+        byte[] content = "wrong role test".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile("file", "test.txt", "text/plain", content);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/self-descriptions")
+                .file(file)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isForbidden());
     }
 
     @Test

@@ -29,9 +29,11 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
+import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_CREATE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_DELETE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
+import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_UPDATE;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -232,5 +234,47 @@ public class SchemaControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_READ})
+  public void updateSchemaWithReadRoleShouldReturnForbiddenResponse() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.put("/schemas")
+            .content(getMockFileDataAsString("test-schema.ttl"))
+            .with(csrf())
+            .contentType("application/rdf+xml"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  public void updateSchemaWithoutAuthShouldReturnUnauthorizedResponse() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.put("/schemas")
+            .content(getMockFileDataAsString("test-schema.ttl"))
+            .with(csrf())
+            .contentType("application/rdf+xml"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @WithMockUser(roles = {ADMIN_ALL})
+  public void addSchemaWithAdminAllRoleShouldReturnSuccessResponse() throws Exception {
+    ResultActions resultActions = mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(getMockFileDataAsString("test-schema.ttl"))
+            .with(csrf())
+            .contentType("application/rdf+xml"))
+        .andExpect(status().isCreated());
+
+    String id = Objects.requireNonNull(resultActions.andReturn().getResponse().getHeader("location"))
+        .replace("/schemas/", "");
+    schemaStore.deleteSchema(id);
+  }
+
+  @Test
+  @WithMockUser(roles = {ADMIN_ALL})
+  public void getSchemaWithAdminAllRoleShouldReturnSuccessResponse() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
   }
 }
