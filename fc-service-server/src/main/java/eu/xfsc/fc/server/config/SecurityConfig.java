@@ -76,14 +76,14 @@ public class SecurityConfig {
           .requestMatchers("/verification").permitAll()
 
           // Self-Description APIs
-          .requestMatchers(HttpMethod.GET, "/self-descriptions", "/self-descriptions/*").hasAnyRole(ASSET_READ, ADMIN_ALL)
+          .requestMatchers(HttpMethod.POST, "/self-descriptions/{self_description_hash}/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
+          .requestMatchers(HttpMethod.GET, "/self-descriptions", "/self-descriptions/{self_description_hash}").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.POST, "/self-descriptions").hasAnyRole(ASSET_CREATE, ADMIN_ALL)
-          .requestMatchers(HttpMethod.DELETE, "/self-descriptions/*").hasAnyRole(ASSET_DELETE, ADMIN_ALL)
-          .requestMatchers(HttpMethod.POST, "/self-descriptions/*/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
+          .requestMatchers(HttpMethod.DELETE, "/self-descriptions/{self_description_hash}").hasAnyRole(ASSET_DELETE, ADMIN_ALL)
 
           // Participants API
           .requestMatchers(HttpMethod.POST, "/participants").hasRole(CATALOGUE_ADMIN_ROLE)
-          .requestMatchers(HttpMethod.GET, "/participants").hasAnyRole(CATALOGUE_ADMIN_ROLE)
+          .requestMatchers(HttpMethod.GET, "/participants").hasRole(CATALOGUE_ADMIN_ROLE)
           .requestMatchers(HttpMethod.PUT, "/participants/*").hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(HttpMethod.DELETE, "/participants/*").hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(HttpMethod.GET, "/participants/*")

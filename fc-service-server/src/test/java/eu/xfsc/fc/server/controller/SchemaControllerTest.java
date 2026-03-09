@@ -33,7 +33,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_CREATE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_DELETE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
-import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_UPDATE;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
