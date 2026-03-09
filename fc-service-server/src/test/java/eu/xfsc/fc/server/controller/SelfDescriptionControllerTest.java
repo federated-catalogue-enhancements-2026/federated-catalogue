@@ -80,6 +80,8 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(EmbeddedNeo4JConfig.class)
 public class SelfDescriptionControllerTest {
     private final static String TEST_ISSUER = "http://example.org/test-issuer";
+    private final static String PARTICIPANT_ISSUER = "did:example:issuer";
+    private final static String RESOURCE_ISSUER = "did:web:compliance.lab.gaia-x.eu";
     private final static String SD_FILE_NAME = "default-sd.json";
 
     @Autowired
@@ -367,7 +369,7 @@ public class SelfDescriptionControllerTest {
 
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+        @StringClaim(name = "participant_id", value = RESOURCE_ISSUER)})))
     public void addResourceReturnCreatedResponse() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
                 .content(getMockFileDataAsString("sd_resource.json"))
@@ -383,7 +385,7 @@ public class SelfDescriptionControllerTest {
 
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+        @StringClaim(name = "participant_id", value = PARTICIPANT_ISSUER)})))
     public void addParicipantReturnCreatedResponse() throws Exception {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
@@ -406,7 +408,7 @@ public class SelfDescriptionControllerTest {
      */
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+        @StringClaim(name = "participant_id", value = PARTICIPANT_ISSUER)})))
     public void addShaclInvalidSDReturnCreatedResponse() throws Exception {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
         schemaStore.addSchema(getAccessor("mock-data/legal-personShape.ttl"));

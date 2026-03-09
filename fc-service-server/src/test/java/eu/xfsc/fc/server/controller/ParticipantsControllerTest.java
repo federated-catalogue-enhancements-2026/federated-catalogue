@@ -2,6 +2,7 @@ package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
 import static eu.xfsc.fc.server.helper.UserServiceHelper.getAllRoles;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE_WITH_PREFIX;
@@ -301,7 +302,7 @@ public class ParticipantsControllerTest {
   }
 
   @Test
-  @WithMockUser(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX})
+  @WithMockUser(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX, ASSET_READ_WITH_PREFIX})
   @Order(20)
   public void getAddedParticipantSDShouldReturnSuccessResponseWithSameSD() throws Exception {
     String json = getMockFileDataAsString(DEFAULT_PARTICIPANT_FILE);

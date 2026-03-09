@@ -1,7 +1,6 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestCommonConstants.SD_ADMIN_ROLE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -75,7 +74,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadPlainTextMultipartReturnsCreated() throws Exception {
         byte[] content = "Hello, this is a plain text template.".getBytes(StandardCharsets.UTF_8);
@@ -99,7 +98,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadPdfMultipartReturnsCreated() throws Exception {
         byte[] content = new byte[]{0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A}; // %PDF-1.4\n
@@ -121,7 +120,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadPlainJsonNoContextReturnsCreated() throws Exception {
         byte[] content = "{\"name\": \"contract\", \"version\": 1}".getBytes(StandardCharsets.UTF_8);
@@ -143,7 +142,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadOctetStreamReturnsCreated() throws Exception {
         byte[] content = "raw binary content for testing".getBytes(StandardCharsets.UTF_8);
@@ -165,7 +164,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadDuplicateAssetReturnsConflict() throws Exception {
         byte[] content = "duplicate-test-content".getBytes(StandardCharsets.UTF_8);
@@ -202,7 +201,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {SD_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void uploadMultipartWithSdAdminRoleReturnsCreated() throws Exception {
         byte[] content = "sd-admin upload test".getBytes(StandardCharsets.UTF_8);
