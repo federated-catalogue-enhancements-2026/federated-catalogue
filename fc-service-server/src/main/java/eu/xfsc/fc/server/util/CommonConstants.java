@@ -4,6 +4,8 @@ package eu.xfsc.fc.server.util;
  * Roles and permissions constant class.
  */
 public final class CommonConstants {
+  private CommonConstants() {}
+
   // Legacy composite roles
   public static final String SD_ADMIN_ROLE = "Ro-SD-A";
   public static final String CATALOGUE_ADMIN_ROLE = "Ro-MU-CA";

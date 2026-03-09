@@ -814,6 +814,7 @@ paths:
       tags:
         - Query
       summary: Retrieve an HTML website to send openCypher queries to the Catalogue
+      description: 'Required permission: QUERY_EXECUTE or ADMIN_ALL'
       operationId: querywebsite
       security:
         - jwt: []
@@ -832,6 +833,7 @@ paths:
       tags:
         - Query
       summary: Send a query to the Catalogue
+      description: 'Required permission: QUERY_EXECUTE or ADMIN_ALL'
       operationId: query
       parameters:
         - in: query
@@ -885,6 +887,7 @@ paths:
       tags:
         - Query
       summary: Get information about the active query backend
+      description: 'Required permission: QUERY_EXECUTE or ADMIN_ALL'
       operationId: queryInfo
       security:
         - jwt: []
@@ -902,7 +905,10 @@ paths:
       tags:
         - Query
       summary: Run distributed search query in the Catalogue
+      description: 'Required permission: QUERY_EXECUTE or ADMIN_ALL'
       operationId: search
+      security:
+        - jwt: []
       requestBody:
         description: JSON object containing query with parameters and annotations
         content:

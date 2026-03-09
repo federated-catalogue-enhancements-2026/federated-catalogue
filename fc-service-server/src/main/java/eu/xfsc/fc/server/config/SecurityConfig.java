@@ -19,7 +19,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_CREATE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_DELETE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_UPDATE;
-import static eu.xfsc.fc.server.util.CommonConstants.SD_ADMIN_ROLE;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -76,10 +76,10 @@ public class SecurityConfig {
           .requestMatchers("/verification").permitAll()
 
           // Self-Description APIs
-          .requestMatchers(HttpMethod.POST, "/self-descriptions/{self_description_hash}/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
-          .requestMatchers(HttpMethod.GET, "/self-descriptions", "/self-descriptions/{self_description_hash}").hasAnyRole(ASSET_READ, ADMIN_ALL)
+          .requestMatchers(HttpMethod.POST, "/self-descriptions/*/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
+          .requestMatchers(HttpMethod.GET, "/self-descriptions", "/self-descriptions/*").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.POST, "/self-descriptions").hasAnyRole(ASSET_CREATE, ADMIN_ALL)
-          .requestMatchers(HttpMethod.DELETE, "/self-descriptions/{self_description_hash}").hasAnyRole(ASSET_DELETE, ADMIN_ALL)
+          .requestMatchers(HttpMethod.DELETE, "/self-descriptions/*").hasAnyRole(ASSET_DELETE, ADMIN_ALL)
 
           // Participants API
           .requestMatchers(HttpMethod.POST, "/participants").hasRole(CATALOGUE_ADMIN_ROLE)
@@ -87,7 +87,7 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.PUT, "/participants/*").hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(HttpMethod.DELETE, "/participants/*").hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(HttpMethod.GET, "/participants/*")
-            	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE, SD_ADMIN_ROLE)
+            	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE, ASSET_READ)
           .requestMatchers(HttpMethod.GET, "/participants/*/users")
             	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE)
 

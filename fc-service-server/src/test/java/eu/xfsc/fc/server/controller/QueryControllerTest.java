@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
 import static eu.xfsc.fc.server.util.CommonConstants.QUERY_EXECUTE;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -559,7 +560,7 @@ public class QueryControllerTest {
   
 
   @Test
-  @WithMockUser(roles = {"ASSET_READ"})
+  @WithMockUser(roles = {ASSET_READ})
   public void postQueryWithWrongRoleReturnsForbidden() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
@@ -570,7 +571,7 @@ public class QueryControllerTest {
   }
 
   @Test
-  @WithMockUser(roles = {"ASSET_READ"})
+  @WithMockUser(roles = {ASSET_READ})
   public void getQueryWithWrongRoleReturnsForbidden() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/query")
             .with(csrf())
