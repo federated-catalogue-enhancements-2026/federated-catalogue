@@ -192,7 +192,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadMultipartWithWrongRoleReturnsForbidden() throws Exception {
+    public void uploadMultipart_withWrongRole_returnsForbidden() throws Exception {
         byte[] content = "wrong role test".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "test.txt", "text/plain", content);
 

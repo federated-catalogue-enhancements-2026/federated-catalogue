@@ -598,7 +598,7 @@ public class SelfDescriptionControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void addSDWithReadOnlyPermissionReturnForbiddenResponse() throws Exception {
+    public void addSD_withReadOnlyPermission_returnForbiddenResponse() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
                         .content(getMockFileDataAsString(SD_FILE_NAME))
                         .with(csrf())
@@ -609,7 +609,7 @@ public class SelfDescriptionControllerTest {
 
     @Test
     @WithMockUser
-    public void readSDsWithoutPermissionRoleShouldReturnForbiddenResponse() throws Exception {
+    public void readSDs_withoutPermissionRole_shouldReturnForbiddenResponse() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions")
                         .with(csrf())
                         .accept(MediaType.APPLICATION_JSON))
@@ -619,7 +619,7 @@ public class SelfDescriptionControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ADMIN_ALL_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = "admin-participant")})))
-    public void addSDWithAdminAllRoleReturnCreatedResponse() throws Exception {
+    public void addSD_withAdminAllRole_returnCreatedResponse() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/self-descriptions")
                 .content(getMockFileDataAsString(SD_FILE_NAME))
                 .with(csrf())
@@ -634,7 +634,7 @@ public class SelfDescriptionControllerTest {
 
     @Test
     @WithMockUser(roles = {"ADMIN_ALL"})
-    public void readSDsWithAdminAllRoleReturnSuccessResponse() throws Exception {
+    public void readSDs_withAdminAllRole_returnSuccessResponse() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/self-descriptions")
                         .with(csrf())
                         .accept(MediaType.APPLICATION_JSON))

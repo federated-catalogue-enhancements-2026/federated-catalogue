@@ -218,7 +218,7 @@ public class SchemaControllerTest {
 
   @Test
   @WithMockUser(roles = {SCHEMA_READ})
-  public void addSchemaWithReadOnlyRoleShouldReturnForbiddenResponse() throws Exception {
+  public void addSchema_withReadOnlyRole_shouldReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
             .content(SCHEMA_REQUEST)
             .with(csrf())
@@ -229,7 +229,7 @@ public class SchemaControllerTest {
 
   @Test
   @WithMockUser
-  public void getSchemaWithoutPermissionRoleShouldReturnForbiddenResponse() throws Exception {
+  public void getSchema_withoutPermissionRole_shouldReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
@@ -238,7 +238,7 @@ public class SchemaControllerTest {
 
   @Test
   @WithMockUser(roles = {SCHEMA_READ})
-  public void updateSchemaWithReadRoleShouldReturnForbiddenResponse() throws Exception {
+  public void updateSchema_withReadRole_shouldReturnForbiddenResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.put("/schemas")
             .content(getMockFileDataAsString("test-schema.ttl"))
             .with(csrf())
@@ -247,7 +247,7 @@ public class SchemaControllerTest {
   }
 
   @Test
-  public void updateSchemaWithoutAuthShouldReturnUnauthorizedResponse() throws Exception {
+  public void updateSchema_withoutAuth_shouldReturnUnauthorizedResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.put("/schemas")
             .content(getMockFileDataAsString("test-schema.ttl"))
             .with(csrf())
@@ -257,7 +257,7 @@ public class SchemaControllerTest {
 
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  public void addSchemaWithAdminAllRoleShouldReturnSuccessResponse() throws Exception {
+  public void addSchema_withAdminAllRole_shouldReturnSuccessResponse() throws Exception {
     ResultActions resultActions = mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
             .content(getMockFileDataAsString("test-schema.ttl"))
             .with(csrf())
@@ -271,7 +271,7 @@ public class SchemaControllerTest {
 
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  public void getSchemaWithAdminAllRoleShouldReturnSuccessResponse() throws Exception {
+  public void getSchema_withAdminAllRole_shouldReturnSuccessResponse() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))

@@ -561,7 +561,7 @@ public class QueryControllerTest {
 
   @Test
   @WithMockUser(roles = {ASSET_READ})
-  public void postQueryWithWrongRoleReturnsForbidden() throws Exception {
+  public void postQuery_withWrongRole_returnsForbidden() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
@@ -572,7 +572,7 @@ public class QueryControllerTest {
 
   @Test
   @WithMockUser(roles = {ASSET_READ})
-  public void getQueryWithWrongRoleReturnsForbidden() throws Exception {
+  public void getQuery_withWrongRole_returnsForbidden() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/query")
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
@@ -581,7 +581,7 @@ public class QueryControllerTest {
 
   @Test
   @WithAnonymousUser
-  public void postQueryWithoutAuthReturnsUnauthorized() throws Exception {
+  public void postQuery_withoutAuth_returnsUnauthorized() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET)
             .with(csrf())
