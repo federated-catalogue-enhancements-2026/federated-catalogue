@@ -102,11 +102,11 @@ public class SecurityConfig {
           .requestMatchers("/session").authenticated()
 
           // Graph Admin APIs
-          .requestMatchers(HttpMethod.POST, "/admin/graph/rebuild").hasAnyRole(ADMIN_ALL, CATALOGUE_ADMIN_ROLE)
-          .requestMatchers(HttpMethod.GET, "/admin/graph/rebuild/status", "/admin/graph/status").hasAnyRole(ADMIN_ALL, CATALOGUE_ADMIN_ROLE)
+          .requestMatchers(HttpMethod.POST, "/admin/graph/rebuild").hasRole(ADMIN_ALL)
+          .requestMatchers(HttpMethod.GET, "/admin/graph/rebuild/status", "/admin/graph/status").hasRole(ADMIN_ALL)
 
-          // Actuator graph-rebuild (requires admin role, matching /admin/graph/rebuild)
-          .requestMatchers(HttpMethod.POST, "/actuator/graph-rebuild").hasAnyRole(ADMIN_ALL, CATALOGUE_ADMIN_ROLE)
+          // Actuator graph-rebuild
+          .requestMatchers(HttpMethod.POST, "/actuator/graph-rebuild").hasRole(ADMIN_ALL)
 
           .anyRequest().authenticated()
         )
