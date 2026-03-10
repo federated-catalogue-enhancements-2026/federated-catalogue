@@ -80,7 +80,8 @@ public class SessionUtils {
    */
   public static void checkParticipantAccess(String participantId) {
     String sessionParticipantId = SessionUtils.getSessionParticipantId();
-    if (!SessionUtils.sessionUserHasRole(ADMIN_ALL_WITH_PREFIX)
+    if (!SessionUtils.sessionUserHasRole(CATALOGUE_ADMIN_ROLE_WITH_PREFIX)
+        && !SessionUtils.sessionUserHasRole(ADMIN_ALL_WITH_PREFIX)
         && (Objects.isNull(participantId)
         || Objects.isNull(sessionParticipantId) || !participantId.equals(sessionParticipantId))) {
       log.debug("checkParticipantAccess; The user does not have access to the specified participant."
