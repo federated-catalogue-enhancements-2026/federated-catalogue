@@ -89,11 +89,7 @@ components:
           $ref: '#/components/schemas/Parameters'
       required:
         - statement
-#      discriminator:
-#        propertyName: type
-#        mapping:
-#          as: "#/components/schemas/AnnotatedStatement"  
-    Parameters: 
+    Parameters:
       type: object
       additionalProperties:
         type: object
