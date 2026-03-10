@@ -1,19 +1,5 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
-import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_DELETE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_UPDATE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.c4_soft.springaddons.security.oauth2.test.annotations.Claims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.OpenIdClaims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.StringClaim;
@@ -39,21 +25,12 @@ import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-
 import org.mockito.ArgumentCaptor;
 import org.neo4j.harness.Neo4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +47,29 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
+import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_DELETE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_UPDATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Slf4j
 @SpringBootTest

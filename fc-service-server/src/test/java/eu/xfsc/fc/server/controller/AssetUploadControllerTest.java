@@ -1,7 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_CREATE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;

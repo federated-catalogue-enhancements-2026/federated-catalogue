@@ -28,10 +28,6 @@ public final class CommonConstants {
   public static final String QUERY_EXECUTE = "QUERY_EXECUTE";
   public static final String ADMIN_ALL = "ADMIN_ALL";
 
-  // Prefixed permission roles (for @WithMockJwtAuth authorities)
-  public static final String ASSET_CREATE_WITH_PREFIX = PREFIX + ASSET_CREATE;
-  public static final String ASSET_READ_WITH_PREFIX = PREFIX + ASSET_READ;
-  public static final String ASSET_UPDATE_WITH_PREFIX = PREFIX + ASSET_UPDATE;
-  public static final String ASSET_DELETE_WITH_PREFIX = PREFIX + ASSET_DELETE;
+  // Prefixed permission roles (Spring Security ROLE_ prefix)
   public static final String ADMIN_ALL_WITH_PREFIX = PREFIX + ADMIN_ALL;
 }
