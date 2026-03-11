@@ -251,7 +251,7 @@ public class ClaimValidator {
             }
           }
         } catch (Exception e) {
-          log.debug("getSDType.error: {}", e.getMessage());
+          log.debug("getSubjectType.error: {}", e.getMessage());
         }
         return null;
       }

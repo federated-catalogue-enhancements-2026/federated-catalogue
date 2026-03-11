@@ -14,7 +14,7 @@ public interface AssetDao {
     PaginatedResults<AssetRecord> selectByFilter(AssetFilter filter, boolean withMeta, boolean withContent);
 	List<String> selectHashes(String startHash, int count, int chunks, int chunkId);
 	List<String> selectExpiredHashes();
-	SubjectHashRecord insert(AssetRecord sd);
+	SubjectHashRecord insert(AssetRecord assetRecord);
 	SubjectStatusRecord update(String hash, int status);
 	SubjectStatusRecord delete(String hash);
 	int deleteAll();

@@ -622,7 +622,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     TypedCredentials(VerifiableCredential credential) {
       this.presentation = null;
       Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
-      TrustFrameworkBaseClass bc = getSDBaseClass(credential);
+      TrustFrameworkBaseClass bc = getCredentialBaseClass(credential);
       creds = Map.of(credential, bc);
       this.credentials = creds;
     }
@@ -639,13 +639,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         for (Map<String, Object> _vc : l) {
           VerifiableCredential vc = VerifiableCredential.fromMap(_vc);
           vc.setDocumentLoader(this.presentation.getDocumentLoader());
-          TrustFrameworkBaseClass bc = getSDBaseClass(vc);
+          TrustFrameworkBaseClass bc = getCredentialBaseClass(vc);
           creds.put(vc, bc);
         }
       } else {
         VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) obj);
         vc.setDocumentLoader(this.presentation.getDocumentLoader());
-        TrustFrameworkBaseClass bc = getSDBaseClass(vc);
+        TrustFrameworkBaseClass bc = getCredentialBaseClass(vc);
         creds = Map.of(vc, bc);
       }
       this.credentials = creds;
@@ -732,13 +732,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
       return credentials.values().stream().anyMatch(bc -> bc != UNKNOWN);
     }
 
-    private TrustFrameworkBaseClass getSDBaseClass(VerifiableCredential credential) {
+    private TrustFrameworkBaseClass getCredentialBaseClass(VerifiableCredential credential) {
       ContentAccessor gaxOntology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
       TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(gaxOntology, getStreamManager(), credential.toJson(), trustFrameworkBaseClassUris);
       if (result == null) {
     	  result = UNKNOWN;
       }
-      log.debug("getSDBaseClass; got type result: {}", result);
+      log.debug("getCredentialBaseClass; got type result: {}", result);
       return result;
     }
 

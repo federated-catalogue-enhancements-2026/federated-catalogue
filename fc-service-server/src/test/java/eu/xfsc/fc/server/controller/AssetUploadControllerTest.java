@@ -204,8 +204,8 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadMultipartWithSdAdminRoleReturnsCreated() throws Exception {
-        byte[] content = "sd-admin upload test".getBytes(StandardCharsets.UTF_8);
+    public void uploadMultipartWithAssetAdminRoleReturnsCreated() throws Exception {
+        byte[] content = "asset-admin upload test".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "admin.txt", "text/plain", content);
 
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")

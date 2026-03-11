@@ -132,17 +132,17 @@ public class CesCompositePublisherTest {
 	    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
 	    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
 	    assertNotNull(vr);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
 			      .addHeader("Content-Type", "application/json")
 			      .setResponseCode(409));
-	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> assetStorePublisher.storeCredential(sdm, vr));
+	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> assetStorePublisher.storeCredential(assetMetadata, vr));
 	    assertEquals(HttpStatusCode.valueOf(409), ((ExternalServiceException) ex).getStatus());
 	    List<Map<String, Object>> claims = graphStore.queryData(
-	            new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", sdm.getId()))).getResults();
+	            new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", assetMetadata.getId()))).getResults();
 	    Assertions.assertEquals(0, claims.size());
-	    Assertions.assertThrows(NotFoundException.class, () -> {assetStorePublisher.getByHash(sdm.getAssetHash());});
+	    Assertions.assertThrows(NotFoundException.class, () -> {assetStorePublisher.getByHash(assetMetadata.getAssetHash());});
 	}
 	  
 	@Test
@@ -155,19 +155,19 @@ public class CesCompositePublisherTest {
 	    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
 	    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
 	    assertNotNull(vr);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
 			      .addHeader("Content-Type", "application/json")
 			      .setResponseCode(409));
-	    assetStorePublisher.storeCredential(sdm, vr);
+	    assetStorePublisher.storeCredential(assetMetadata, vr);
 	    //List<Map<String, Object>> claims = graphStore.queryData(
-	    //        new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", sdm.getId()))).getResults();
+	    //        new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", assetMetadata.getId()))).getResults();
 	    //Assertions.assertTrue(claims.size() > 0);
-	    AssetMetadata sdm2 = assetStorePublisher.getByHash(sdm.getAssetHash());
-	    assertNotNull(sdm2);
-	    assertEquals(sdm.getAssetHash(), sdm2.getAssetHash());
-	    assertEquals(sdm.getId(), sdm2.getId());
-	    assertEquals(sdm.getIssuer(), sdm2.getIssuer());
+	    AssetMetadata assetMetadata2 = assetStorePublisher.getByHash(assetMetadata.getAssetHash());
+	    assertNotNull(assetMetadata2);
+	    assertEquals(assetMetadata.getAssetHash(), assetMetadata2.getAssetHash());
+	    assertEquals(assetMetadata.getId(), assetMetadata2.getId());
+	    assertEquals(assetMetadata.getIssuer(), assetMetadata2.getIssuer());
 	}
 }

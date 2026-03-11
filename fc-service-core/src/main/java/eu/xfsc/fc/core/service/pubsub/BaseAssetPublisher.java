@@ -39,14 +39,14 @@ public abstract class BaseAssetPublisher implements AssetPublisher {
     }
     
 	@Override
-	public boolean publish(AssetMetadata sd, CredentialVerificationResult verificationResult) {
+	public boolean publish(AssetMetadata assetMetadata, CredentialVerificationResult verificationResult) {
 		if (supportsMetadataUpdate()) {
 			if (transactional) {
-				return publishInternal(sd, verificationResult);
+				return publishInternal(assetMetadata, verificationResult);
 			} else {
 				threadPool.execute(() -> {
 					// set thread name?
-					publishInternal(sd, verificationResult);
+					publishInternal(assetMetadata, verificationResult);
 				});
 				return true;
 			}
@@ -79,7 +79,7 @@ public abstract class BaseAssetPublisher implements AssetPublisher {
     	// any initialization steps here..
     }
 
-	protected boolean publishInternal(AssetMetadata sd, CredentialVerificationResult verificationResult) {
+	protected boolean publishInternal(AssetMetadata assetMetadata, CredentialVerificationResult verificationResult) {
 		return false;
 	}
 

@@ -15,7 +15,7 @@ public class PublishingAssetStore extends AssetStoreImpl {
 
 	  @Override
 	  public void storeCredential(final AssetMetadata assetMetadata, final CredentialVerificationResult verificationResult) {
-		SubjectHashRecord subHash = super.storeSDInternal(assetMetadata, verificationResult);
+		SubjectHashRecord subHash = super.storeCredentialInternal(assetMetadata, verificationResult);
 		if (subHash != null && subHash.assetHash() != null ) {
 	      assetPublisher.publish(subHash.assetHash(), AssetEvent.UPDATE, AssetStatus.DEPRECATED);
 	    }

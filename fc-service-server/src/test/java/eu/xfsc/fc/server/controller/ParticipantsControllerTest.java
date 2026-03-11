@@ -162,10 +162,10 @@ public class ParticipantsControllerTest {
   private RoleScopeResource roleScopeResource;
 
   private final String userId = "ae366624-8371-401d-b2c4-518d2f308a15";
-  private final String DEFAULT_PARTICIPANT_FILE = "default_participant.json";
-  private final String ALTERNATIVE_PARTICIPANT_FILE = "alternative_participant.json";
-  private final String ALTERNATIVE2_PARTICIPANT_FILE = "alternative2_participant.json";
-  private final String UNIQUE_PARTICIPANT_FILE = "unique_participant.json";
+  private final String DEFAULT_PARTICIPANT_FILE = "default-participant.json";
+  private final String ALTERNATIVE_PARTICIPANT_FILE = "alternative-participant.json";
+  private final String ALTERNATIVE2_PARTICIPANT_FILE = "alternative2-participant.json";
+  private final String UNIQUE_PARTICIPANT_FILE = "unique-participant.json";
   private final String PUBLIC_KEY_AS_JWK = "{\"kty\":\"RSA\",\"e\":\"AQAB\",\"alg\":\"PS256\",\"n\":\"0nYZU6EuuzHKBCzkcBZqsMkVZXngYO7VujfLU_4ys7onF4HxTJPP3OGKEjbjbMgmpa7vKaWRomt_XXTjemA3r3f5t8bj0IoqFfvbTIq65GUIIh4y2mVbomdcQLRK2Auf79vDiqiONknTSstoPjAiCg6t6z_KruGFZbDOhYkZwqrjGnmB_LfFSlpeLwkQQ-5dVLhhXkImmWhnACoAo8ECny24Ap7wLbN9i9o1fNSz2uszACj0zxFhl3NGunHFUm3YkGd0URvoToXpK9a4zfihSUxHjeT0_7a9puVF4E3w1AAjSh4nV3pLE0cJyDITVb2M4d3m9tjjz_3XwjYiAAJ1MKVBSKDM27pexRFCJj_Dvb-dr-AImhqBhPDHn_gjdaRZIVoADC4zwBULkpvUaUIKmNFyYOjDYWWTBzTf4Gs9QL5adlVfVyK14MZPBOyq-cqIIymgp6A5_R3hKnCCBP8C_S0-VDidhI6Pr5VJPx9DydI0eB2DiOyOZvbfg7sKVkJXFUEJRiBTMhujyjYqeTtCHjCFHctZVQ8hU279eyk7mpmpDrktfCFJFi-00ZzQWTgtzBoGhke5hj0hjtG1n4jN6BfypdT5oB-DeXl2P1hp_hNC9I5gveWUYHAqN4VKve_52A3ub8vBlISQhEUeZoFUterTiDA3NyK7wsj_V7-KM6U\"}";
 
   @BeforeAll
@@ -199,7 +199,7 @@ public class ParticipantsControllerTest {
     ParticipantMetaData part = new ParticipantMetaData("did:example:issuer", "did:example:holder", "did:example:holder#key", json);
     setupKeycloak(HttpStatus.SC_CREATED, part);
 
-    deleteParticipantFromSdStore(part);
+    deleteParticipantFromAssetStore(part);
 
     String response = mockMvc
             .perform(MockMvcRequestBuilders.post("/participants")
@@ -228,7 +228,7 @@ public class ParticipantsControllerTest {
     ParticipantMetaData part = new ParticipantMetaData("did:example:issuer", "did:example:holder", "did:example:holder#key", json);
     setupKeycloak(HttpStatus.SC_CREATED, part);
 
-    deleteParticipantFromSdStore(part);
+    deleteParticipantFromAssetStore(part);
 
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(json);
     CredentialVerificationResultParticipant verResult = verificationService.verifyParticipantCredential(contentAccessor);
@@ -303,7 +303,7 @@ public class ParticipantsControllerTest {
   @Test
   @WithMockUser(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX})
   @Order(20)
-  public void getAddedParticipantSDShouldReturnSuccessResponseWithSameSD() throws Exception {
+  public void getAddedParticipantCredentialShouldReturnSuccessResponseWithSameCredential() throws Exception {
     String json = getMockFileDataAsString(DEFAULT_PARTICIPANT_FILE);
     ParticipantMetaData part = new ParticipantMetaData("did:example:issuer", "did:example:holder", "did:example:holder#key", json);
     setupKeycloak(HttpStatus.SC_OK, part);
@@ -319,13 +319,13 @@ public class ParticipantsControllerTest {
     String assetHash = assets.getItems().get(0).getMeta().getAssetHash();
     String content = assets.getItems().get(0).getContent();
 
-    String responseOfSDContent = mockMvc
+    String responseOfCredentialContent = mockMvc
             .perform(MockMvcRequestBuilders.get("/assets/" + assetHash)
                     .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-    assertEquals(part.getAsset(), responseOfSDContent);
-    assertEquals(responseOfSDContent, content);
+    assertEquals(part.getAsset(), responseOfCredentialContent);
+    assertEquals(responseOfCredentialContent, content);
     assertEquals(1, assets.getItems().size());
   }
 
@@ -399,7 +399,7 @@ public class ParticipantsControllerTest {
   @Test
   @WithMockUser(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX})
   @Order(25)
-  public void addParticipantFailWithSameSDShouldReturnConflictFromKeyCloakWithoutDBStore() throws Exception {
+  public void addParticipantFailWithSameCredentialShouldReturnConflictFromKeyCloakWithoutDBStore() throws Exception {
     String json = getMockFileDataAsString(DEFAULT_PARTICIPANT_FILE);
     ParticipantMetaData partNew = new ParticipantMetaData("did:example:issuer", "did:example:holder", "did:example:holder#key", json);
     assetStorePublisher.deleteAsset(partNew.getAssetHash());
@@ -412,9 +412,9 @@ public class ParticipantsControllerTest {
                     .with(csrf()))
             .andExpect(status().isConflict());
 
-    NotFoundException exceptionSDStore = assertThrows(NotFoundException.class,
+    NotFoundException exceptionAssetStore = assertThrows(NotFoundException.class,
             () -> assetStorePublisher.getByHash(partNew.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSDStore.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
   }
 
   @Test
@@ -433,9 +433,9 @@ public class ParticipantsControllerTest {
                     .with(csrf()))
             .andExpect(status().is5xxServerError());
 
-    Throwable exceptionSD = assertThrows(Throwable.class,
+    Throwable exceptionAssetStore = assertThrows(Throwable.class,
             () -> assetStorePublisher.getByHash(part.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSD.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
   }
 
   @Test
@@ -533,9 +533,9 @@ public class ParticipantsControllerTest {
             .with(csrf()))
         .andExpect(status().is5xxServerError());
 
-    Throwable exceptionSD = assertThrows(Throwable.class,
+    Throwable exceptionAssetStore = assertThrows(Throwable.class,
             () -> assetStorePublisher.getByHash(part.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSD.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
   }
 
   @Test
@@ -582,9 +582,9 @@ public class ParticipantsControllerTest {
             .with(csrf()))
         .andExpect(status().isNotFound());
 
-    Throwable exceptionSD = assertThrows(Throwable.class,
+    Throwable exceptionAssetStore = assertThrows(Throwable.class,
             () -> assetStorePublisher.getByHash(part.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSD.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
 
   }
 
@@ -618,9 +618,9 @@ public class ParticipantsControllerTest {
     assertEquals("did:example:holder", participantMetaData.getName());
     assertEquals("did:example:holder#key", participantMetaData.getPublicKey());
 
-    Throwable exceptionSD = assertThrows(Throwable.class,
+    Throwable exceptionAssetStore = assertThrows(Throwable.class,
             () -> assetStorePublisher.getByHash(part.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSD.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
   }
 
   @Test
@@ -654,9 +654,9 @@ public class ParticipantsControllerTest {
     ParticipantMetaData participantMetaData = objectMapper.readValue(response, ParticipantMetaData.class);
     assertNotNull(participantMetaData);
 
-    Throwable exceptionSD = assertThrows(Throwable.class,
+    Throwable exceptionAssetStore = assertThrows(Throwable.class,
             () -> assetStorePublisher.getByHash(part.getAssetHash()));
-    assertEquals(NotFoundException.class, exceptionSD.getClass());
+    assertEquals(NotFoundException.class, exceptionAssetStore.getClass());
 
     assertEquals(0, userDao.search(userId, 0, 1).getTotalCount());
   }
@@ -739,7 +739,7 @@ public class ParticipantsControllerTest {
     }
   }
 
-  private void deleteParticipantFromSdStore(ParticipantMetaData part) {
+  private void deleteParticipantFromAssetStore(ParticipantMetaData part) {
     try {
       assetStorePublisher.deleteAsset(part.getAssetHash());
     } catch (Exception ex) {

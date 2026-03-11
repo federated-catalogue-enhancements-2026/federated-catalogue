@@ -45,10 +45,10 @@ public class AssetSigner {
   private static final String PATH_TO_PRIVATE_KEY = getResourcePath() + "prk.ss.pem";
   private static final String PATH_TO_PUBLIC_KEY = getResourcePath() + "cert.ss.pem";
 
-  public static String signAsset(String sd){
+  public static String signAsset(String asset){
     try {
       Security.addProvider(new BouncyCastleProvider());
-      VerifiablePresentation vp = VerifiablePresentation.fromJson(sd);
+      VerifiablePresentation vp = VerifiablePresentation.fromJson(asset);
       VerifiableCredential vc = vp.getVerifiableCredential();
 
       LdProof vc_proof = sign(vc);

@@ -29,11 +29,11 @@ In the **_user-files/resources/application.properties_** file you can find commo
 #### Gatling script configurations in the `application.properties` file:
 
 * **users** - the number of users that will be injected to run the script:
-`fc-performance-testing.sd.users`, `fc-performance-testing.query.users`
+`fc-performance-testing.asset.users`, `fc-performance-testing.query.users`
 * **rampTime** - the time during which the users will be injected in the execution of the script:
-`fc-performance-testing.sd.rampTime`, `fc-performance-testing.query.rampTime`
+`fc-performance-testing.asset.rampTime`, `fc-performance-testing.query.rampTime`
 * **duringTime** - script execution time:
-`fc-performance-testing.sd.duringTime`, `fc-performance-testing.query.duringTime`
+`fc-performance-testing.asset.duringTime`, `fc-performance-testing.query.duringTime`
 
 ## Running scripts
 

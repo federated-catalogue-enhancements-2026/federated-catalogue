@@ -60,9 +60,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(EmbeddedNeo4JConfig.class)
 public class QueryControllerTest {
 
-  private final static String DEFAULT_SERVICE_SD_FILE_NAME = "default-sd-service-offering.json";
-  private final static String DEFAULT_PARTICIPANT_SD_FILE_NAME = "default_participant.json";
-  private final static String UNIQUE_PARTICIPANT_SD_FILE_NAME = "unique_participant.json";
+  private final static String DEFAULT_SERVICE_CREDENTIAL_FILE_NAME = "default-credential-service-offering.json";
+  private final static String DEFAULT_PARTICIPANT_CREDENTIAL_FILE_NAME = "default-participant.json";
+  private final static String UNIQUE_PARTICIPANT_CREDENTIAL_FILE_NAME = "unique-participant.json";
 
   private static final String OPENCYPHER_CONTENT_TYPE = "application/opencypher-query";
   private static final String SPARQL_CONTENT_TYPE = "application/sparql-query";
@@ -97,7 +97,7 @@ public class QueryControllerTest {
   public void setup() throws Exception {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
-    initialiseAllDataBaseWithManuallyAddingSDFromRepository();
+    initialiseAllDataBaseWithManuallyAddingCredentialsFromRepository();
     mockBackEnd90 = new MockWebServer();
     mockBackEnd90.noClientAuth();
     mockBackEnd90.start(9090);
@@ -199,7 +199,7 @@ public class QueryControllerTest {
 
 
   @Test
-  public void postGetSDMetadataCountBySubjectIDSQueriesReturnSuccessResponse() throws Exception {
+  public void postGetAssetMetadataCountBySubjectIDSQueriesReturnSuccessResponse() throws Exception {
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/query")
             .content(QUERY_REQUEST_GET_SUBJECT_ID)
             .with(csrf())
@@ -240,7 +240,8 @@ public class QueryControllerTest {
             .getContentAsString();
 
     Results result = objectMapper.readValue(response, Results.class);
-    assertEquals(2, result.getItems().size());
+    // Only 1 match: the service offering has City Name 2; participants do not
+    assertEquals(1, result.getItems().size());
     assertTrue(result.getItems().size() < 101);
   }
 
@@ -318,7 +319,7 @@ public class QueryControllerTest {
 
   /**
    * POST a Cypher query without LIMIT clause. Verifies that the default limit injection
-   * does not break the query. With only 3 SDs in test data,
+   * does not break the query. With only 3 assets in test data,
    * the 100-item limit is not boundary-tested; this validates correctness of injection.
    */
   @Test
@@ -554,33 +555,33 @@ public class QueryControllerTest {
 
   
 
-  private void initialiseAllDataBaseWithManuallyAddingSDFromRepository() throws Exception {
+  private void initialiseAllDataBaseWithManuallyAddingCredentialsFromRepository() throws Exception {
 
-    //adding 1st sd
+    //adding 1st credential
     ContentAccessorDirect contentAccessor =
-        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_PARTICIPANT_SD_FILE_NAME));
+        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_PARTICIPANT_CREDENTIAL_FILE_NAME));
     CredentialVerificationResultParticipant verificationResult = verificationService.verifyParticipantCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
             verificationResult.getIssuer(), verificationResult.getValidators(), contentAccessor);
     assetStorePublisher.storeCredential(assetMetadata, verificationResult);
 
-    //adding second sd
+    //adding second credential
     ContentAccessorDirect contentAccessor2
-            = new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_SERVICE_SD_FILE_NAME));
+            = new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_SERVICE_CREDENTIAL_FILE_NAME));
     CredentialVerificationResultOffering verificationResult2
             = verificationService.verifyOfferingCredential(contentAccessor2);
     AssetMetadata assetMetadata2 = new AssetMetadata(verificationResult2.getId(),
             verificationResult2.getIssuer(), verificationResult2.getValidators(), contentAccessor2);
     assetStorePublisher.storeCredential(assetMetadata2, verificationResult2);
 
-    //adding sd 3
+    //adding credential 3
    ContentAccessorDirect contentAccessorDirect3 =
-        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(UNIQUE_PARTICIPANT_SD_FILE_NAME));
+        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(UNIQUE_PARTICIPANT_CREDENTIAL_FILE_NAME));
     CredentialVerificationResultParticipant verificationResult3
         = verificationService.verifyParticipantCredential(contentAccessorDirect3);
     AssetMetadata assetMetadata3 = new AssetMetadata(verificationResult3.getId(),
         verificationResult3.getIssuer(), verificationResult3.getValidators(), contentAccessorDirect3);
-    assetStorePublisher.storeCredential(assetMetadata3, verificationResult2);
+    assetStorePublisher.storeCredential(assetMetadata3, verificationResult3);
   }
 
 }

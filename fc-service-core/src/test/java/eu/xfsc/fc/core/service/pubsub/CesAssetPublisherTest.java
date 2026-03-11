@@ -62,7 +62,7 @@ public class CesAssetPublisherTest {
 	public void test01AssetPublishSuccess() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
 		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		ContentAccessor response = getAccessor("Pub-Sub-Tests/sag-research-response.jsonld");
 		mockCompService.enqueue(new MockResponse()
 			      .setBody(response.getContentAsString())
@@ -71,7 +71,7 @@ public class CesAssetPublisherTest {
 			      .addHeader("Content-Type", "application/json")
 			      .addHeader("Location", "https://ces-v1.lab.gaia-x.eu/credentials-events/797d2011-bb4f-4472-8cbd-158bec554f60")
 			      .setResponseCode(201));
-		boolean pub = cesPublisher.publish(sdm, vr);
+		boolean pub = cesPublisher.publish(assetMetadata, vr);
 		assertTrue(pub);
 	}
 
@@ -79,12 +79,12 @@ public class CesAssetPublisherTest {
 	public void test02AssetPublishCompFail() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
 		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
 			      .addHeader("Content-Type", "application/json")
 			      .setResponseCode(409));
-	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> cesPublisher.publish(sdm, vr));
+	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> cesPublisher.publish(assetMetadata, vr));
 	    assertEquals(HttpStatusCode.valueOf(409), ((ExternalServiceException) ex).getStatus());
 	}
 
@@ -92,7 +92,7 @@ public class CesAssetPublisherTest {
 	public void test03AssetPublishCesFail() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
 		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		ContentAccessor response = getAccessor("Pub-Sub-Tests/comp-response.jsonld");
 		mockCompService.enqueue(new MockResponse()
 			      .setBody(response.getContentAsString())
@@ -101,7 +101,7 @@ public class CesAssetPublisherTest {
 			      .setBody("{\"error\": \"Internal Server Error\"}")
 			      .addHeader("Content-Type", "application/json")
 			      .setResponseCode(500));
-	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> cesPublisher.publish(sdm, vr));
+	    Exception ex = assertThrowsExactly(ExternalServiceException.class, () -> cesPublisher.publish(assetMetadata, vr));
 	    assertEquals(HttpStatusCode.valueOf(500), ((ExternalServiceException) ex).getStatus());
 	}
 
@@ -109,7 +109,7 @@ public class CesAssetPublisherTest {
 	public void test04AssetPublishTxOff() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
 		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
-		AssetMetadata sdm = new AssetMetadata(content, vr);
+		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
 			      .addHeader("Content-Type", "application/json")
@@ -119,7 +119,7 @@ public class CesAssetPublisherTest {
 			      .addHeader("Content-Type", "application/json")
 			      .setResponseCode(500));
 		cesPublisher.setTransactional(false);
-		boolean pub = cesPublisher.publish(sdm, vr);
+		boolean pub = cesPublisher.publish(assetMetadata, vr);
 		assertTrue(pub);
 	}
 	

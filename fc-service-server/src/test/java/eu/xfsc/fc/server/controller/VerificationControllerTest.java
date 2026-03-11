@@ -77,7 +77,7 @@ public class VerificationControllerTest {
 
   @Test
   public void verifyParticipantShouldReturnSuccessResponse() throws Exception {
-    String json = getMockFileDataAsString("default_participant.json");
+    String json = getMockFileDataAsString("default-participant.json");
     String response = mockMvc.perform(MockMvcRequestBuilders.post("/verification")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
@@ -154,7 +154,7 @@ public class VerificationControllerTest {
   public void verifyShaclInvalidCredential_SchemaEnabled_ShouldReturnSchemaError() throws Exception {
     schemaStore.addSchema(getAccessor("mock-data/legal-personShape.ttl"));
     try {
-      String json = getMockFileDataAsString("default_participant.json");
+      String json = getMockFileDataAsString("default-participant.json");
       String response = mockMvc.perform(MockMvcRequestBuilders.post("/verification")
               .queryParam("verifySchema", "true")
               .queryParam("verifyVPSignature", "false")
@@ -180,7 +180,7 @@ public class VerificationControllerTest {
   public void verifyShaclInvalidCredential_SchemaDisabled_ShouldReturnSuccess() throws Exception {
     schemaStore.addSchema(getAccessor("mock-data/legal-personShape.ttl"));
     try {
-      String json = getMockFileDataAsString("default_participant.json");
+      String json = getMockFileDataAsString("default-participant.json");
       mockMvc.perform(MockMvcRequestBuilders.post("/verification")
               .queryParam("verifySchema", "false")
               .queryParam("verifyVPSignature", "false")

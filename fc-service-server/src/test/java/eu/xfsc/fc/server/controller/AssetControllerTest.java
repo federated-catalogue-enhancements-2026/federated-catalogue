@@ -76,7 +76,7 @@ import org.springframework.web.context.WebApplicationContext;
 @Import(EmbeddedNeo4JConfig.class)
 public class AssetControllerTest {
     private final static String TEST_ISSUER = "http://example.org/test-issuer";
-    private final static String ASSET_FILE_NAME = "default-sd.json";
+    private final static String ASSET_FILE_NAME = "default-credential.json";
 
     @Autowired
     private Neo4j embeddedDatabaseServer;
@@ -338,7 +338,7 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addAssetWithoutIssuerReturnUnprocessableEntity() throws Exception {
       mockMvc.perform(MockMvcRequestBuilders.post("/assets")
-              .content(getMockFileDataAsString("sd-without-issuer.json"))
+              .content(getMockFileDataAsString("credential-without-issuer.json"))
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -357,10 +357,10 @@ public class AssetControllerTest {
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assertTrue(sd.getWarnings() == null || sd.getWarnings().isEmpty(),
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        assertTrue(asset.getWarnings() == null || asset.getWarnings().isEmpty(),
             "Clean asset upload should produce no warnings");
-        assetStorePublisher.deleteAsset(sd.getAssetHash());
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -368,19 +368,19 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addAssetWithFcmetaTriples_returnsCreated_withWarning() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
-                .content(getMockFileDataAsString("sd-with-fcmeta.json"))
+                .content(getMockFileDataAsString("credential-with-fcmeta.json"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assertNotNull(sd.getWarnings(), "Warnings should be present when fcmeta triples were filtered");
-        assertFalse(sd.getWarnings().isEmpty(), "Warnings list should not be empty when fcmeta triples were filtered");
-        assertTrue(sd.getWarnings().get(0).contains("triple(s)"), "Warning should mention filtered triple count");
-        assertTrue(sd.getWarnings().get(0).contains("federated-catalogue/meta#"), "Warning should contain the reserved namespace URI");
-        assetStorePublisher.deleteAsset(sd.getAssetHash());
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        assertNotNull(asset.getWarnings(), "Warnings should be present when fcmeta triples were filtered");
+        assertFalse(asset.getWarnings().isEmpty(), "Warnings list should not be empty when fcmeta triples were filtered");
+        assertTrue(asset.getWarnings().get(0).contains("triple(s)"), "Warning should mention filtered triple count");
+        assertTrue(asset.getWarnings().get(0).contains("federated-catalogue/meta#"), "Warning should contain the reserved namespace URI");
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -388,15 +388,15 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addResourceReturnCreatedResponse() throws Exception {
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
-                .content(getMockFileDataAsString("sd_resource.json"))
+                .content(getMockFileDataAsString("credential-resource.json"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(sd.getAssetHash());
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -405,15 +405,15 @@ public class AssetControllerTest {
     public void addParicipantReturnCreatedResponse() throws Exception {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
-                .content(getMockFileDataAsString("default_participant.json"))
+                .content(getMockFileDataAsString("default-participant.json"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(sd.getAssetHash());
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
         schemaStore.clear();
     }
     
@@ -429,15 +429,15 @@ public class AssetControllerTest {
         schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
         schemaStore.addSchema(getAccessor("mock-data/legal-personShape.ttl"));
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
-                .content(getMockFileDataAsString("default_participant.json"))
+                .content(getMockFileDataAsString("default-participant.json"))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(sd.getAssetHash());
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
         schemaStore.clear();
     }
 
@@ -445,15 +445,15 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void addDuplicateAssetReturnConflictWithAssetStorage() throws Exception {
-      String sd = getMockFileDataAsString(ASSET_FILE_NAME);
-      ContentAccessorDirect contentAccessor = new ContentAccessorDirect(sd);
+      String asset = getMockFileDataAsString(ASSET_FILE_NAME);
+      ContentAccessorDirect contentAccessor = new ContentAccessorDirect(asset);
 
       AssetMetadata assetMetadata = new AssetMetadata("id123", TEST_ISSUER, new ArrayList<>(), contentAccessor);
 
       assetStorePublisher.storeCredential(assetMetadata, getStaticVerificationResult());
       mockMvc.perform(MockMvcRequestBuilders
               .post("/assets")
-              .content(sd)
+              .content(asset)
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -550,8 +550,8 @@ public class AssetControllerTest {
             .andExpect(status().isCreated())
             .andReturn();
 
-        Asset sd = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        Assertions.assertEquals(hash, sd.getAssetHash());
+        Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+        Assertions.assertEquals(hash, asset.getAssetHash());
 
         List<Map<String, Object>> nodes = graphStore.queryData(new GraphQuery(
                 "MATCH (n {claimsGraphUri: [$uri]}) RETURN n", Map.of("uri", TEST_ISSUER)

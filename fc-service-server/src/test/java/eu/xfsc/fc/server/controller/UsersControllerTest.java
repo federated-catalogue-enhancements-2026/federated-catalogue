@@ -225,7 +225,7 @@ public class UsersControllerTest {
 
     @Test
     @WithMockUser(authorities = {CATALOGUE_ADMIN_ROLE_WITH_PREFIX})
-    public void addDuplicateSDReturnConflictWithKeycloak() throws Exception {
+    public void addDuplicateAssetReturnConflictWithKeycloak() throws Exception {
         User user = getTestUser("name2", "surname2");
         setupKeycloak(HttpStatus.SC_CREATED, user, UUID.randomUUID().toString());
         userDao.create(user);
@@ -439,7 +439,7 @@ public class UsersControllerTest {
     //    role :-> can given by
     //    Ro-MU-CA :-> Ro-MU-CA
     //    Ro-MU-A :-> Ro-MU-CA, Ro-MU-A
-    //    Ro-SD-A :-> Ro-MU-CA, Ro-MU-A, Ro-Pa-A (if not self)
+    //    Ro-AS-A :-> Ro-MU-CA, Ro-MU-A, Ro-Pa-A (if not self)
     //    Ro-Pa-A :-> Ro-MU-CA, Ro-MU-A, Ro-Pa-A
 
     //Please see above criteria for detailed role assignment rule.

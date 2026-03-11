@@ -235,7 +235,7 @@ public class DistributedQueryControllerTest {
 	  try {
     //adding 1st credential
     ContentAccessorDirect contentAccessor =
-        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("default_participant.json"));
+        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("default-participant.json"));
     CredentialVerificationResultParticipant verificationResult = verificationService.verifyParticipantCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
             verificationResult.getIssuer(), verificationResult.getValidators(), contentAccessor);
@@ -252,7 +252,7 @@ public class DistributedQueryControllerTest {
 
     //adding third credential
    ContentAccessorDirect contentAccessorDirect3 =
-        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("unique_participant.json"));
+        new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("unique-participant.json"));
     CredentialVerificationResultParticipant verificationResult3
         = verificationService.verifyParticipantCredential(contentAccessorDirect3);
     AssetMetadata assetMetadata3 = new AssetMetadata(verificationResult3.getId(),

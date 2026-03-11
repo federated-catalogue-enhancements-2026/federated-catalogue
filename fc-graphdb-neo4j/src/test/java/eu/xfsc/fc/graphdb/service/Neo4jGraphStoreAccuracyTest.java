@@ -64,10 +64,10 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 public class Neo4jGraphStoreAccuracyTest {
 	
   //TODO:: We need to update credential file when final implementation of claim parsing is done .
-  private final String SERVICE_SD_FILE_NAME = "serviceOfferingSD.jsonld";
-  private final String SERVICE_SD_FILE_NAME1 = "serviceOfferingSD1.jsonld";
-  private final String SERVICE_SD_FILE_NAME2 = "serviceOfferingSD2.jsonld";
-  private final String SERVICE_SD_FILE_NAME3 = "serviceOfferingSD3.jsonld";
+  private final String SERVICE_CREDENTIAL_FILE_NAME = "serviceOfferingCredential.jsonld";
+  private final String SERVICE_CREDENTIAL_FILE_NAME1 = "serviceOfferingCredential1.jsonld";
+  private final String SERVICE_CREDENTIAL_FILE_NAME2 = "serviceOfferingCredential2.jsonld";
+  private final String SERVICE_CREDENTIAL_FILE_NAME3 = "serviceOfferingCredential3.jsonld";
 
   @SpringBootApplication
   public static class TestApplication {
@@ -89,7 +89,7 @@ public class Neo4jGraphStoreAccuracyTest {
   
   @BeforeAll
   void addDBEntries() throws Exception {
-    initialiseAllDataBaseWithManuallyAddingSD();
+    initialiseAllDataBaseWithManuallyAddingCredential();
   }
 
   @AfterAll
@@ -321,13 +321,13 @@ public class Neo4jGraphStoreAccuracyTest {
     neo4jGraphStore.deleteClaims(credentialSubject3);
   }
 
-  private void initialiseAllDataBaseWithManuallyAddingSD() throws Exception {
+  private void initialiseAllDataBaseWithManuallyAddingCredential() throws Exception {
 
-    ContentAccessorDirect contentAccessor = new ContentAccessorDirect(getMockFileDataAsString(SERVICE_SD_FILE_NAME));
+    ContentAccessorDirect contentAccessor = new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME));
     CredentialVerificationResultOffering verificationResult =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
-    //TODO:: adding manually claims, after final implementation we will remove it and change the query according to sd
+    //TODO:: adding manually claims, after final implementation we will remove it and change the query according to credential file content
 
     AssetClaim claim = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -346,9 +346,9 @@ public class Neo4jGraphStoreAccuracyTest {
             verificationResult.getIssuer(), new ArrayList<>(), contentAccessor);
     assetStore.storeCredential(assetMetadata, verificationResult);
 
-    //adding 2 sd skipping sd validation as we don't have full implementation
+    //adding 2 credential skipping credential validation as we don't have full implementation
     ContentAccessorDirect contentAccessorDirect2 =
-            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_SD_FILE_NAME1));
+            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME1));
     CredentialVerificationResultOffering verificationResult2 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
@@ -370,11 +370,11 @@ public class Neo4jGraphStoreAccuracyTest {
             verificationResult2.getIssuer(), new ArrayList<>(), contentAccessorDirect2);
     assetStore.storeCredential(assetMetadata2, verificationResult2);
 
-    //adding sd 3
+    //adding credential 3
     ContentAccessorDirect contentAccessorDirect3 =
-            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_SD_FILE_NAME2));
+            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME2));
     CredentialVerificationResultOffering verificationResult3 =
-            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
+            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessorDirect3, true, false, false, false);
 
     AssetClaim claim3 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -395,9 +395,9 @@ public class Neo4jGraphStoreAccuracyTest {
     assetStore.storeCredential(assetMetadata3, verificationResult3);
 
 
-    //adding sd 3
+    //adding credential 4
     ContentAccessorDirect contentAccessorDirect4 =
-            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_SD_FILE_NAME3));
+            new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME3));
     CredentialVerificationResultOffering verificationResult4 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 

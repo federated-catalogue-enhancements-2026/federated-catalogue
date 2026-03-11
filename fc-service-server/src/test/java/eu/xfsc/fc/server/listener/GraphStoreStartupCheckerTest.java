@@ -68,10 +68,10 @@ class GraphStoreStartupCheckerTest {
   }
 
   @Test
-  void onApplicationEvent_emptyGraphWithActiveSds_logsWarningWithoutRebuild() {
+  void onApplicationEvent_emptyGraphWithActiveAssets_logsWarningWithoutRebuild() {
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
     when(graphStore.getClaimCount()).thenReturn(0L);
-    stubActiveSdCount(5);
+    stubActiveAssetCount(5);
 
     startupChecker.onApplicationEvent(event);
 
@@ -79,12 +79,12 @@ class GraphStoreStartupCheckerTest {
   }
 
   @Test
-  void onApplicationEvent_emptyGraphWithActiveSdsAndAutoRebuild_triggersRebuild() {
+  void onApplicationEvent_emptyGraphWithActiveAssetsAndAutoRebuild_triggersRebuild() {
     startupChecker = new GraphStoreStartupChecker(
         graphStore, assetStore, graphRebuildService, true, 4, 100);
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
     when(graphStore.getClaimCount()).thenReturn(0L);
-    stubActiveSdCount(5);
+    stubActiveAssetCount(5);
 
     startupChecker.onApplicationEvent(event);
 
@@ -95,7 +95,7 @@ class GraphStoreStartupCheckerTest {
   void onApplicationEvent_populatedGraph_doesNotTriggerRebuild() {
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.FUSEKI);
     when(graphStore.getClaimCount()).thenReturn(10L);
-    stubActiveSdCount(5);
+    stubActiveAssetCount(5);
 
     startupChecker.onApplicationEvent(event);
 
@@ -103,10 +103,10 @@ class GraphStoreStartupCheckerTest {
   }
 
   @Test
-  void onApplicationEvent_emptyGraphAndNoActiveSds_doesNotTriggerRebuild() {
+  void onApplicationEvent_emptyGraphAndNoActiveAssets_doesNotTriggerRebuild() {
     when(graphStore.getBackendType()).thenReturn(GraphBackendType.NEO4J);
     when(graphStore.getClaimCount()).thenReturn(0L);
-    stubActiveSdCount(0);
+    stubActiveAssetCount(0);
 
     startupChecker.onApplicationEvent(event);
 
@@ -114,7 +114,7 @@ class GraphStoreStartupCheckerTest {
   }
 
   @SuppressWarnings("unchecked")
-  private void stubActiveSdCount(long count) {
+  private void stubActiveAssetCount(long count) {
     var result = org.mockito.Mockito.mock(
         eu.xfsc.fc.core.pojo.PaginatedResults.class);
     when(result.getTotalCount()).thenReturn(count);

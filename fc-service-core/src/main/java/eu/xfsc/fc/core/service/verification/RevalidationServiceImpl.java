@@ -93,13 +93,13 @@ public class RevalidationServiceImpl implements RevalidationService {
     this.batchSize = batchSize;
   }
 
-  private void handleTask(final String sdhash) {
-    ContentAccessor content = assetStorePublisher.getFileByHash(sdhash);
+  private void handleTask(final String assetHash) {
+    ContentAccessor content = assetStorePublisher.getFileByHash(assetHash);
     try {
       schemaValidationService.validateCredentialAgainstCompositeSchema(content);
     } catch (VerificationException ex) {
-      log.info("Asset {} is no longer valid", sdhash);
-      assetStorePublisher.changeLifeCycleStatus(sdhash, AssetStatus.REVOKED);
+      log.info("Asset {} is no longer valid", assetHash);
+      assetStorePublisher.changeLifeCycleStatus(assetHash, AssetStatus.REVOKED);
     }
     final var finalTaskQueue = taskQueue;
     if (finalTaskQueue != null && finalTaskQueue.size() < 0.5 * batchSize) {
@@ -124,15 +124,15 @@ public class RevalidationServiceImpl implements RevalidationService {
       if (workingOnChunk >= 0) {
         if (taskQueue.size() < 0.5 * batchSize) {
           // Fetch more hashes.
-          List<String> activeSdHashes = assetStorePublisher.getActiveAssetHashes(lastHash, batchSize, instanceCount, workingOnChunk);
-          if (activeSdHashes.isEmpty()) {
+          List<String> activeAssetHashes = assetStorePublisher.getActiveAssetHashes(lastHash, batchSize, instanceCount, workingOnChunk);
+          if (activeAssetHashes.isEmpty()) {
             log.info("Finished revalidating.");
             workingOnChunk = -1;
             lastHash = null;
           } else {
-            taskQueue.addAll(activeSdHashes);
-            lastHash = activeSdHashes.get(activeSdHashes.size() - 1);
-            log.debug("Added {} hashes for chunk {} of {}. Queue now: {}", activeSdHashes.size(), workingOnChunk, instanceCount, taskQueue.size());
+            taskQueue.addAll(activeAssetHashes);
+            lastHash = activeAssetHashes.get(activeAssetHashes.size() - 1);
+            log.debug("Added {} hashes for chunk {} of {}. Queue now: {}", activeAssetHashes.size(), workingOnChunk, instanceCount, taskQueue.size());
           }
         }
       }

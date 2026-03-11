@@ -60,27 +60,27 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public AssetMetadata getByHash(final String hash) {
-    AssetRecord sdmRecord = dao.select(hash);
-    if (sdmRecord == null) {
+    AssetRecord assetRecord = dao.select(hash);
+    if (assetRecord == null) {
       throw new NotFoundException(String.format("no asset found for hash %s", hash));
     }
-    return sdmRecord;
+    return assetRecord;
   }
 
   @Override
   public PaginatedResults<AssetMetadata> getByFilter(final AssetFilter filter, final boolean withMeta, final boolean withContent) {
     log.debug("getByFilter.enter; got filter: {}, withMeta: {}, withContent: {}", filter, withMeta, withContent);
     PaginatedResults<AssetRecord> page = dao.selectByFilter(filter, withMeta, withContent);
-    List sds = page.getResults();
-    return new PaginatedResults<>(page.getTotalCount(), (List<AssetMetadata>) sds);
+    List assetList = page.getResults();
+    return new PaginatedResults<>(page.getTotalCount(), (List<AssetMetadata>) assetList);
   }
 
   @Override
   public void storeCredential(final AssetMetadata assetMetadata, final CredentialVerificationResult verificationResult) {
-	storeSDInternal(assetMetadata, verificationResult);
+	storeCredentialInternal(assetMetadata, verificationResult);
   }
 
-  protected SubjectHashRecord storeSDInternal(final AssetMetadata assetMetadata, final CredentialVerificationResult verificationResult) {
+  protected SubjectHashRecord storeCredentialInternal(final AssetMetadata assetMetadata, final CredentialVerificationResult verificationResult) {
     if (verificationResult == null) {
       throw new IllegalArgumentException("verification result must not be null");
     }
@@ -92,7 +92,7 @@ public class AssetStoreImpl implements AssetStore {
       Validator minVal = validators.stream().min(new Validator.ExpirationComparator()).orElse(null);
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
-    AssetRecord sd = AssetRecord.builder()
+    AssetRecord assetRecord = AssetRecord.builder()
         .assetHash(assetMetadata.getAssetHash())
         .id(assetMetadata.getId())
         .status(assetMetadata.getStatus())
@@ -107,7 +107,7 @@ public class AssetStoreImpl implements AssetStore {
 
     SubjectHashRecord subjectHash = null;
     try {
-      subjectHash = dao.insert(sd);
+      subjectHash = dao.insert(assetRecord);
     } catch (DuplicateKeyException ex) {
       if (ex.getMessage().contains("assets_pkey")) {
         throw new ConflictException(String.format("asset with hash %s already exists", assetMetadata.getAssetHash()));
@@ -129,7 +129,7 @@ public class AssetStoreImpl implements AssetStore {
   public AssetMetadata storeAsset(final AssetMetadata assetMetadata, final String originalFilename) {
     log.debug("storeAsset.enter; got meta: {}", assetMetadata);
     String subjectId = assetMetadata.getId() != null ? assetMetadata.getId() : assetSubjectIdPrefix + assetMetadata.getAssetHash();
-    AssetRecord sd = AssetRecord.builder()
+    AssetRecord assetRecord = AssetRecord.builder()
         .assetHash(assetMetadata.getAssetHash())
         .id(subjectId)
         .status(assetMetadata.getStatus())
@@ -142,7 +142,7 @@ public class AssetStoreImpl implements AssetStore {
         .originalFilename(originalFilename)
         .build();
     try {
-      dao.insert(sd);
+      dao.insert(assetRecord);
     } catch (DuplicateKeyException ex) {
       if (ex.getMessage().contains("assets_pkey")) {
         throw new ConflictException(String.format("asset with hash %s already exists", assetMetadata.getAssetHash()));
@@ -155,7 +155,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new ServerException("Failed to store asset content in file store", ex);
     }
     log.debug("storeAsset.exit; stored asset with hash: {}", assetMetadata.getAssetHash());
-    return sd;
+    return assetRecord;
   }
 
   @Override
@@ -168,7 +168,7 @@ public class AssetStoreImpl implements AssetStore {
 
     if (ssr.subjectId() == null) {
       throw new ConflictException(String.format("can not change status of asset with hash %s: require status %s, but encountered status %s",
-    	hash, AssetStatus.ACTIVE, ssr.getSdStatus()));
+    	hash, AssetStatus.ACTIVE, ssr.getAssetStatus()));
     }
     graphDb.deleteClaims(ssr.subjectId());
   }
@@ -181,7 +181,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new NotFoundException("no asset found for hash " + hash);
     }
 
-    if (ssr.getSdStatus() == AssetStatus.ACTIVE) {
+    if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
     }
     try {
@@ -195,10 +195,10 @@ public class AssetStoreImpl implements AssetStore {
   public int invalidateExpiredAssets() {
     // A possible Performance optimisation may be required here to limit the number
     // of assets that are expired in one run, to limit the size of the Transaction.
-    List<String> expiredSds = dao.selectExpiredHashes();
+    List<String> expiredAssets = dao.selectExpiredHashes();
     final MutableInt count = new MutableInt();
     // we could also expire/update all assets from batch in one batchUpdate..
-    expiredSds.forEach(assetHash -> {
+    expiredAssets.forEach(assetHash -> {
       try {
         changeLifeCycleStatus(assetHash, AssetStatus.EOL);
         count.increment();

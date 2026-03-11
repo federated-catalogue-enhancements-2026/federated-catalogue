@@ -91,7 +91,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void invalidSyntax_NoVCinSD() {
+  void invalidSyntax_NoVCinCredential() {
     String path = "VerificationService/syntax/smallExample.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     Exception ex = assertThrowsExactly(VerificationException.class, ()
@@ -152,7 +152,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void validSyntax_ValidSDVP() {
+  void validSyntax_ValidCredentialVP() {
     //schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     String path = "VerificationService/syntax/input.vp.jsonld";
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
@@ -246,7 +246,7 @@ public class VerificationServiceTest {
   @Test
   void validSyntax_ValidResourceNewSchema() {
     schemaStore.initializeDefaultSchemas();
-    ContentAccessor content = getAccessor("VerificationService/syntax/resourceSD.jsonld");
+    ContentAccessor content = getAccessor("VerificationService/syntax/resourceCredential.jsonld");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource"); 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "http://w3id.org/gaia-x/resource#Resource"); 
@@ -357,7 +357,7 @@ public class VerificationServiceTest {
   }
     
   @Test
-  void validSD() {
+  void validCredential() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     String path = "VerificationService/sign/valid_signature.json";
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), false, false, true, true);
@@ -365,7 +365,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void validComplexSD() {
+  void validComplexCredential() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     String path = "VerificationService/sign/valid_complex_signature.json";
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path));
@@ -373,11 +373,11 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void validComplexSDPartType() {
+  void validComplexCredentialPartType() {
     schemaStore.initializeDefaultSchemas();
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering");
-    String path = "VerificationService/syntax/complexSDPartType.jsonld";
+    String path = "VerificationService/syntax/complexCredentialPartType.jsonld";
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
@@ -403,11 +403,11 @@ public class VerificationServiceTest {
   }
   
   @Test
-  void invalidComplexSD2Types() {
+  void invalidComplexCredential2Types() {
     schemaStore.initializeDefaultSchemas();
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering");
-    String path = "VerificationService/syntax/complexSD2Types.jsonld";
+    String path = "VerificationService/syntax/complexCredential2Types.jsonld";
     Exception ex = assertThrowsExactly(VerificationException.class, () -> verificationService.verifyCredential(getAccessor(path), true, true, false, false));
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
@@ -564,7 +564,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void verifyInvalidSDValidation_Result_Against_CompositeSchema() {
+  void verifyInvalidCredentialValidation_Result_Against_CompositeSchema() {
     schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     SchemaValidationResult result = verificationService.verifyCredentialAgainstCompositeSchema(
@@ -574,7 +574,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void verifyValidVP_SDValidationCompositeSchema() {
+  void verifyValidCredentialValidation_Result_Against_CompositeSchema() {
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
     SchemaValidationResult validationResult = verificationService.verifyCredentialAgainstCompositeSchema(
@@ -584,7 +584,7 @@ public class VerificationServiceTest {
 
   /** With verifySchema=true, a credential that violates SHACL shapes should be rejected. */
   @Test
-  void schemaValidationEnabled_InvalidSD_Rejected() {
+  void schemaValidationEnabled_InvalidCredential_Rejected() {
     verificationService.setVerifySchema(true);
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
@@ -596,7 +596,7 @@ public class VerificationServiceTest {
 
   /** With verifySchema=false, a credential that violates SHACL shapes should still be accepted. */
   @Test
-  void schemaValidationDisabled_InvalidSD_Accepted() {
+  void schemaValidationDisabled_InvalidCredential_Accepted() {
     verificationService.setVerifySchema(false);
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));

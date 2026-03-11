@@ -85,12 +85,12 @@ public class GraphRebuilder {
     int lastCount;
     String lastHash = null;
     do {
-      List<String> activeSdHashes = assetStore.getActiveAssetHashes(lastHash, batchSize, chunkCount, chunkId);
-      lastCount = activeSdHashes.size();
+      List<String> activeAssetHashes = assetStore.getActiveAssetHashes(lastHash, batchSize, chunkCount, chunkId);
+      lastCount = activeAssetHashes.size();
       log.info("Rebuilding GraphDB: Fetched {} Hashes", lastCount);
       if (lastCount > 0) {
-        lastHash = activeSdHashes.getLast();
-        for (String hash : activeSdHashes) {
+        lastHash = activeAssetHashes.getLast();
+        for (String hash : activeAssetHashes) {
           try {
             pendingTasks.incrementAndGet();
             taskQueue.put(hash);
