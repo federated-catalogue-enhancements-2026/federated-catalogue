@@ -72,14 +72,14 @@ public class SecurityConfig {
           // Verification APIs
           .requestMatchers(antMatcher("/verification")).permitAll()
           
-          // Self-Description APIs
-          .requestMatchers(antMatcher(HttpMethod.GET, "/self-descriptions")).authenticated()
-          .requestMatchers(antMatcher(HttpMethod.GET, "/self-descriptions/{self_description_hash}")).authenticated()
-          .requestMatchers(antMatcher(HttpMethod.POST, "/self-descriptions"))
+          // Asset APIs
+          .requestMatchers(antMatcher(HttpMethod.GET, "/assets")).authenticated()
+          .requestMatchers(antMatcher(HttpMethod.GET, "/assets/{asset_id}")).authenticated()
+          .requestMatchers(antMatcher(HttpMethod.POST, "/assets"))
           		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
-          .requestMatchers(antMatcher(HttpMethod.DELETE, "/self-descriptions/{self_description_hash}"))
+          .requestMatchers(antMatcher(HttpMethod.DELETE, "/assets/{asset_id}"))
           		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
-          .requestMatchers(antMatcher(HttpMethod.POST, "/self-descriptions/{self_description_hash}/revoke"))
+          .requestMatchers(antMatcher(HttpMethod.POST, "/assets/{asset_id}/revoke"))
           		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
 
           // Participants API

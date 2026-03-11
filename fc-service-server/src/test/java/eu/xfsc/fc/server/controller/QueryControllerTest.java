@@ -6,12 +6,12 @@ import eu.xfsc.fc.api.generated.model.QueryInfo;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
-import eu.xfsc.fc.core.pojo.SdFilter;
-import eu.xfsc.fc.core.pojo.SelfDescriptionMetadata;
-import eu.xfsc.fc.core.pojo.VerificationResultOffering;
-import eu.xfsc.fc.core.pojo.VerificationResultParticipant;
+import eu.xfsc.fc.core.pojo.AssetFilter;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
-import eu.xfsc.fc.core.service.sdstore.SelfDescriptionStore;
+import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.server.helper.FileReaderHelper;
@@ -79,7 +79,7 @@ public class QueryControllerTest {
   private Neo4j embeddedDatabaseServer;
 
   @Autowired
-  private SelfDescriptionStore sdStorePublisher;
+  private AssetStore assetStorePublisher;
 
   @Autowired
   private VerificationService verificationService;
@@ -111,7 +111,7 @@ public class QueryControllerTest {
     mockBackEnd91.shutdown();
     mockBackEnd90.shutdown();
     schemaStore.clear();
-    sdStorePublisher.clear();
+    assetStorePublisher.clear();
     embeddedDatabaseServer.close();
   }
 
@@ -218,10 +218,10 @@ public class QueryControllerTest {
 
     assertEquals(1, uriId.size());
 
-    final SdFilter filterParams = new SdFilter();
+    final AssetFilter filterParams = new AssetFilter();
     filterParams.setIds(uriId);
 
-    PaginatedResults<SelfDescriptionMetadata> byFilter = sdStorePublisher.getByFilter(filterParams, true, true);
+    PaginatedResults<AssetMetadata> byFilter = assetStorePublisher.getByFilter(filterParams, true, true);
     int matchCount = byFilter.getResults().size();
 
     assertEquals(uriId.size(), matchCount);
@@ -559,28 +559,28 @@ public class QueryControllerTest {
     //adding 1st sd
     ContentAccessorDirect contentAccessor =
         new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_PARTICIPANT_SD_FILE_NAME));
-    VerificationResultParticipant verificationResult = verificationService.verifyParticipantSelfDescription(contentAccessor);
-    SelfDescriptionMetadata sdMetadata = new SelfDescriptionMetadata(verificationResult.getId(),
+    CredentialVerificationResultParticipant verificationResult = verificationService.verifyParticipantCredential(contentAccessor);
+    AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
             verificationResult.getIssuer(), verificationResult.getValidators(), contentAccessor);
-    sdStorePublisher.storeSelfDescription(sdMetadata, verificationResult);
+    assetStorePublisher.storeCredential(assetMetadata, verificationResult);
 
     //adding second sd
     ContentAccessorDirect contentAccessor2
             = new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(DEFAULT_SERVICE_SD_FILE_NAME));
-    VerificationResultOffering verificationResult2
-            = verificationService.verifyOfferingSelfDescription(contentAccessor2);
-    SelfDescriptionMetadata sdMetadata2 = new SelfDescriptionMetadata(verificationResult2.getId(),
+    CredentialVerificationResultOffering verificationResult2
+            = verificationService.verifyOfferingCredential(contentAccessor2);
+    AssetMetadata assetMetadata2 = new AssetMetadata(verificationResult2.getId(),
             verificationResult2.getIssuer(), verificationResult2.getValidators(), contentAccessor2);
-    sdStorePublisher.storeSelfDescription(sdMetadata2, verificationResult2);
+    assetStorePublisher.storeCredential(assetMetadata2, verificationResult2);
 
     //adding sd 3
    ContentAccessorDirect contentAccessorDirect3 =
         new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString(UNIQUE_PARTICIPANT_SD_FILE_NAME));
-    VerificationResultParticipant verificationResult3
-        = verificationService.verifyParticipantSelfDescription(contentAccessorDirect3);
-    SelfDescriptionMetadata sdMetadata3 = new SelfDescriptionMetadata(verificationResult3.getId(),
+    CredentialVerificationResultParticipant verificationResult3
+        = verificationService.verifyParticipantCredential(contentAccessorDirect3);
+    AssetMetadata assetMetadata3 = new AssetMetadata(verificationResult3.getId(),
         verificationResult3.getIssuer(), verificationResult3.getValidators(), contentAccessorDirect3);
-    sdStorePublisher.storeSelfDescription(sdMetadata3, verificationResult2);
+    assetStorePublisher.storeCredential(assetMetadata3, verificationResult2);
   }
 
 }

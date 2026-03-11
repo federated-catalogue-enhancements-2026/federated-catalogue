@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initialscale=1.0">
-    <title>Verify Self-Description</title>
+    <title>Verify Credential</title>
     <link href="css/jquery-ui.min.css" rel="stylesheet">
     <script src="js/jquery-3.6.3.min.js"></script>
     <script src="js/jquery-ui.min.js"></script>
@@ -29,9 +29,9 @@
 <body>
  <div class="container">
     <div>
-        <h2>Verify Self-Description</h2>
+        <h2>Verify Credential</h2>
         <br>
-        Please upload SD file or copy/paste SD content in textarea:<br>
+        Please upload credential file or copy/paste credential content in textarea:<br>
         <br>
         <input accept="application/json" class="btn btn-info" id="sdFile" name="datafile" size="40" type="file">
         </p>
@@ -105,7 +105,7 @@
 
                 $('#result').html("");
                 if(document.getElementById('content-target').value=="" || document.getElementById('content-target').value==null){
-                     alert("Please add Self-Description");
+                     alert("Please add credential");
                      return;
                 }
                 var checkVerifySemantics = $("#verifySemantics").is(":checked") ? "true" : "false";
