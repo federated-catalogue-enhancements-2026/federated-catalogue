@@ -231,7 +231,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "[\r\n    \"Ro-MU-CA\",\r\n    \"Ro-PA-A\",\r\n    \"Ro-MU-A\",\r\n    \"Ro-SD-A\"\r\n]",
+							"raw": "[\r\n    \"Ro-MU-CA\",\r\n    \"Ro-PA-A\",\r\n    \"Ro-MU-A\",\r\n    \"Ro-AS-A\"\r\n]",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1195,7 +1195,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "[\r\n    \"uma_authorization\",\r\n    \"offline_access\",\r\n    \"Ro-MU-CA\",\r\n    \"Ro-PA-A\",\r\n    \"default-roles-gaia-x\",\r\n    \"Ro-MU-A\",\r\n    \"Ro-SD-A\"\r\n]",
+							"raw": "[\r\n    \"uma_authorization\",\r\n    \"offline_access\",\r\n    \"Ro-MU-CA\",\r\n    \"Ro-PA-A\",\r\n    \"default-roles-gaia-x\",\r\n    \"Ro-MU-A\",\r\n    \"Ro-AS-A\"\r\n]",
 							"options": {
 								"raw": {
 									"language": "json"

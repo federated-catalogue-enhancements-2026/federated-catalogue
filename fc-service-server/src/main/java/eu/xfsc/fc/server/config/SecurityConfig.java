@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_USER_ADMIN_ROLE;
-import static eu.xfsc.fc.server.util.CommonConstants.SD_ADMIN_ROLE;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_ADMIN_ROLE;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -76,11 +76,11 @@ public class SecurityConfig {
           .requestMatchers(antMatcher(HttpMethod.GET, "/assets")).authenticated()
           .requestMatchers(antMatcher(HttpMethod.GET, "/assets/{asset_id}")).authenticated()
           .requestMatchers(antMatcher(HttpMethod.POST, "/assets"))
-          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
+          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, ASSET_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.DELETE, "/assets/{asset_id}"))
-          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
+          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, ASSET_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.POST, "/assets/{asset_id}/revoke"))
-          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, SD_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
+          		.hasAnyRole(CATALOGUE_ADMIN_ROLE, ASSET_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
 
           // Participants API
           .requestMatchers(antMatcher(HttpMethod.POST, "/participants")).hasRole(CATALOGUE_ADMIN_ROLE)
@@ -88,7 +88,7 @@ public class SecurityConfig {
           .requestMatchers(antMatcher(HttpMethod.PUT, "/participants/*")).hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.DELETE, "/participants/*")).hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.GET, "/participants/*"))
-            	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE, SD_ADMIN_ROLE)
+            	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE, ASSET_ADMIN_ROLE)
           .requestMatchers(antMatcher(HttpMethod.GET, "/participants/*/users"))
             	.hasAnyRole(CATALOGUE_ADMIN_ROLE, PARTICIPANT_ADMIN_ROLE, PARTICIPANT_USER_ADMIN_ROLE)
 

@@ -6,7 +6,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE_WITH_P
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_ADMIN_ROLE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.CommonConstants.PARTICIPANT_USER_ADMIN_ROLE;
-import static eu.xfsc.fc.server.util.TestCommonConstants.SD_ADMIN_ROLE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_ADMIN_ROLE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -291,7 +291,7 @@ public class ParticipantsControllerTest {
   }
 
   @Test
-  @WithMockUser(authorities = SD_ADMIN_ROLE_WITH_PREFIX)
+  @WithMockUser(authorities = ASSET_ADMIN_ROLE_WITH_PREFIX)
   public void getParticipantsShouldReturnForbiddenResponse() throws Exception {
     mockMvc
             .perform(MockMvcRequestBuilders.get("/participants")
@@ -386,7 +386,7 @@ public class ParticipantsControllerTest {
   }
 
   @Test
-  @WithMockUser(authorities = SD_ADMIN_ROLE_WITH_PREFIX)
+  @WithMockUser(authorities = ASSET_ADMIN_ROLE_WITH_PREFIX)
   public void addParticipantShouldReturnForbiddenResponse() throws Exception {
     mockMvc
             .perform(MockMvcRequestBuilders.post("/participants")
