@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 public interface VerificationService {
 
   /**
-   * Validates the RDF credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @return a Participant metadata validation result. If the validation fails, the reason explains the issue.
@@ -32,7 +32,7 @@ public interface VerificationService {
   CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the RDF credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @return a Verification result. If the verification fails, the reason explains the issue.
@@ -40,7 +40,7 @@ public interface VerificationService {
   CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the RDF credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @return a Verification result. If the verification fails, the reason explains the issue.
@@ -48,7 +48,7 @@ public interface VerificationService {
   CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the RDF credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @return a credential metadata validation result. If the validation fails, the reason explains the issue.
@@ -56,7 +56,7 @@ public interface VerificationService {
   CredentialVerificationResult verifyCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the RDF credential payload with custom verification toggles (JSON-LD format).
+   * Validates the credential payload with custom verification toggles (JSON-LD format).
    *
    * @param payload
    * @param verifySemantics
@@ -78,7 +78,7 @@ public interface VerificationService {
   List<CredentialClaim> extractClaims(ContentAccessor payload);
 
   /**
-   * The function validates the RDF credential against the given schema.
+   * The function validates the credential against the given schema.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @param schema ContentAccessor - the schema to validate credential against (null = composite)
@@ -89,7 +89,7 @@ public interface VerificationService {
   SchemaValidationResult verifyCredentialAgainstSchema(ContentAccessor payload, ContentAccessor schema);
 
   /**
-   * The function validates the RDF credential against the composite schema.
+   * The function validates the credential against the composite schema.
    *
    * @param payload ContentAccessor to credential which should be validated.
    * @return the result of the semantic validation.
