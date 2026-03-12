@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -124,13 +124,13 @@ public class VerificationServiceImpl implements VerificationService {
   }
 
   /**
-   * A method that returns a list of claims from the given RDF asset (currently only credential) payload without performing verification.
+   * A method that returns a list of claims from the given RDF credential payload without performing verification.
    *
-   * @param payload the RDF asset content to extract claims from
+   * @param payload the RDF credential content to extract claims from
    * @return a list of claims.
    */
   @Override
-  public List<AssetClaim> extractClaims(ContentAccessor payload) {
+  public List<CredentialClaim> extractClaims(ContentAccessor payload) {
     return resolveStrategy(payload).extractClaims(payload);
   }
 

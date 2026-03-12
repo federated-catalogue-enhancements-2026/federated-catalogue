@@ -20,13 +20,13 @@ public class CredentialVerificationResultResource extends CredentialVerification
    * @param issuedDate issuing date of the credential
    */
   public CredentialVerificationResultResource(Instant verificationTimestamp, String lifecycleStatus, String issuer, Instant issuedDateTime,
-          String id, List<AssetClaim> claims, List<Validator> validators) {
+          String id, List<CredentialClaim> claims, List<Validator> validators) {
     super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, id, claims, validators);
   }
 
   @Override
   public String toString() {
-    List<AssetClaim> claims = getClaims();
+    List<CredentialClaim> claims = getClaims();
     String cls = claims == null ? "null" : "" + claims.size();
     List<Validator> validators = getValidators();
     String vls = validators == null ? "null" : "" + validators.size();

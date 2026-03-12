@@ -36,7 +36,7 @@ import eu.xfsc.fc.core.dao.impl.AssetDaoImpl;
 import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.GraphQuery;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
@@ -162,132 +162,132 @@ public class Neo4jGraphStoreAccuracyTest {
   @Test
   void testQueryForGroupBYAndLocation() {
     String credentialSubject1 = "http://example.org/test-issuer";
-    List<AssetClaim> claimList = Arrays.asList(
-            new AssetClaim(
+    List<CredentialClaim> claimList = Arrays.asList(
+            new CredentialClaim(
                     "<http://example.org/test-issuer>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Provider>"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer>",
                     "<http://w3id.org/gaia-x/participant#legalAddress>",
                     "_:23"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer>",
                     "<http://w3id.org/gaia-x/participant#legalName>",
                     "\"deltaDAO AG\""
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer>",
                     "<http://w3id.org/gaia-x/participant#name>",
                     "\"deltaDAO AG\""
             ),
-            new AssetClaim("_:23",
+            new CredentialClaim("_:23",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Address>"
             ),
-            new AssetClaim("_:23",
+            new CredentialClaim("_:23",
                     "<http://w3id.org/gaia-x/participant#country>",
                     "\"DE\""
             ),
-            new AssetClaim("_:23",
+            new CredentialClaim("_:23",
                     "<http://w3id.org/gaia-x/participant#locality>",
                     "\"Hamburg\""
             ),
-            new AssetClaim("_:23",
+            new CredentialClaim("_:23",
                     "<http://w3id.org/gaia-x/participant#postal-code>",
                     "\"22303\""
             ),
-            new AssetClaim("_:23",
+            new CredentialClaim("_:23",
                     "<http://w3id.org/gaia-x/participant#street-address>",
                     "\"GeibelstraГџe 46b\""
             )
     );
 
     String credentialSubject2 = "http://example.org/test-issuer2";
-    List<AssetClaim> claimList2 = Arrays.asList(
-            new AssetClaim(
+    List<CredentialClaim> claimList2 = Arrays.asList(
+            new CredentialClaim(
                     "<http://example.org/test-issuer2>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Provider>"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer2>",
                     "<http://w3id.org/gaia-x/participant#legalAddress>",
                     "_:b1"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer2>",
                     "<http://w3id.org/gaia-x/participant#legalName>",
                     "\"deltaDAO AGE\""
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer2>",
                     "<http://w3id.org/gaia-x/participant#name>",
                     "\"deltaDAO AGE\""
             ),
-            new AssetClaim("_:b1",
+            new CredentialClaim("_:b1",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Address>"
             ),
-            new AssetClaim("_:b1",
+            new CredentialClaim("_:b1",
                     "<http://w3id.org/gaia-x/participant#country>",
                     "\"DE\""
             ),
-            new AssetClaim("_:b1",
+            new CredentialClaim("_:b1",
                     "<http://w3id.org/gaia-x/participant#locality>",
                     "\"Dresden\""
             ),
-            new AssetClaim("_:b1",
+            new CredentialClaim("_:b1",
                     "<http://w3id.org/gaia-x/participant#postal-code>",
                     "\"01067\""
             ),
-            new AssetClaim("_:b1",
+            new CredentialClaim("_:b1",
                     "<http://w3id.org/gaia-x/participant#street-address>",
                     "\"Tried str 46b\""
             )
     );
 
     String credentialSubject3 = "http://example.org/test-issuer3";
-    List<AssetClaim> claimList3 = Arrays.asList(
-            new AssetClaim(
+    List<CredentialClaim> claimList3 = Arrays.asList(
+            new CredentialClaim(
                     "<http://example.org/test-issuer3>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Provider>"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer3>",
                     "<http://w3id.org/gaia-x/participant#legalAddress>",
                     "_:b2"
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer3>",
                     "<http://w3id.org/gaia-x/participant#legalName>",
                     "\"deltaDAO AGEF\""
             ),
-            new AssetClaim(
+            new CredentialClaim(
                     "<http://example.org/test-issuer3>",
                     "<http://w3id.org/gaia-x/participant#name>",
                     "\"deltaDAO AGEF\""
             ),
-            new AssetClaim("_:b2",
+            new CredentialClaim("_:b2",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
                     "<http://w3id.org/gaia-x/participant#Address>"
             ),
-            new AssetClaim("_:b2",
+            new CredentialClaim("_:b2",
                     "<http://w3id.org/gaia-x/participant#country>",
                     "\"DE\""
             ),
-            new AssetClaim("_:b2",
+            new CredentialClaim("_:b2",
                     "<http://w3id.org/gaia-x/participant#locality>",
                     "\"Dresden\""
             ),
-            new AssetClaim("_:b2",
+            new CredentialClaim("_:b2",
                     "<http://w3id.org/gaia-x/participant#postal-code>",
                     "\"01069\""
             ),
-            new AssetClaim("_:b2",
+            new CredentialClaim("_:b2",
                     "<http://w3id.org/gaia-x/participant#street-address>",
                     "\"Fried str 46b\""
             )
@@ -329,15 +329,15 @@ public class Neo4jGraphStoreAccuracyTest {
 
     //TODO:: adding manually claims, after final implementation we will remove it and change the query according to credential file content
 
-    AssetClaim claim = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal.json>",
+    CredentialClaim claim = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<http://w3id.org/gaia-x/service#ServiceOffering>");
 
-    AssetClaim claimName = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal.json>",
+    CredentialClaim claimName = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal.json>",
             "<http://w3id.org/gaia-x/service#name>",
             "\"Portal\"");
 
-    List<AssetClaim> claimFile = List.of(claim, claimName);
+    List<CredentialClaim> claimFile = List.of(claim, claimName);
 
     verificationResult.setClaims(claimFile);
     verificationResult.setId(claimFile.get(0).getSubjectValue());
@@ -352,15 +352,15 @@ public class Neo4jGraphStoreAccuracyTest {
     CredentialVerificationResultOffering verificationResult2 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
-    AssetClaim claim1 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json>",
+    CredentialClaim claim1 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<http://w3id.org/gaia-x/service#ServiceOffering>");
 
-    AssetClaim claimName1 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json>",
+    CredentialClaim claimName1 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json>",
             "<http://w3id.org/gaia-x/service#name>",
             "\"Portal2\"");
 
-    List<AssetClaim> claimFile1 = List.of(claim1, claimName1);
+    List<CredentialClaim> claimFile1 = List.of(claim1, claimName1);
 
     verificationResult2.setClaims(claimFile1);
     verificationResult2.setId(claimFile1.get(0).getSubjectValue());
@@ -376,15 +376,15 @@ public class Neo4jGraphStoreAccuracyTest {
     CredentialVerificationResultOffering verificationResult3 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessorDirect3, true, false, false, false);
 
-    AssetClaim claim3 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json>",
+    CredentialClaim claim3 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<http://w3id.org/gaia-x/service#ServiceOffering>");
 
-    AssetClaim claimName3 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json>",
+    CredentialClaim claimName3 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json>",
             "<http://w3id.org/gaia-x/service#name>",
             " \"Portal3\"");
 
-    List<AssetClaim> claimFile3 = List.of(claim3, claimName3);
+    List<CredentialClaim> claimFile3 = List.of(claim3, claimName3);
 
     verificationResult3.setClaims(claimFile3);
     verificationResult3.setId(claimFile3.get(0).getSubjectValue());
@@ -402,16 +402,16 @@ public class Neo4jGraphStoreAccuracyTest {
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
 
-    AssetClaim claim4 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal4.json>",
+    CredentialClaim claim4 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal4.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<http://w3id.org/gaia-x/service#ServiceOffering>");
 
-    AssetClaim claimName4 = new AssetClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal4.json>",
+    CredentialClaim claimName4 = new CredentialClaim("<http://w3id.org/gaia-x/indiv#serviceMVGPortal4.json>",
             "<http://w3id.org/gaia-x/service#name>",
             "\"Portal2\"");
 
 
-    List<AssetClaim> claimFile4 = List.of(claim4, claimName4);
+    List<CredentialClaim> claimFile4 = List.of(claim4, claimName4);
 
     verificationResult4.setClaims(claimFile4);
     verificationResult4.setId(claimFile4.get(0).getSubjectValue());

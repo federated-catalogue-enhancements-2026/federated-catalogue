@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.FilteredModel;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 
 /**
  * Unit tests for {@link ProtectedNamespaceFilter}.
@@ -45,7 +45,7 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsProtectedSubject() {
-    AssetClaim claim = new AssetClaim("<" + NS + "someSubject>", NORMAL_PRED, NORMAL_OBJ);
+    CredentialClaim claim = new CredentialClaim("<" + NS + "someSubject>", NORMAL_PRED, NORMAL_OBJ);
     FilteredClaims result = filter.filterClaims(List.of(claim), "test");
     assertTrue(result.claims().isEmpty());
     assertTrue(result.hasWarning());
@@ -53,7 +53,7 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsProtectedPredicate() {
-    AssetClaim claim = new AssetClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
+    CredentialClaim claim = new CredentialClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
     FilteredClaims result = filter.filterClaims(List.of(claim), "test");
     assertTrue(result.claims().isEmpty());
     assertTrue(result.hasWarning());
@@ -61,7 +61,7 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsProtectedObjectIri() {
-    AssetClaim claim = new AssetClaim(NORMAL_SUBJ, NORMAL_PRED, "<" + NS + "someValue>");
+    CredentialClaim claim = new CredentialClaim(NORMAL_SUBJ, NORMAL_PRED, "<" + NS + "someValue>");
     FilteredClaims result = filter.filterClaims(List.of(claim), "test");
     assertTrue(result.claims().isEmpty());
     assertTrue(result.hasWarning());
@@ -70,7 +70,7 @@ class ProtectedNamespaceFilterTest {
   @Test
   void filterClaimsLiteralObjectNotFiltered() {
     // Literal object containing namespace string — should NOT be filtered
-    AssetClaim claim = new AssetClaim(NORMAL_SUBJ, NORMAL_PRED, "\"" + NS + "someValue\"");
+    CredentialClaim claim = new CredentialClaim(NORMAL_SUBJ, NORMAL_PRED, "\"" + NS + "someValue\"");
     FilteredClaims result = filter.filterClaims(List.of(claim), "test");
     assertEquals(1, result.claims().size());
     assertFalse(result.hasWarning());
@@ -78,7 +78,7 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsBlankNodeNotFiltered() {
-    AssetClaim claim = new AssetClaim(NORMAL_SUBJ, NORMAL_PRED, "_:b0");
+    CredentialClaim claim = new CredentialClaim(NORMAL_SUBJ, NORMAL_PRED, "_:b0");
     FilteredClaims result = filter.filterClaims(List.of(claim), "test");
     assertEquals(1, result.claims().size());
     assertFalse(result.hasWarning());
@@ -86,8 +86,8 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsNormalClaims() {
-    AssetClaim claim1 = new AssetClaim(NORMAL_SUBJ, NORMAL_PRED, NORMAL_OBJ);
-    AssetClaim claim2 = new AssetClaim("<https://example.org/s2>", "<https://example.org/p2>", "\"literal\"");
+    CredentialClaim claim1 = new CredentialClaim(NORMAL_SUBJ, NORMAL_PRED, NORMAL_OBJ);
+    CredentialClaim claim2 = new CredentialClaim("<https://example.org/s2>", "<https://example.org/p2>", "\"literal\"");
     FilteredClaims result = filter.filterClaims(List.of(claim1, claim2), "test");
     assertEquals(2, result.claims().size());
     assertFalse(result.hasWarning());
@@ -95,7 +95,7 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsEmptyList() {
-    List<AssetClaim> input = List.of();
+    List<CredentialClaim> input = List.of();
     FilteredClaims result = filter.filterClaims(input, "test");
     assertSame(input, result.claims());
     assertFalse(result.hasWarning());
@@ -110,9 +110,9 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsMixedClaims() {
-    AssetClaim normal = new AssetClaim(NORMAL_SUBJ, NORMAL_PRED, NORMAL_OBJ);
-    AssetClaim protectedClaim = new AssetClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
-    AssetClaim anotherNormal = new AssetClaim("<https://example.org/s2>", NORMAL_PRED, "\"text\"");
+    CredentialClaim normal = new CredentialClaim(NORMAL_SUBJ, NORMAL_PRED, NORMAL_OBJ);
+    CredentialClaim protectedClaim = new CredentialClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
+    CredentialClaim anotherNormal = new CredentialClaim("<https://example.org/s2>", NORMAL_PRED, "\"text\"");
 
     FilteredClaims result = filter.filterClaims(List.of(normal, protectedClaim, anotherNormal), "test");
     assertEquals(2, result.claims().size());
@@ -123,8 +123,8 @@ class ProtectedNamespaceFilterTest {
 
   @Test
   void filterClaimsWarningContainsCountNamespaceAndTripleDetails() {
-    AssetClaim p1 = new AssetClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
-    AssetClaim p2 = new AssetClaim(NORMAL_SUBJ, "<" + NS + "validationTimestamp>", NORMAL_OBJ);
+    CredentialClaim p1 = new CredentialClaim(NORMAL_SUBJ, "<" + NS + "complianceResult>", NORMAL_OBJ);
+    CredentialClaim p2 = new CredentialClaim(NORMAL_SUBJ, "<" + NS + "validationTimestamp>", NORMAL_OBJ);
     FilteredClaims result = filter.filterClaims(List.of(p1, p2), "test");
     assertNotNull(result.warning());
     assertTrue(result.warning().contains("2 triple(s)"));

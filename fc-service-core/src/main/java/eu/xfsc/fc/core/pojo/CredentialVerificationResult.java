@@ -19,7 +19,7 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
    * claims of the credential, to be inserted into the Graph-DB.
    */
   @JsonIgnore
-  private List<AssetClaim> claims;
+  private List<CredentialClaim> claims;
   /**
    * validators, that signed parts of the credential.
    */
@@ -27,7 +27,7 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
   private List<Validator> validators;
 
   public CredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus, String issuer, Instant issuedDateTime,
-          String id, List<AssetClaim> claims, List<Validator> validators) {
+          String id, List<CredentialClaim> claims, List<Validator> validators) {
     super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, null, null);
     this.id = id;
     this.claims = claims;
@@ -42,11 +42,11 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
     this.id = id;
   }
 
-  public List<AssetClaim> getClaims() {
+  public List<CredentialClaim> getClaims() {
     return claims;
   }
 
-  public void setClaims(List<AssetClaim> claims) {
+  public void setClaims(List<CredentialClaim> claims) {
     this.claims = claims;
   }
 
@@ -66,7 +66,7 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
 
   @Override
   public String toString() {
-    List<AssetClaim> claims = getClaims();
+    List<CredentialClaim> claims = getClaims();
     String cls = claims == null ? "null" : "" + claims.size();
     List<Validator> validators = getValidators();
     String vls = validators == null ? "null" : "" + validators.size();

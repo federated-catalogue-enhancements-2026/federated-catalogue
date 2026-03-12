@@ -49,7 +49,7 @@ import org.topbraid.shacl.vocabulary.SH;
 import com.apicatalog.rdf.RdfValue;
 
 import eu.xfsc.fc.core.exception.QueryException;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass;
 import lombok.extern.slf4j.Slf4j;
@@ -90,10 +90,10 @@ public class ClaimValidator {
      * @return the claim as a formatted triple string
      * @throws IOException 
      */
-    public Model validateClaims(List<AssetClaim> claimList) { 
+    public Model validateClaims(List<CredentialClaim> claimList) { 
         Model listClaims = ModelFactory.createDefaultModel();
         StringBuilder payload = new StringBuilder();
-        for (AssetClaim claim : claimList) {
+        for (CredentialClaim claim : claimList) {
             validateRDFTripleSyntax(claim);
             payload.append(claim.asTriple());
         }
@@ -108,7 +108,7 @@ public class ClaimValidator {
      *
      * @param claim the claim to be validated
      */
-    private void validateRDFTripleSyntax(AssetClaim claim) {
+    private void validateRDFTripleSyntax(CredentialClaim claim) {
         Model model = ModelFactory.createDefaultModel();
         try (InputStream in = IOUtils.toInputStream(claim.asTriple(), StandardCharsets.UTF_8)) {
             switchOnJenaLiteralValidation();
@@ -174,7 +174,7 @@ public class ClaimValidator {
         } // else it's a blank node, which is OK
     }
     
-    public Pair<String, Set<String>> resolveClaims(List<AssetClaim> claims, String subject) {
+    public Pair<String, Set<String>> resolveClaims(List<CredentialClaim> claims, String subject) {
         Model model = validateClaims(claims);
         String added = ExtendClaims.addPropertyGraphUri(model, subject);
         Set<String> props = ExtendClaims.getMultivalProp(model);
@@ -189,7 +189,7 @@ public class ClaimValidator {
      * @param shaclShape ContentAccessor of a union schemas of type SHACL
      * @return SchemaValidationResult object
      */
-    public static String validateClaimsBySchema(List<AssetClaim> claims, ContentAccessor schema, StreamManager sm) {
+    public static String validateClaimsBySchema(List<CredentialClaim> claims, ContentAccessor schema, StreamManager sm) {
       Model data = ModelFactory.createDefaultModel();
       Model shape = ModelFactory.createDefaultModel();
       RDFParser.create()
@@ -200,7 +200,7 @@ public class ClaimValidator {
 
       RDFNode node;
       TypeMapper typeMapper = TypeMapper.getInstance();
-      for (AssetClaim claim: claims) {
+      for (CredentialClaim claim: claims) {
         log.trace("validateClaimsBySchema; {}", claim);
         RdfValue object = claim.getObject();
         if (object.isLiteral()) {

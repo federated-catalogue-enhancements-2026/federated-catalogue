@@ -49,7 +49,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.ValidatorCacheDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -212,7 +212,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     stamp2 = System.currentTimeMillis();
-    List<AssetClaim> claims = extractClaims(payload);
+    List<CredentialClaim> claims = extractClaims(payload);
 
     FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
     claims = filtered.claims();
@@ -224,7 +224,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
       Set<String> subjects = new HashSet<>();
       Set<String> objects = new HashSet<>();
       if (claims != null && !claims.isEmpty()) {
-        for (AssetClaim claim : claims) {
+        for (CredentialClaim claim : claims) {
           subjects.add(claim.getSubjectString());
           objects.add(claim.getObjectString());
         }
@@ -413,10 +413,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     return tcs;
   }
 
-  public List<AssetClaim> extractClaims(ContentAccessor payload) {
+  public List<CredentialClaim> extractClaims(ContentAccessor payload) {
     // Make sure our interceptors are in place.
     initLoaders();
-    List<AssetClaim> claims = null;
+    List<CredentialClaim> claims = null;
     for (ClaimExtractor extra : extractors) {
       try {
         claims = extra.extractClaims(payload);

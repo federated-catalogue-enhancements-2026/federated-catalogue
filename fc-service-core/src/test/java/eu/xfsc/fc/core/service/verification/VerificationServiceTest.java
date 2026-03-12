@@ -34,7 +34,7 @@ import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
@@ -91,7 +91,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void invalidSyntax_NoVCinCredential() {
+  void verifyCredential_VPWithoutVC_throwsVerificationException() {
     String path = "VerificationService/syntax/smallExample.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     Exception ex = assertThrowsExactly(VerificationException.class, ()
@@ -383,21 +383,21 @@ public class VerificationServiceTest {
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
     assertNotNull(result);
     assertEquals(12, result.getClaims().size());
-    List<AssetClaim> expectedClaims = new ArrayList<>();
-    expectedClaims.add(new AssetClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
-    expectedClaims.add(new AssetClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#headquarterAddress>", "_:b0")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalAddress>", "_:b1")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalName>", "\"Riphixel\""));
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>", "<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#GaiaXTermsAndConditions>"));
+    List<CredentialClaim> expectedClaims = new ArrayList<>();
+    expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
+    expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#headquarterAddress>", "_:b0")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalAddress>", "_:b1")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalName>", "\"Riphixel\""));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>", "<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#GaiaXTermsAndConditions>"));
     // cannot compare the multiline claim below 
     //expectedClaims.add(new Claim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#termsAndConditions>", "\"The PARTICIPANT signing the Self-Description agrees as follows:\n- to update its descriptions about any changes, be it technical, organizational, or legal - especially but not limited to contractual in regards to the indicated attributes present in the descriptions.\n\nThe keypair used to sign Verifiable Credentials will be revoked where Gaia-X Association becomes aware of any inaccurate statements in regards to the claims which result in a non-compliance with the Trust Framework and policy rules defined in the Policy Rules and Labelling Document (PRLD).\"")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\"")); 
-    expectedClaims.add(new AssetClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
-    for (AssetClaim claim: expectedClaims) {
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\"")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
+    for (CredentialClaim claim: expectedClaims) {
     	assertTrue(result.getClaims().contains(claim));
     }
   }
@@ -419,17 +419,17 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
-    Set<AssetClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new AssetClaim("<http://example.org/test-issuer>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Provider>"));
-    expectedClaims.add(new AssetClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#name>", "\"deltaDAO AG\""));
-    expectedClaims.add(new AssetClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
-    expectedClaims.add(new AssetClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b0"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
+    List<CredentialClaim> actualClaims = result.getClaims();
+    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Provider>"));
+    expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#name>", "\"deltaDAO AG\""));
+    expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
+    expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
   }
@@ -439,29 +439,29 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
+    List<CredentialClaim> actualClaims = result.getClaims();
 
-    Set<AssetClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#leiCode>", "\"391200FJBNU0YW987L26\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#ethereumAddress>", "\"0x4C84a36fCDb7Bc750294A7f3B5ad5CA8F74C4A52\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/service#TermsAndConditions>", "_:b2"));
-    expectedClaims.add(new AssetClaim("_:b2", "<http://w3id.org/gaia-x/service#url>", "\"https://gaia-x.gitlab.io/policy-rules-committee/trust-framework/participant/#legal-person\""));
-    expectedClaims.add(new AssetClaim("_:b2", "<http://w3id.org/gaia-x/service#hash>", "\"36ba819f30a3c4d4a7f16ee0a77259fc92f2e1ebf739713609f1c11eb41499e7aa2cd3a5d2011e073f9ba9c107493e3e8629cc15cd4fc07f67281d7ea9023db0\""));
+    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#leiCode>", "\"391200FJBNU0YW987L26\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#ethereumAddress>", "\"0x4C84a36fCDb7Bc750294A7f3B5ad5CA8F74C4A52\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/service#TermsAndConditions>", "_:b2"));
+    expectedClaims.add(new CredentialClaim("_:b2", "<http://w3id.org/gaia-x/service#url>", "\"https://gaia-x.gitlab.io/policy-rules-committee/trust-framework/participant/#legal-person\""));
+    expectedClaims.add(new CredentialClaim("_:b2", "<http://w3id.org/gaia-x/service#hash>", "\"36ba819f30a3c4d4a7f16ee0a77259fc92f2e1ebf739713609f1c11eb41499e7aa2cd3a5d2011e073f9ba9c107493e3e8629cc15cd4fc07f67281d7ea9023db0\""));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
   }
@@ -471,22 +471,22 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoVCs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
-    List<AssetClaim> expectedClaims = new ArrayList<>();
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b0"));
+    List<CredentialClaim> actualClaims = result.getClaims();
+    List<CredentialClaim> expectedClaims = new ArrayList<>();
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b0"));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, actualClaims);
   }
@@ -497,10 +497,10 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("VerificationService/syntax/specialCharacters.jsonld");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
-    Set<AssetClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new AssetClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/gax-trust-framework#Resource>"));
-    expectedClaims.add(new AssetClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://purl.org/dc/terms/description>", "\"\\n \\\\ Test with </\\\"s>pecial\\\" \\\\ / characters \\b </\\f \\n \\r \\t 🔥\""));
+    List<CredentialClaim> actualClaims = result.getClaims();
+    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/gax-trust-framework#Resource>"));
+    expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://purl.org/dc/terms/description>", "\"\\n \\\\ Test with </\\\"s>pecial\\\" \\\\ / characters \\b </\\f \\n \\r \\t 🔥\""));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
   }
@@ -523,22 +523,22 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoCSs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
+    List<CredentialClaim> actualClaims = result.getClaims();
 
-    Set<AssetClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
-    expectedClaims.add(new AssetClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
+    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
   }
@@ -622,9 +622,9 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<AssetClaim> actualClaims = result.getClaims();
+    List<CredentialClaim> actualClaims = result.getClaims();
 
-    for (AssetClaim claim : actualClaims) {
+    for (CredentialClaim claim : actualClaims) {
       assertFalse(claim.getPredicateString().contains(protectedNsProps.getNamespace()),
           "Protected namespace predicate should have been filtered: " + claim);
       assertFalse(claim.getSubjectString().contains(protectedNsProps.getNamespace()),
@@ -635,22 +635,22 @@ public class VerificationServiceTest {
       }
     }
 
-    Set<AssetClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
-    expectedClaims.add(new AssetClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
-    expectedClaims.add(new AssetClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
-    expectedClaims.add(new AssetClaim("_:b1", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
+    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
+    expectedClaims.add(new CredentialClaim("_:b0", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b1"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#street-address>", "\"Geibelstraße 46b\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#Address>"));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#postal-code>", "\"22303\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#locality>", "\"Hamburg\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<http://w3id.org/gaia-x/participant#country>", "\"DE\""));
     assertEquals(expectedClaims.size(), actualClaims.size(),
         "fcmeta:complianceResult triple should have been filtered, leaving only normal claims");
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
@@ -664,7 +664,7 @@ public class VerificationServiceTest {
   void extractClaims_allFcmetaClaimsFiltered_returnsEmptyList() {
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-only-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
-    List<AssetClaim> claims = result.getClaims();
+    List<CredentialClaim> claims = result.getClaims();
     assertNotNull(claims, "Result should not be null even when all claims are filtered");
     assertTrue(claims.isEmpty(), "All fcmeta: claims should have been filtered, leaving an empty list");
     assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");

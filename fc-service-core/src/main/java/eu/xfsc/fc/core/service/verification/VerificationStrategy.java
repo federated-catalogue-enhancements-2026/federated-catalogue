@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.verification;
 
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 
@@ -43,12 +43,12 @@ public interface VerificationStrategy {
       boolean verifyVCSignatures) throws VerificationException;
 
   /**
-   * Extracts claims from the given RDF asset  payload without performing verification.
+   * Extracts claims from the given RDF credential payload without performing verification.
    *
-   * @param payload the RDF asset content to extract claims from
+   * @param payload the RDF credential content to extract claims from
    * @return the list of extracted claims
    */
-  List<AssetClaim> extractClaims(ContentAccessor payload);
+  List<CredentialClaim> extractClaims(ContentAccessor payload);
 
   /**
    * Override URI for one of the Trust Framework base classes.

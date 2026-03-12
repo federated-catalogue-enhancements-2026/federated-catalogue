@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.util;
 
 import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
@@ -122,7 +122,7 @@ public class GraphRebuilder {
 
   private void addAssetToGraph(String hash) {
     AssetMetadata assetMetaData = assetStore.getByHash(hash);
-    List<AssetClaim> claims = verificationService.extractClaims(assetMetaData.getContentAccessor());
+    List<CredentialClaim> claims = verificationService.extractClaims(assetMetaData.getContentAccessor());
     claims = protectedNamespaceFilter.filterClaims(claims, "graph rebuild").claims();
     graphStore.addClaims(claims, assetMetaData.getId());
   }

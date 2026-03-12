@@ -36,7 +36,7 @@ import com.danubetech.verifiablecredentials.validation.Validation;
 //import com.github.jsonldjava.utils.JsonUtils;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.AssetClaim;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonStructure;
@@ -150,7 +150,7 @@ public class VerificationDirectTest {
         log.debug("extractClaims; expanded: {}", arr);
         JsonObject vp = arr.get(0).asJsonObject();
         JsonArray vcs = vp.get("https://www.w3.org/2018/credentials#verifiableCredential").asJsonArray();
-        List<AssetClaim> claims = new ArrayList<>();
+        List<CredentialClaim> claims = new ArrayList<>();
         Map<String, String> subMap = new HashMap<>();
         int idxVC = 0;
         for (JsonValue vcv: vcs) {
@@ -174,7 +174,7 @@ public class VerificationDirectTest {
                     for (RdfTriple triple: triples) {
                         //log.debug("extractClaims; got triple: {}", triple);
                         String suffix = idxVC + "." + idxCS;
-                        AssetClaim claim = new AssetClaim(rdf2String(triple.getSubject(), subMap, suffix), 
+                        CredentialClaim claim = new CredentialClaim(rdf2String(triple.getSubject(), subMap, suffix), 
                                 rdf2String(triple.getPredicate(), subMap, suffix), rdf2String(triple.getObject(), subMap, suffix));
                         claims.add(claim);
                         log.debug("extractClaims; claim: {}", claim);
@@ -185,7 +185,7 @@ public class VerificationDirectTest {
         
         Set<String> subjects = new HashSet<>();
         Set<String> objects = new HashSet<>();
-        for (AssetClaim claim : claims) {
+        for (CredentialClaim claim : claims) {
           subjects.add(claim.getSubjectString());
           objects.add(claim.getObjectString());
         }

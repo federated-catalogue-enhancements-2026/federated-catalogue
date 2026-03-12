@@ -12,20 +12,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Utility for extending RDF claims with asset subject annotations.
- * Adds a {@code claimsGraphUri} property linking claims to their source asset subject IRI.
+ * Utility for extending RDF claims with credential subject annotations.
+ * Adds a {@code claimsGraphUri} property linking claims to their source credential subject IRI.
  * For W3C credentials, this is the {@code credentialSubject.id}; for other RDF, it's the main subject IRI.
  * 
- * @see eu.xfsc.fc.core.pojo.AssetClaim
+ * @see eu.xfsc.fc.core.pojo.CredentialClaim
  */
 public class ExtendClaims {
 
     /**
-     * Adds annotation property linking claims to their source asset subject IRI.
+     * Adds annotation property linking claims to their source credential subject IRI.
      * Uses a previously validated model containing claims.
      *
      * @param claims the RDF model containing claims to annotate
-     * @param credentialSubject the asset's subject IRI (for credentials: credentialSubject.id)
+     * @param credentialSubject the credential's subject IRI (credentialSubject.id)
      * @return Triples as N-Triples string
      */
     public static String addPropertyGraphUri(Model claims, String credentialSubject) {

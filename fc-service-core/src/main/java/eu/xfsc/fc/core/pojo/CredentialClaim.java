@@ -10,21 +10,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 /**
  * POJO Class for holding a Claim. A Claim is a triple represented by a subject, predicate, and object.
  */
-public class AssetClaim {
+public class CredentialClaim {
 
   private RdfTriple triple;
   private String subject;
   private String predicate;
   private String object;
   
-  public AssetClaim(RdfTriple triple, ObjectMapper objectMapper) {
+  public CredentialClaim(RdfTriple triple, ObjectMapper objectMapper) {
     this.triple = triple;
     this.subject = rdf2String(triple.getSubject(), objectMapper);
     this.predicate = rdf2String(triple.getPredicate(), objectMapper);
     this.object = rdf2String(triple.getObject(), objectMapper);
   }
   
-  public AssetClaim(String subject, String predicate, String object) {
+  public CredentialClaim(String subject, String predicate, String object) {
 	this.subject = subject;
 	this.predicate = predicate;
 	this.object = object;	  
@@ -87,7 +87,7 @@ public class AssetClaim {
 		return false;
 	if (getClass() != obj.getClass())
 		return false;
-	AssetClaim other = (AssetClaim) obj;
+	CredentialClaim other = (CredentialClaim) obj;
 	return Objects.equals(object, other.object) && Objects.equals(predicate, other.predicate)
 			&& Objects.equals(subject, other.subject);
   }
