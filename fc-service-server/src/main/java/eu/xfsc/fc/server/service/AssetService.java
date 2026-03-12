@@ -119,7 +119,7 @@ public class AssetService implements AssetsApiDelegate {
    *         Must not outline any information about the internal structure of the server. (status code 500)
    */
   @Override
-  public ResponseEntity<String> readAssetById(String assetId) {
+  public ResponseEntity<String> readAssetByHash(String assetId) {
     log.debug("readAssetById.enter; got hash: {}", assetId);
     AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetId);
 
@@ -210,8 +210,8 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Asset> revokeAsset(String assetId) {
-    log.debug("revokeAsset.enter; got hash: {}", assetId);
+  public ResponseEntity<Asset> updateAsset(String assetId) {
+    log.debug("updateAsset.enter; got hash: {}", assetId);
     // TODO: 27.07.2022 Need to change the description and the order of actions in the documentation
     //  (The documentation specifies a search by credential object, not by hash.)
 
@@ -226,7 +226,7 @@ public class AssetService implements AssetsApiDelegate {
           + assetMetadata.getStatus());
     }
 
-    log.debug("revokeAsset.exit; revoked asset by hash: {}", assetId);
+    log.debug("updateAsset.exit; updated asset by hash: {}", assetId);
     return new ResponseEntity<>(assetMetadata, HttpStatus.OK);
   }
 

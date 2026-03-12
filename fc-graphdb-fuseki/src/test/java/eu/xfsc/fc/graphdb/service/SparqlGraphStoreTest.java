@@ -238,14 +238,14 @@ public class SparqlGraphStoreTest {
     }
 
     @Test
-    void getAssetCountInGraph_emptyDataset_returnsZero() {
+    void getRDFAssetCountInGraph_emptyDataset_returnsZero() {
         long count = graphStore.getRDFAssetCountInGraph();
         assertEquals(0, count,
-            "getAssetCountInGraph() should return 0 on empty dataset");
+            "getRDFAssetCountInGraph() should return 0 on empty dataset");
     }
 
     @Test
-    void getAssetCountInGraph_afterAddClaims_countsDistinctCredentialSubjects() {
+    void getRDFAssetCountInGraph_afterAddClaims_countsDistinctCredentialSubjects() {
         graphStore.addClaims(List.of(
             new CredentialClaim(
                 "<http://example.org/subject1>",
@@ -270,7 +270,7 @@ public class SparqlGraphStoreTest {
         assertEquals(3, graphStore.getClaimCount(),
             "getClaimCount() should return 3 claim triples total");
         assertEquals(2, graphStore.getRDFAssetCountInGraph(),
-            "getAssetCountInGraph() should return 2 distinct credential subjects");
+            "getRDFAssetCountInGraph() should return 2 distinct credential subjects");
     }
 
     @Test

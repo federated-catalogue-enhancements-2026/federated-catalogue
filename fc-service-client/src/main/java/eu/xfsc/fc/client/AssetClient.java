@@ -54,7 +54,7 @@ public class AssetClient extends ServiceClient {
         doDelete("/assets/{asset_hash}", pathParams, Map.of(), Void.class);
     }
 
-    public void revokeAsset(String hash) {
+    public void updateAsset(String hash) {
         Map<String, Object> pathParams = Map.of("asset_hash", hash);
         doPost("/assets/{asset_hash}/revoke", null, pathParams, Map.of(), Void.class);
     }
