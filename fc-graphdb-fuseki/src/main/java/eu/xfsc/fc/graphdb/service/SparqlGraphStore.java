@@ -117,7 +117,7 @@ public class SparqlGraphStore implements GraphStore {
 
     /** {@inheritDoc} */
     @Override
-    public long getAssetCountInGraph() {
+    public long getRDFAssetCountInGraph() {
         try {
             return Txn.calculateRead(rdfConnection, () -> {
                 String query = "SELECT (COUNT(DISTINCT ?cs) AS ?cnt) WHERE { "

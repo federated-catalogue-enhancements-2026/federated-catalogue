@@ -41,14 +41,14 @@ import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-public class AssetSigner {
+public class CredentialSigner {
   private static final String PATH_TO_PRIVATE_KEY = getResourcePath() + "prk.ss.pem";
   private static final String PATH_TO_PUBLIC_KEY = getResourcePath() + "cert.ss.pem";
 
-  public static String signAsset(String asset){
+  public static String signCredential(String credential){
     try {
       Security.addProvider(new BouncyCastleProvider());
-      VerifiablePresentation vp = VerifiablePresentation.fromJson(asset);
+      VerifiablePresentation vp = VerifiablePresentation.fromJson(credential);
       VerifiableCredential vc = vp.getVerifiableCredential();
 
       LdProof vc_proof = sign(vc);
@@ -60,7 +60,7 @@ public class AssetSigner {
       vp.setJsonObjectKeyValue("proof", vp.getLdProof().getJsonObject());
       return vp.toString();
     } catch (JsonLDException | GeneralSecurityException | IOException exception) {
-      System.out.println("Cannot sign asset: " + exception);
+      System.out.println("Cannot sign credential: " + exception);
     }
     return null;
   }
@@ -92,7 +92,7 @@ public class AssetSigner {
       System.out.println("Can't parse private key data: " + exception);
       throw exception;
     } catch (IOException | GeneralSecurityException | JsonLDException exception) {
-      System.out.println("Can't parse sign asset: ");
+      System.out.println("Can't sign credential: ");
       throw exception;
     }
   }

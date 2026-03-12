@@ -1,6 +1,6 @@
 import argparse
 
-def createServiceOfferingAsset(attrNumber, assetNumber):
+def createServiceOfferingCredential(attrNumber, assetNumber):
     for i in range(1, assetNumber + 1):
         vp = "{\n\t\"@context\": [\"https://www.w3.org/2018/credentials/v1\"],\n\t\"@id\": \"http://example.edu/verifiablePresentation/self-description%s\",\n\t\"type\": [\"VerifiablePresentation\"],\n\t\"verifiableCredential\": {\n\t\t\"@context\": [\"https://www.w3.org/2018/credentials/v1\"],\n\t\t\"@id\": \"https://www.example.org/legalPerson.json\",\n\t\t\"@type\": [\"VerifiableCredential\"],\n\t\t\"issuer\": \"http://gaiax.de\",\n\t\t\"issuanceDate\": \"2022-10-19T18:48:09Z\",\n\t\t\"credentialSubject\": {\n"%i
         csContext = "\t\t\t\"@context\": {\n\t\t\t\t\"dcat\": \"http://www.w3.org/ns/dcat#\",\n\t\t\t\t\"gax-core\": \"https://w3id.org/gaia-x/core#\",\n\t\t\t\t\"gax-trust-framework\": \"https://w3id.org/gaia-x/gax-trust-framework#\",\n\t\t\t\t\"xsd\": \"http://www.w3.org/2001/XMLSchema#\"\n\t\t\t},\n"
@@ -18,13 +18,13 @@ def createServiceOfferingAsset(attrNumber, assetNumber):
 
         ending = "\t\t\t\"gax-trust-framework:policy\": \"www.example.org/ServicePolicy\"\n\t\t}\n\t}\n}"
 
-        completeAsset = vp + csContext + attributes1 + attributes2 + ending
+        completeCredential = vp + csContext + attributes1 + attributes2 + ending
 
         text_file = open("service%s.jsonld"%i, "w")
-        text_file.write(completeAsset)
+        text_file.write(completeCredential)
         text_file.close
 
-def createLegalPersonAsset(attrNumber, assetNumber):
+def createLegalPersonCredential(attrNumber, assetNumber):
     for i in range(1, assetNumber + 1):
         vp = "{\n\t\"@context\": [\"https://www.w3.org/2018/credentials/v1\"],\n\t\"@id\": \"http://example.edu/verifiablePresentation/self-description%s\",\n\t\"type\": [\"VerifiablePresentation\"],\n\t\"verifiableCredential\": {\n\t\t\"@context\": [\"https://www.w3.org/2018/credentials/v1\"],\n\t\t\"@id\": \"https://www.example.org/legalPerson.json\",\n\t\t\"@type\": [\"VerifiableCredential\"],\n\t\t\"issuer\": \"http://gaiax.de\",\n\t\t\"issuanceDate\": \"2022-10-19T18:48:09Z\",\n\t\t\"credentialSubject\": {\n" %i
         csContext = "\t\t\t\"@context\": {\n\t\t\t\t\"gax-trust-framework\": \"https://w3id.org/gaia-x/gax-trust-framework#\",\n\t\t\t\t\"xsd\": \"http://www.w3.org/2001/XMLSchema#\",\n\t\t\t\t\"vcard\": \"http://www.w3.org/2006/vcard/ns#\"\n\t\t\t},\n"
@@ -42,17 +42,17 @@ def createLegalPersonAsset(attrNumber, assetNumber):
 
         ending = "\t\t\t\"gax-trust-framework:legalName\": \"Provider Name\"\n\t\t}\n\t}\n}"
 
-        completeAsset = vp + csContext + attributes1 + attributes2 + ending
+        completeCredential = vp + csContext + attributes1 + attributes2 + ending
 
         text_file = open("legalPerson%s.jsonld" % i, "w")
-        text_file.write(completeAsset)
+        text_file.write(completeCredential)
         text_file.close
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-claimNr', help='Number of claims contained in the generated Asset', type=int)
-    parser.add_argument('-assetNr', help='Number of generated Assets', type=int)
-    parser.add_argument('-schema', help='Schema of generated Asset (service or legalperson)')
+    parser.add_argument('-claimNr', help='Number of claims contained in the generated Credential', type=int)
+    parser.add_argument('-assetNr', help='Number of generated Credentials', type=int)
+    parser.add_argument('-schema', help='Schema of generated Credential (service or legalperson)')
     args = parser.parse_args()
 
     claimNumber = vars(args)["claimNr"]
@@ -60,8 +60,8 @@ if __name__ == '__main__':
     schema = vars(args)["schema"]
 
     if schema == "service":
-        createServiceOfferingAsset(claimNumber, assetNumber)
+        createServiceOfferingCredential(claimNumber, assetNumber)
     elif schema == "legalperson":
-        createLegalPersonAsset(claimNumber, assetNumber)
+        createLegalPersonCredential(claimNumber, assetNumber)
     else:
         print("Error: Please enter valid schema.")

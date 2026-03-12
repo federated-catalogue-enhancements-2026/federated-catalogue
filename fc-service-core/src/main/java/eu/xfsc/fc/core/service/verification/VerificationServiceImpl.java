@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  * and data extraction logic to format-specific {@link VerificationStrategy} implementations.
  * Routes by RDF serialization format (JSON-LD, Turtle, N-Triples, RDF/XML).
  * 
- * <p>Currently delegates all RDF assets to {@link CredentialVerificationStrategy} (JSON-LD only).
+ * <p>Currently delegates all RDF credentials to {@link CredentialVerificationStrategy} (JSON-LD only).
  */
 @Slf4j
 @Component

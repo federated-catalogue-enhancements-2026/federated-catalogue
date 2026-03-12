@@ -101,7 +101,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_assetCountUnknown_returnsUnknownAssessment() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(5);
-    when(graphStore.getAssetCountInGraph()).thenReturn(-1L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(-1L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -112,7 +112,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_bothEmpty_returnsEmptyAssessment() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(0);
-    when(graphStore.getAssetCountInGraph()).thenReturn(0L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(0L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -123,7 +123,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_emptyGraphWithActiveAssets_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.FUSEKI, true);
     stubActiveAssetCount(10);
-    when(graphStore.getAssetCountInGraph()).thenReturn(0L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(0L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -134,7 +134,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_graphAssetsButNoActiveAssets_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(0);
-    when(graphStore.getAssetCountInGraph()).thenReturn(5L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(5L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -145,7 +145,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_assetCountMatchesActiveAssets_returnsInSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(10);
-    when(graphStore.getAssetCountInGraph()).thenReturn(10L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(10L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -158,7 +158,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_fewerAssetsInGraphThanActive_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(500);
-    when(graphStore.getAssetCountInGraph()).thenReturn(2L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(2L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 
@@ -169,7 +169,7 @@ class GraphAdminServiceTest {
   void getGraphStatus_moreAssetsInGraphThanActive_returnsOutOfSync() {
     stubEnabledBackend(GraphBackendType.NEO4J, true);
     stubActiveAssetCount(10);
-    when(graphStore.getAssetCountInGraph()).thenReturn(25L);
+    when(graphStore.getRDFAssetCountInGraph()).thenReturn(25L);
 
     GraphStatus body = service.getGraphStatus().getBody();
 

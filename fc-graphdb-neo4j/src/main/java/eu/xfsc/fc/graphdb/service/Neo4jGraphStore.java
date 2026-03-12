@@ -106,7 +106,7 @@ public class Neo4jGraphStore implements GraphStore {
 
     /** {@inheritDoc} */
     @Override
-    public long getAssetCountInGraph() {
+    public long getRDFAssetCountInGraph() {
         try (Session session = driver.session()) {
             Result result = session.run(
                 "MATCH (n) WHERE n.claimsGraphUri IS NOT NULL "

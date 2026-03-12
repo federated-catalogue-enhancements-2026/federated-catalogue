@@ -11,7 +11,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.AssetClaim;
 
 /**
- * Defines the required functions to add, query, update and delete active claims extracted from assets
+ * Defines the required functions to add, query, update and delete active claims extracted from credentials
  * @author nacharya
  */
 public interface GraphStore {
@@ -75,7 +75,7 @@ public interface GraphStore {
     }
 
     /**
-     * Returns the number of distinct assets whose claims are stored
+     * Returns the number of distinct RDF-assets whose claims are stored
      * in the graph database. Unlike {@link #getClaimCount()}, which counts
      * individual claim triples/nodes, this counts unique credential subjects.
      *
@@ -83,7 +83,7 @@ public interface GraphStore {
      *         determined (e.g. connectivity failure). The default implementation
      *         returns {@code 0}, suitable for disabled or dummy stores.
      */
-    default long getAssetCountInGraph() {
+    default long getRDFAssetCountInGraph() {
         return 0;
     }
 

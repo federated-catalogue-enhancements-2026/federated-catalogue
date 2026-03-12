@@ -239,7 +239,7 @@ public class SparqlGraphStoreTest {
 
     @Test
     void getAssetCountInGraph_emptyDataset_returnsZero() {
-        long count = graphStore.getAssetCountInGraph();
+        long count = graphStore.getRDFAssetCountInGraph();
         assertEquals(0, count,
             "getAssetCountInGraph() should return 0 on empty dataset");
     }
@@ -269,7 +269,7 @@ public class SparqlGraphStoreTest {
 
         assertEquals(3, graphStore.getClaimCount(),
             "getClaimCount() should return 3 claim triples total");
-        assertEquals(2, graphStore.getAssetCountInGraph(),
+        assertEquals(2, graphStore.getRDFAssetCountInGraph(),
             "getAssetCountInGraph() should return 2 distinct credential subjects");
     }
 

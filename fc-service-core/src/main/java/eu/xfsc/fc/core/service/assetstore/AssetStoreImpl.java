@@ -126,7 +126,7 @@ public class AssetStoreImpl implements AssetStore {
   }
 
   @Override
-  public AssetMetadata storeAsset(final AssetMetadata assetMetadata, final String originalFilename) {
+  public AssetMetadata storeUnverified(final AssetMetadata assetMetadata, final String originalFilename) {
     log.debug("storeAsset.enter; got meta: {}", assetMetadata);
     String subjectId = assetMetadata.getId() != null ? assetMetadata.getId() : assetSubjectIdPrefix + assetMetadata.getAssetHash();
     AssetRecord assetRecord = AssetRecord.builder()

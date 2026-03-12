@@ -82,6 +82,6 @@ public class AssetUploadService {
         assetMetadata.setContentType(contentType);
         assetMetadata.setFileSize((long) content.length);
 
-        return assetStorePublisher.storeAsset(assetMetadata, originalFilename);
+        return assetStorePublisher.storeUnverified(assetMetadata, originalFilename);
     }
 }

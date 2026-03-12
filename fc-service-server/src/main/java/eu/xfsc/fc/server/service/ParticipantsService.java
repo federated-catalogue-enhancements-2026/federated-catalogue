@@ -92,11 +92,11 @@ public class ParticipantsService implements ParticipantsApiDelegate {
     checkParticipantAccess(participantId);
     ParticipantMetaData participant = partDao.select(participantId)
         .orElseThrow(() -> new NotFoundException("Participant not found: " + participantId));
-    String assetContent = assetStorePublisher.getByHash(participant.getAssetHash()).getContentAccessor().getContentAsString();
+    String credentialContent = assetStorePublisher.getByHash(participant.getAssetHash()).getContentAccessor().getContentAsString();
     assetStorePublisher.deleteAsset(participant.getAssetHash());
     participant = partDao.delete(participant.getId()).get();
     log.debug("deleteParticipant.exit; returning: {}", participant);
-    participant.setAsset(assetContent);
+    participant.setAsset(credentialContent);
     setParticipantPublicKey(participant);
     return ResponseEntity.ok(participant);
   }

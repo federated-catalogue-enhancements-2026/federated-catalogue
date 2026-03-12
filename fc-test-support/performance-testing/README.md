@@ -41,6 +41,6 @@ In the **_user-files/resources/application.properties_** file you can find commo
 2. Select item `[1] Run the Simulation locally` from the list received in the console.
 3. And then you can choose which of the scripts to run, for example:
 * `[0] federatedcatalogue.QuerySimulation`
-* `[1] federatedcatalogue.AssetSimulation`
+* `[1] federatedcatalogue.CredentialSimulation`
 4. Next, you will see the optional input `Select run description (optional)`, which you can skip. After that, the execution of scripts will begin.
 5. After completion in the **_results_** folder you can see the result of running the script.

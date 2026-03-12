@@ -46,11 +46,11 @@ public interface AssetStore {
   /**
    * Store the given credential.
    *
-   * @param asset                 The asset to store.
+   * @param credential            The credential metadata to store.
    * @param verificationResults   The results of the verification of the
    *                              credential.
    */
-  void storeCredential(AssetMetadata asset, CredentialVerificationResult verificationResults);
+  void storeCredential(AssetMetadata credential, CredentialVerificationResult verificationResults);
 
   /**
    * Change the life cycle status of the asset with the given hash.
@@ -100,7 +100,7 @@ public interface AssetStore {
    * @throws eu.xfsc.fc.core.exception.ServerException if the file store write fails.
    * @throws eu.xfsc.fc.core.exception.ConflictException if an asset with the same hash already exists.
    */
-  AssetMetadata storeAsset(AssetMetadata assetMetadata, String originalFilename);
+  AssetMetadata storeUnverified(AssetMetadata assetMetadata, String originalFilename);
 
   /**
    * Remove all assets from the AssetStore.

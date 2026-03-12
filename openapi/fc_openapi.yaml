@@ -252,7 +252,7 @@ components:
         validatorDids:
           description: >-
             The credentialSubjects of the parties that validated (parts of) the
-            asset (only applicable to RDF credentials).
+            credential.
           type: array
           items:
             type: string
@@ -624,8 +624,8 @@ paths:
         - name: issuers
           in: query
           description: >-
-            Filter for the issuer of the asset. This is the unique ID of the
-            Participant that has prepared the asset.
+            Filter for the issuer of the credential. This is the unique ID of the
+            Participant that has prepared the credential.
           required: false
           schema:
             type: array
@@ -635,8 +635,8 @@ paths:
         - name: validators
           in: query
           description: >-
-            Filter for a validator of the asset. This is the unique ID of the
-            Participant that validated (part of) the asset.
+            Filter for a validator of the credential. This is the unique ID of the
+            Participant that validated (part of) the credential.
           required: false
           schema:
             type: array
@@ -654,7 +654,7 @@ paths:
           explode: false
         - name: ids
           in: query
-          description: Filter for the id/credentialSubject of the asset.
+          description: Filter for the id/credentialSubject of the credential.
           required: false
           schema:
             type: array

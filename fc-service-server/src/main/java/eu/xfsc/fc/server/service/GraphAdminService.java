@@ -103,7 +103,7 @@ public class GraphAdminService implements GraphAdminApiDelegate {
     filter.setOffset(0);
     long activeAssetCount = assetStore.getByFilter(filter, false, false).getTotalCount();
     long claimCount = graphStore.getClaimCount();
-    long assetCountInGraph = graphStore.getAssetCountInGraph();
+    long assetCountInGraph = graphStore.getRDFAssetCountInGraph();
 
     dto.setActiveAssetCount(activeAssetCount);
     dto.setClaimCountInGraph(claimCount);

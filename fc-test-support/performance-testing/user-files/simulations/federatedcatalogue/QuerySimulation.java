@@ -1,6 +1,6 @@
 package federatedcatalogue;
 
-import static federatedcatalogue.AssetSigner.signAsset;
+import static federatedcatalogue.CredentialSigner.signCredential;
 import static federatedcatalogue.SimulationHelper.addRandomId;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.exec;
@@ -22,9 +22,9 @@ public class QuerySimulation extends CommonSimulation {
 
   private static final String IS_ADDED_PARAM = "isAdded";
 
-  ChainBuilder add = exec(http("Add asset")
+  ChainBuilder add = exec(http("Add credential")
       .post("/assets")
-      .body(StringBody(session -> signAsset(addRandomId(getAssetContent()))))
+      .body(StringBody(session -> signCredential(addRandomId(getCredentialContent()))))
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().saveAs(IS_ADDED_PARAM))

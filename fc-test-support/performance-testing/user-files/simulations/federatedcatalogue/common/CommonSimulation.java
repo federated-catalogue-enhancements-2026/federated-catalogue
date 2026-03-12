@@ -27,11 +27,11 @@ public abstract class CommonSimulation extends Simulation {
   public static final String IS_ADDED_PARAM = "isAdded";
   public static final String ASSET_HASH_PARAM = "assetHash";
 
-  private String assetContent;
+  private String credentialContent;
 
   {
     try {
-      assetContent = Files.readString(Path.of(getResourcePath() + VC_FILENAME));
+      credentialContent = Files.readString(Path.of(getResourcePath() + VC_FILENAME));
     } catch (FileNotFoundException exception) {
       System.out.println("Can't find " + VC_FILENAME + " file in resources: " + exception);
     } catch (IOException exception) {
@@ -39,8 +39,8 @@ public abstract class CommonSimulation extends Simulation {
     }
   }
 
-  public String getAssetContent() {
-    return assetContent;
+  public String getCredentialContent() {
+    return credentialContent;
   }
 
   static {
