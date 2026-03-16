@@ -20,7 +20,6 @@ import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_DELETE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_UPDATE;
 import static eu.xfsc.fc.server.util.CommonConstants.ASSET_ADMIN_ROLE;
-import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -75,7 +74,7 @@ public class SecurityConfig {
           .requestMatchers("/query", "/query/**").hasAnyRole(QUERY_EXECUTE, ADMIN_ALL)
 
           // Verification APIs
-          .requestMatchers(antMatcher("/verification")).permitAll()
+          .requestMatchers("/verification").permitAll()
           
           // Asset APIs
           .requestMatchers(HttpMethod.POST, "/assets/*/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
