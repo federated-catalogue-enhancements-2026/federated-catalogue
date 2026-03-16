@@ -18,7 +18,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.XMLConstants;
-import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.SchemaFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -82,6 +81,7 @@ public class SchemaStoreImpl implements SchemaStore {
   private ProtectedNamespaceFilter protectedNamespaceFilter;
 
   private static final Map<SchemaType, ContentAccessor> COMPOSITE_SCHEMAS = new ConcurrentHashMap<>();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
 
   @Override
@@ -277,8 +277,12 @@ public class SchemaStoreImpl implements SchemaStore {
 
   /**
    * Analyze a non-RDF schema (JSON Schema or XML Schema).
+   *
+   * @param schema The schema content to analyze.
+   * @param type The expected schema type ({@link SchemaType#JSON_SCHEMA} or {@link SchemaType#XML_SCHEMA}).
+   * @return The analysis result containing validity, extracted ID, and type information.
    */
-  public SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
+  SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
     SchemaAnalysisResult result = new SchemaAnalysisResult();
     result.setSchemaType(type);
     result.setExtractedUrls(Collections.emptySet());
@@ -296,8 +300,7 @@ public class SchemaStoreImpl implements SchemaStore {
 
   private void analyzeJsonSchema(ContentAccessor schema, SchemaAnalysisResult result) {
     try {
-      ObjectMapper mapper = new ObjectMapper();
-      JsonNode schemaNode = mapper.readTree(schema.getContentAsString());
+      JsonNode schemaNode = JSON_MAPPER.readTree(schema.getContentAsString());
       JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
       factory.getSchema(schemaNode);
       result.setValid(true);
@@ -315,27 +318,19 @@ public class SchemaStoreImpl implements SchemaStore {
   private void analyzeXmlSchema(ContentAccessor schema, SchemaAnalysisResult result) {
     try {
       byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
-      SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-      factory.newSchema(new StreamSource(new ByteArrayInputStream(content)));
-      result.setValid(true);
-      String targetNamespace = extractXsdTargetNamespace(content);
-      result.setExtractedId(targetNamespace != null ? targetNamespace : "urn:uuid:" + UUID.randomUUID());
-    } catch (Exception e) {
-      result.setValid(false);
-      result.setErrorMessage("Invalid XML Schema: " + e.getMessage());
-    }
-  }
-
-  private String extractXsdTargetNamespace(byte[] content) {
-    try {
       javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
       dbf.setNamespaceAware(true);
       org.w3c.dom.Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
+
+      SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+      factory.newSchema(new javax.xml.transform.dom.DOMSource(doc));
+      result.setValid(true);
+
       String targetNs = doc.getDocumentElement().getAttribute("targetNamespace");
-      return targetNs.isEmpty() ? null : targetNs;
+      result.setExtractedId(!targetNs.isEmpty() ? targetNs : "urn:uuid:" + UUID.randomUUID());
     } catch (Exception e) {
-      log.warn("Could not extract XSD targetNamespace", e);
-      return null;
+      result.setValid(false);
+      result.setErrorMessage("Invalid XML Schema: " + e.getMessage());
     }
   }
 

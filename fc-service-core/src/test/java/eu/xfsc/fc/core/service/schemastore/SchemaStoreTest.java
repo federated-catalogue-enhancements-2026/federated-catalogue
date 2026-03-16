@@ -587,6 +587,21 @@ public class SchemaStoreTest {
   }
 
   @Test
+  void addSchema_invalidXmlSchema_throwsVerificationException() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-xml-schema.xsd");
+
+    assertThrowsExactly(VerificationException.class, () -> schemaStore.addSchema(content, XML_SCHEMA));
+  }
+
+  @Test
+  void addSchema_duplicateJsonSchema_throwsConflictException() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    schemaStore.addSchema(content, JSON_SCHEMA);
+
+    assertThrowsExactly(ConflictException.class, () -> schemaStore.addSchema(content, JSON_SCHEMA));
+  }
+
+  @Test
   void getSchema_jsonSchema_returnsContent() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
     schemaStore.addSchema(content, JSON_SCHEMA);
@@ -595,6 +610,17 @@ public class SchemaStoreTest {
 
     assertNotNull(retrieved);
     assertTrue(retrieved.getContentAsString().contains("\"$schema\""));
+  }
+
+  @Test
+  void getSchema_xmlSchema_returnsContent() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+    schemaStore.addSchema(content, XML_SCHEMA);
+
+    ContentAccessor retrieved = schemaStore.getSchema("http://example.org/config");
+
+    assertNotNull(retrieved);
+    assertTrue(retrieved.getContentAsString().contains("xs:schema"));
   }
 
   @Test

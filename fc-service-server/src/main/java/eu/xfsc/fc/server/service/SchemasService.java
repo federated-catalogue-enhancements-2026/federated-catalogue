@@ -78,8 +78,8 @@ public class SchemasService implements SchemasApiDelegate {
     schema.setOntologies(schemaListMap.get(SchemaType.ONTOLOGY));
     schema.setShapes(schemaListMap.get(SchemaType.SHAPE));
     schema.setVocabularies(schemaListMap.get(SchemaType.VOCABULARY));
-    schema.setJsonSchemas(schemaListMap.get(SchemaType.JSON_SCHEMA));
-    schema.setXmlSchemas(schemaListMap.get(SchemaType.XML_SCHEMA));
+    schema.setJsonSchemas(schemaListMap.getOrDefault(SchemaType.JSON_SCHEMA, Collections.emptyList()));
+    schema.setXmlSchemas(schemaListMap.getOrDefault(SchemaType.XML_SCHEMA, Collections.emptyList()));
      return ResponseEntity.ok(schema);
   }
 

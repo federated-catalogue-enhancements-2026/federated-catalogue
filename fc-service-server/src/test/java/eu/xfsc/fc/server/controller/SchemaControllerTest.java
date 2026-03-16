@@ -36,6 +36,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -342,12 +343,21 @@ public class SchemaControllerTest {
             .contentType("application/schema+json"))
         .andExpect(status().isCreated());
 
+    String xsd = getMockFileDataAsString("test-xml-schema.xsd");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(xsd)
+            .with(csrf())
+            .contentType("application/xml"))
+        .andExpect(status().isCreated());
+
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.jsonSchemas").isArray())
-        .andExpect(jsonPath("$.jsonSchemas[0]").exists());
+        .andExpect(jsonPath("$.jsonSchemas[0]").exists())
+        .andExpect(jsonPath("$.xmlSchemas").isArray())
+        .andExpect(jsonPath("$.xmlSchemas[0]").exists());
   }
 
   @Test
@@ -364,7 +374,8 @@ public class SchemaControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", schemaId)
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk());
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("\"$schema\"")));
   }
 
   @Test
