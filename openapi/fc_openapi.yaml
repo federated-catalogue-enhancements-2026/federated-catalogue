@@ -318,6 +318,18 @@ components:
           items:
             type: string
             example: schemaId
+        jsonSchemas:
+          description: 'SchemaIds of JSON Schemas used to validate JSON assets.'
+          type: array
+          items:
+            type: string
+            example: schemaId
+        xmlSchemas:
+          description: 'SchemaIds of XML Schemas (XSD) used to validate XML assets.'
+          type: array
+          items:
+            type: string
+            example: schemaId
     ResultPage:
       type: object
       properties:
@@ -1008,6 +1020,14 @@ paths:
             schema:
               type: string
               description: 'SHACL file describing the ontology of the schema.'
+          application/schema+json:
+            schema:
+              type: string
+              description: 'JSON Schema file (Draft 2020-12).'
+          application/xml:
+            schema:
+              type: string
+              description: 'XML Schema (XSD) file.'
         required: true
       responses:
         '201':
@@ -1055,6 +1075,14 @@ paths:
               schema:
                 type: string
                 description: 'SHACL file describing the ontology of the schema.'
+            application/schema+json:
+              schema:
+                type: string
+                description: 'JSON Schema file.'
+            application/xml:
+              schema:
+                type: string
+                description: 'XML Schema (XSD) file.'
         '400':
           $ref: '#/components/responses/ClientError'
         '403':
@@ -1158,6 +1186,8 @@ paths:
               - ontology
               - shape
               - vocabulary
+              - json_schema
+              - xml_schema
         - name: term
           in: query
           description: 'The URI of the term of the requested schema e.g. `http://w3id.org/gaia-x/service#ServiceOffering`'

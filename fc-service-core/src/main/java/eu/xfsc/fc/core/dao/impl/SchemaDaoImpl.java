@@ -65,36 +65,37 @@ public class SchemaDaoImpl implements SchemaDao {
 	@Override
 	public boolean insert(SchemaRecord sr) {
 		log.debug("insert.enter; got schema: {}", sr.getId());
-		String sql = """
-			with s as (insert into schemafiles(schemaId, nameHash, type, uploadTime, updateTime, content) values(?, ?, ?, ?, ?, ?) returning schemaid),
-			t as (insert into schematerms(term, schemaid) select * from unnest(?::varchar[], ?::varchar[]) returning schemaid)
-			select s.schemaid, count(t.schemaid) from s join t on t.schemaid = s.schemaid group by s.schemaid""";
-		String[] schemaIds = new String[sr.terms().size()];
-		Arrays.fill(schemaIds, sr.getId()); 
-		String[] terms = sr.terms().toArray(new String[0]);
-		Map<String, Integer> result = jdbc.queryForObject(sql, new Object[] {sr.getId(), sr.nameHash(), sr.type().ordinal(), Timestamp.from(sr.updateTime()), Timestamp.from(sr.updateTime()), 
-				sr.content(), terms, schemaIds},	new int[] {VARCHAR, VARCHAR, INTEGER, TIMESTAMP, TIMESTAMP, VARCHAR, ARRAY, ARRAY}, new SchemaAggregateMapper());
-		log.debug("insert.exit; inserted: {}", result);
-		return result.size() > 0;
+		String insertSchemaSql = "insert into schemafiles(schemaId, nameHash, type, uploadTime, updateTime, content) values(?, ?, ?, ?, ?, ?)";
+		int rows = jdbc.update(insertSchemaSql, sr.getId(), sr.nameHash(), sr.type().ordinal(),
+				Timestamp.from(sr.updateTime()), Timestamp.from(sr.updateTime()), sr.content());
+		if (rows > 0 && sr.terms() != null && !sr.terms().isEmpty()) {
+			String insertTermsSql = "insert into schematerms(term, schemaid) select * from unnest(?::varchar[], ?::varchar[])";
+			String[] schemaIds = new String[sr.terms().size()];
+			Arrays.fill(schemaIds, sr.getId());
+			String[] terms = sr.terms().toArray(new String[0]);
+			jdbc.update(insertTermsSql, (Object) terms, (Object) schemaIds);
+		}
+		log.debug("insert.exit; inserted: {}", rows);
+		return rows > 0;
 	}
 
 	@Override
 	public int update(String id, String content, Collection<String> terms) {
 		log.debug("update.enter; got id: {}, content length: {}, terms: {}", id, content.length(), terms);
-		String sql = "delete from schematerms where schemaid = ?";
-		int cnt = jdbc.update(sql, id);
+		String deleteTermsSql = "delete from schematerms where schemaid = ?";
+		int cnt = jdbc.update(deleteTermsSql, id);
 		log.debug("update; deleted {} terms", cnt);
-		sql = """
-			with s as (update schemafiles set updateTime = ?, content = ? where schemaid = ? returning schemaid),
-			t as (insert into schematerms(term, schemaid) select * from unnest(?::varchar[], ?::varchar[]) returning schemaid) 
-			select s.schemaid, count(t.schemaid) from s join t on t.schemaid = s.schemaid group by s.schemaid""";
-		String[] schemaIds = new String[terms.size()];
-		Arrays.fill(schemaIds, id);
-		String[] termIds = terms.toArray(new String[0]);
-		Map<String, Integer> result = jdbc.queryForObject(sql, new Object[] {Timestamp.from(Instant.now()), content, id, termIds, schemaIds},
-				new int[] {TIMESTAMP, VARCHAR, VARCHAR, ARRAY, ARRAY}, new SchemaAggregateMapper());
-		log.debug("update.exit; updated: {}", result);
-		return result.size();
+		String updateSchemaSql = "update schemafiles set updateTime = ?, content = ? where schemaid = ?";
+		int rows = jdbc.update(updateSchemaSql, Timestamp.from(Instant.now()), content, id);
+		if (rows > 0 && terms != null && !terms.isEmpty()) {
+			String insertTermsSql = "insert into schematerms(term, schemaid) select * from unnest(?::varchar[], ?::varchar[])";
+			String[] schemaIds = new String[terms.size()];
+			Arrays.fill(schemaIds, id);
+			String[] termIds = terms.toArray(new String[0]);
+			jdbc.update(insertTermsSql, (Object) termIds, (Object) schemaIds);
+		}
+		log.debug("update.exit; updated: {}", rows);
+		return rows;
 	}
 
 	@Override
@@ -122,14 +123,6 @@ public class SchemaDaoImpl implements SchemaDao {
 				result.computeIfAbsent(rs.getInt(1), t -> new HashSet<>()).add(rs.getString(2));
 			}
 			return result;
-		}
-	}
-	
-	private class SchemaAggregateMapper implements RowMapper<Map<String, Integer>> {
-
-		@Override
-		public Map<String, Integer> mapRow(ResultSet rs, int rowNum) throws SQLException {
-			return Map.of(rs.getString(1), rs.getInt(2));
 		}
 	}
 

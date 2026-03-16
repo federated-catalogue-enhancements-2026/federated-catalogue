@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.schemastore;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -7,12 +8,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.xml.XMLConstants;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.SchemaFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -208,6 +220,10 @@ public class SchemaStoreImpl implements SchemaStore {
 
   private ContentAccessor createCompositeSchema(SchemaType type) {
     log.debug("createCompositeSchema.enter; got type: {}", type);
+    if (type == SchemaType.JSON_SCHEMA || type == SchemaType.XML_SCHEMA) {
+      log.debug("createCompositeSchema.exit; composite not supported for {}", type);
+      return new ContentAccessorDirect("");
+    }
 
     StringWriter out = new StringWriter();
     Map<SchemaType, List<String>> schemaList = getSchemaList();
@@ -259,6 +275,78 @@ public class SchemaStoreImpl implements SchemaStore {
     return result;
   }
 
+  /**
+   * Analyze a non-RDF schema (JSON Schema or XML Schema).
+   */
+  public SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
+    SchemaAnalysisResult result = new SchemaAnalysisResult();
+    result.setSchemaType(type);
+    result.setExtractedUrls(Collections.emptySet());
+
+    switch (type) {
+      case JSON_SCHEMA -> analyzeJsonSchema(schema, result);
+      case XML_SCHEMA -> analyzeXmlSchema(schema, result);
+      default -> {
+        result.setValid(false);
+        result.setErrorMessage("Not a non-RDF schema type: " + type);
+      }
+    }
+    return result;
+  }
+
+  private void analyzeJsonSchema(ContentAccessor schema, SchemaAnalysisResult result) {
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode schemaNode = mapper.readTree(schema.getContentAsString());
+      JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+      factory.getSchema(schemaNode);
+      result.setValid(true);
+      if (schemaNode.has("$id")) {
+        result.setExtractedId(schemaNode.get("$id").asText());
+      } else {
+        result.setExtractedId("urn:uuid:" + UUID.randomUUID());
+      }
+    } catch (Exception e) {
+      result.setValid(false);
+      result.setErrorMessage("Invalid JSON Schema: " + e.getMessage());
+    }
+  }
+
+  private void analyzeXmlSchema(ContentAccessor schema, SchemaAnalysisResult result) {
+    try {
+      byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
+      SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+      factory.newSchema(new StreamSource(new ByteArrayInputStream(content)));
+      result.setValid(true);
+      String targetNamespace = extractXsdTargetNamespace(content);
+      result.setExtractedId(targetNamespace != null ? targetNamespace : "urn:uuid:" + UUID.randomUUID());
+    } catch (Exception e) {
+      result.setValid(false);
+      result.setErrorMessage("Invalid XML Schema: " + e.getMessage());
+    }
+  }
+
+  private String extractXsdTargetNamespace(byte[] content) {
+    try {
+      javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+      dbf.setNamespaceAware(true);
+      org.w3c.dom.Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
+      String targetNs = doc.getDocumentElement().getAttribute("targetNamespace");
+      return targetNs.isEmpty() ? null : targetNs;
+    } catch (Exception e) {
+      log.warn("Could not extract XSD targetNamespace", e);
+      return null;
+    }
+  }
+
+  private SchemaAnalysisResult analyzeAndValidateNonRdf(ContentAccessor schema, SchemaType type) {
+    SchemaAnalysisResult result = analyzeNonRdfSchema(schema, type);
+    if (!result.isValid()) {
+      throw new VerificationException("Schema is not valid: " + result.getErrorMessage());
+    }
+    return result;
+  }
+
   private SchemaRecord buildSchemaRecord(SchemaAnalysisResult result, ContentAccessor schema) {
     String schemaId = result.getExtractedId();
     String nameHash = Strings.isNullOrEmpty(schemaId)
@@ -271,6 +359,16 @@ public class SchemaStoreImpl implements SchemaStore {
   @Override
   public SchemaStoreResult addSchema(ContentAccessor schema) {
     SchemaAnalysisResult analysis = analyzeAndValidate(schema);
+    return insertSchema(analysis, schema);
+  }
+
+  @Override
+  public SchemaStoreResult addSchema(ContentAccessor schema, SchemaType type) {
+    SchemaAnalysisResult analysis = analyzeAndValidateNonRdf(schema, type);
+    return insertSchema(analysis, schema);
+  }
+
+  private SchemaStoreResult insertSchema(SchemaAnalysisResult analysis, ContentAccessor schema) {
     SchemaRecord newRecord = buildSchemaRecord(analysis, schema);
     try {
       if (!dao.insert(newRecord)) {

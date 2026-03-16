@@ -15,7 +15,9 @@ public interface SchemaStore {
   public enum SchemaType {
     ONTOLOGY,
     SHAPE,
-    VOCABULARY
+    VOCABULARY,
+    JSON_SCHEMA,
+    XML_SCHEMA
   }
 
   /**
@@ -43,6 +45,15 @@ public interface SchemaStore {
    * @return The result containing the internal identifier and any warnings.
    */
   SchemaStoreResult addSchema(ContentAccessor schema);
+
+  /**
+   * Store a non-RDF schema with a known type.
+   *
+   * @param schema The schema content to be stored.
+   * @param type The schema type (JSON_SCHEMA or XML_SCHEMA).
+   * @return The result containing the internal identifier and any warnings.
+   */
+  SchemaStoreResult addSchema(ContentAccessor schema, SchemaType type);
 
   /**
    * Update the schema with the given identifier.

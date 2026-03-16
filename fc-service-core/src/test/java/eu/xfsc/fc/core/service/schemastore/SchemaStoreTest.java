@@ -1,8 +1,10 @@
 package eu.xfsc.fc.core.service.schemastore;
 
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.JSON_SCHEMA;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.ONTOLOGY;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.SHAPE;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.VOCABULARY;
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.XML_SCHEMA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,6 +51,7 @@ import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -497,6 +500,127 @@ public class SchemaStoreTest {
     SchemaAnalysisResult result = schemaStore.analyzeSchema(new ContentAccessorDirect(ttl));
     assertFalse(result.isValid());
     assertEquals("Schema type not supported", result.getErrorMessage());
+  }
+
+  // --- Non-RDF Schema Tests ---
+
+  @Test
+  void analyzeNonRdfSchema_validJsonSchema_extractsId() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+
+    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON_SCHEMA);
+
+    assertTrue(result.isValid());
+    assertEquals(JSON_SCHEMA, result.getSchemaType());
+    assertEquals("https://example.org/schemas/person", result.getExtractedId());
+    assertNotNull(result.getExtractedUrls());
+    assertTrue(result.getExtractedUrls().isEmpty());
+  }
+
+  @Test
+  void analyzeNonRdfSchema_jsonSchemaWithoutId_generatesUuidUrn() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema-no-id.json");
+
+    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON_SCHEMA);
+
+    assertTrue(result.isValid());
+    assertEquals(JSON_SCHEMA, result.getSchemaType());
+    assertTrue(result.getExtractedId().startsWith("urn:uuid:"));
+  }
+
+  @Test
+  void analyzeNonRdfSchema_invalidJsonSchema_notValid() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-json-schema.json");
+
+    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON_SCHEMA);
+
+    assertFalse(result.isValid());
+    assertNotNull(result.getErrorMessage());
+    assertTrue(result.getErrorMessage().startsWith("Invalid JSON Schema:"));
+  }
+
+  @Test
+  void analyzeNonRdfSchema_validXmlSchema_extractsNamespace() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+
+    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, XML_SCHEMA);
+
+    assertTrue(result.isValid());
+    assertEquals(XML_SCHEMA, result.getSchemaType());
+    assertEquals("http://example.org/config", result.getExtractedId());
+  }
+
+  @Test
+  void analyzeNonRdfSchema_invalidXmlSchema_notValid() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-xml-schema.xsd");
+
+    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, XML_SCHEMA);
+
+    assertFalse(result.isValid());
+    assertNotNull(result.getErrorMessage());
+    assertTrue(result.getErrorMessage().startsWith("Invalid XML Schema:"));
+  }
+
+  @Test
+  void addSchema_validJsonSchema_returnsResult() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+
+    SchemaStoreResult result = schemaStore.addSchema(content, JSON_SCHEMA);
+
+    assertEquals("https://example.org/schemas/person", result.id());
+  }
+
+  @Test
+  void addSchema_invalidJsonSchema_throwsVerificationException() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-json-schema.json");
+
+    assertThrowsExactly(VerificationException.class, () -> schemaStore.addSchema(content, JSON_SCHEMA));
+  }
+
+  @Test
+  void addSchema_validXmlSchema_returnsResult() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+
+    SchemaStoreResult result = schemaStore.addSchema(content, XML_SCHEMA);
+
+    assertEquals("http://example.org/config", result.id());
+  }
+
+  @Test
+  void getSchema_jsonSchema_returnsContent() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    schemaStore.addSchema(content, JSON_SCHEMA);
+
+    ContentAccessor retrieved = schemaStore.getSchema("https://example.org/schemas/person");
+
+    assertNotNull(retrieved);
+    assertTrue(retrieved.getContentAsString().contains("\"$schema\""));
+  }
+
+  @Test
+  void deleteSchema_jsonSchema_succeeds() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    schemaStore.addSchema(content, JSON_SCHEMA);
+
+    schemaStore.deleteSchema("https://example.org/schemas/person");
+
+    Map<SchemaType, List<String>> list = schemaStore.getSchemaList();
+    assertNull(list.get(JSON_SCHEMA));
+  }
+
+  @Test
+  void getSchemaList_withNonRdfSchemas_includesAllTypes() {
+    ContentAccessor jsonContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    ContentAccessor xsdContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+    schemaStore.addSchema(jsonContent, JSON_SCHEMA);
+    schemaStore.addSchema(xsdContent, XML_SCHEMA);
+
+    Map<SchemaType, List<String>> list = schemaStore.getSchemaList();
+
+    assertNotNull(list.get(JSON_SCHEMA));
+    assertEquals(1, list.get(JSON_SCHEMA).size());
+    assertNotNull(list.get(XML_SCHEMA));
+    assertEquals(1, list.get(XML_SCHEMA).size());
   }
 
   private static boolean isExistTriple(Model model, String sub, String pre, String obj) {

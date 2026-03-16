@@ -11,6 +11,8 @@ import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreResult;
 import eu.xfsc.fc.server.generated.controller.SchemasApiDelegate;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -32,6 +34,9 @@ import org.springframework.stereotype.Service;
 public class SchemasService implements SchemasApiDelegate {
   @Autowired
   private SchemaStore schemaStore;
+
+  @Autowired
+  private HttpServletRequest httpServletRequest;
   
   /**
    * Service method for GET /schemas/{schemaId} : Get a specific schema.
@@ -73,6 +78,8 @@ public class SchemasService implements SchemasApiDelegate {
     schema.setOntologies(schemaListMap.get(SchemaType.ONTOLOGY));
     schema.setShapes(schemaListMap.get(SchemaType.SHAPE));
     schema.setVocabularies(schemaListMap.get(SchemaType.VOCABULARY));
+    schema.setJsonSchemas(schemaListMap.get(SchemaType.JSON_SCHEMA));
+    schema.setXmlSchemas(schemaListMap.get(SchemaType.XML_SCHEMA));
      return ResponseEntity.ok(schema);
   }
 
@@ -111,7 +118,16 @@ public class SchemasService implements SchemasApiDelegate {
    */
   @Override
   public ResponseEntity<SchemaResult> addSchema(String schema) {
-    SchemaStoreResult storeResult = schemaStore.addSchema(new ContentAccessorDirect(schema));
+    String contentType = httpServletRequest.getContentType();
+    ContentAccessor content = new ContentAccessorDirect(schema);
+    SchemaStoreResult storeResult;
+    if (contentType != null && contentType.contains("application/schema+json")) {
+      storeResult = schemaStore.addSchema(content, SchemaType.JSON_SCHEMA);
+    } else if (contentType != null && contentType.contains("application/xml")) {
+      storeResult = schemaStore.addSchema(content, SchemaType.XML_SCHEMA);
+    } else {
+      storeResult = schemaStore.addSchema(content);
+    }
     SchemaResult result = toSchemaResult(storeResult);
     return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);
   }

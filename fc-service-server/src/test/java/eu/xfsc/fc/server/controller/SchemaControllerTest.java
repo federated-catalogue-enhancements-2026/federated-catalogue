@@ -36,6 +36,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -275,6 +276,110 @@ public class SchemaControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  // --- Non-RDF Schema Tests ---
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE})
+  public void addSchema_validJsonSchema_returns201() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value("https://example.org/schemas/test-person"));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE})
+  public void addSchema_invalidJsonSchema_returns422() throws Exception {
+    String invalidSchema = "{ this is not valid JSON at all";
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(invalidSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE})
+  public void addSchema_validXmlSchema_returns201() throws Exception {
+    String xsd = getMockFileDataAsString("test-xml-schema.xsd");
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(xsd)
+            .with(csrf())
+            .contentType("application/xml"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value("http://example.org/test-config"));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE})
+  public void addSchema_invalidXmlSchema_returns422() throws Exception {
+    String invalidXsd = "<?xml version=\"1.0\"?><xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">"
+        + "<xs:element name=\"broken\" type=\"xs:nonExistentType\"/></xs:schema>";
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(invalidXsd)
+            .with(csrf())
+            .contentType("application/xml"))
+        .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void getSchemas_withNonRdfSchemas_includesJsonAndXml() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.jsonSchemas").isArray())
+        .andExpect(jsonPath("$.jsonSchemas[0]").exists());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void getSchema_jsonSchemaById_returns200() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated());
+
+    String schemaId = URLEncoder.encode("https://example.org/schemas/test-person", Charset.defaultCharset());
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", schemaId)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_DELETE})
+  public void deleteSchema_jsonSchema_returns200() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated());
+
+    String schemaId = URLEncoder.encode("https://example.org/schemas/test-person", Charset.defaultCharset());
+    mockMvc.perform(MockMvcRequestBuilders.delete("/schemas/{schemaId}", schemaId)
+            .with(csrf()))
         .andExpect(status().isOk());
   }
 }
