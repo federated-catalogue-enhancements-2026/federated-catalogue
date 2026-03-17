@@ -164,14 +164,15 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         // Read content once (fixes double-read)
         String body = payload.getContentAsString().strip();
         payload = new ContentAccessorDirect(body);
+        boolean isJwt = jwtPreprocessor.isJwtWrapped(payload);
         // JWT guard — fires before any processor (no signature verification — see Issue #12)
-        if (verifyVCSignatures && jwtPreprocessor.isJwtWrapped(payload)) {
+        if (verifyVCSignatures && isJwt) {
             throw new UnsupportedOperationException(
                     "JWT signature verification is not supported; provide a JSON-LD credential with a data-integrity proof");
         }
         // Version dispatch — payload is unwrapped JSON-LD after this point
         // JWT-wrapped payloads are VC 2.0-only; fall back to vc2Processor when context parse fails
-        boolean isVc2 = isVc2Context(body) || jwtPreprocessor.isJwtWrapped(payload);
+        boolean isVc2 = isVc2Context(body) || isJwt;
         payload = (isVc2 ? vc2Processor : vc11Processor).preProcess(payload);
         // NOTE: CAT-FR-GD-02's VcStructureDetector.isVcStructured() call MUST be placed AFTER this
         // line, not before — a JWT-wrapped VC 2.0 payload would not be recognised as a VC until unwrapped.

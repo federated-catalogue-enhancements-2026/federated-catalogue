@@ -47,7 +47,7 @@ class Vc2ProcessorTest {
 
     ContentAccessor result = processor.preProcess(nonJwtPayload);
 
-    assertEquals(json, result.getContentAsString());
+    assertSame(nonJwtPayload, result);
   }
 
   @Test

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -77,6 +78,9 @@ public class VerificationServiceTest {
   @MockitoSpyBean
   private JwtContentPreprocessor jwtPreprocessorSpy;
 
+  @MockitoSpyBean
+  private Vc2Processor vc2ProcessorSpy;
+
   @Autowired
   private ProtectedNamespaceProperties protectedNsProps;
 
@@ -96,6 +100,20 @@ public class VerificationServiceTest {
     verificationService.verifyCredential(vc11, false, true, false, false);
 
     verify(jwtPreprocessorSpy, never()).unwrap(any());
+  }
+
+  @Test
+  void verifyCredential_vc2JwtWrappedInput_vc2ProcessorPreProcessInvoked() {
+    String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
+    String header = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
+    ContentAccessor content = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+
+    verificationService.verifyCredential(content, false, false, false, false);
+
+    verify(vc2ProcessorSpy).preProcess(any());
   }
 
   @Test
@@ -143,7 +161,7 @@ public class VerificationServiceTest {
     assertEquals("did:example:ebfeb1f712ebc6f1c276e12ec21", vr.getId());
     assertEquals("https://example.edu/issuers/565049", vr.getIssuer());
   }
-  
+
   @Test
   void validVPUnknownType() {
     String path = "VerificationService/jsonld/input.vp.jsonld";
@@ -163,7 +181,7 @@ public class VerificationServiceTest {
     String path = "VerificationService/syntax/participantCredential2.jsonld";
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path));
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
     assertEquals("https://www.handelsregister.de/", vrp.getId());
     assertEquals("https://www.handelsregister.de/", vrp.getIssuer());
@@ -191,7 +209,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
     assertFalse(vr instanceof CredentialVerificationResultParticipant);
-    assertTrue(vr instanceof CredentialVerificationResultOffering);
+    assertInstanceOf(CredentialVerificationResultOffering.class, vr);
     CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
     assertEquals("https://www.example.org/Service1", vro.getId());
     assertEquals("http://gaiax.de", vro.getIssuer());
@@ -245,7 +263,7 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson2.jsonld");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
     assertNotNull(vr);
     assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
@@ -263,9 +281,9 @@ public class VerificationServiceTest {
   void validSyntax_ValidResourceNewSchema() {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/resourceCredential.jsonld");
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "http://w3id.org/gaia-x/resource#Resource"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "http://w3id.org/gaia-x/resource#Resource");
     assertNotNull(vr);
     assertInstanceOf(CredentialVerificationResultResource.class, vr);
     CredentialVerificationResultResource vrr = (CredentialVerificationResultResource) vr;
@@ -273,16 +291,16 @@ public class VerificationServiceTest {
     assertEquals("did:web:compliance.lab.gaia-x.eu", vrr.getIssuer());
     assertEquals(Instant.parse("2023-08-08T11:29:40Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
-    assertEquals(4, vrr.getClaims().size()); 
+    assertEquals(4, vrr.getClaims().size());
     assertNull(vrr.getValidators());
     assertNull(vrr.getValidatorDids());
   }
-  
+
   @Test
   void validSyntax_LegalParticipantNewSchema() {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/legalParticipant.jsonld");
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
     assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
@@ -291,14 +309,14 @@ public class VerificationServiceTest {
     //assertEquals("did:web:compliance.lab.gaia-x.eu", vrr.getIssuer());
     assertEquals(Instant.parse("2024-03-15T12:40:58.486Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
-    assertEquals(14, vrr.getClaims().size()); 
+    assertEquals(14, vrr.getClaims().size());
     assertEquals(3, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
     schemaStore.deleteSchema("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#");
     assertEquals(2, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
     Exception ex = assertThrowsExactly(VerificationException.class, ()
             -> verificationService.verifyCredential(content, true, true, false, false));
     assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
   }
 
   @Test
@@ -344,7 +362,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void verifySignature_InvalidSignature() { 
+  void verifySignature_InvalidSignature() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     String path = "VerificationService/sign/hasInvalidSignature.json";
     Exception ex = assertThrowsExactly(VerificationException.class, ()
@@ -369,7 +387,7 @@ public class VerificationServiceTest {
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
     assertNotNull(vr);
   }
-    
+
   @Test
   void validCredential() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -394,28 +412,28 @@ public class VerificationServiceTest {
     String path = "VerificationService/syntax/complexCredentialPartType.jsonld";
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
     assertNotNull(result);
     assertEquals(12, result.getClaims().size());
     List<CredentialClaim> expectedClaims = new ArrayList<>();
-    expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
-    expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\"")); 
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>")); 
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#headquarterAddress>", "_:b0")); 
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalAddress>", "_:b1")); 
+    expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
+    expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>"));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#headquarterAddress>", "_:b0"));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalAddress>", "_:b1"));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalName>", "\"Riphixel\""));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>", "<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>")); 
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>", "<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>"));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#GaiaXTermsAndConditions>"));
-    // cannot compare the multiline claim below 
-    //expectedClaims.add(new Claim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#termsAndConditions>", "\"The PARTICIPANT signing the Self-Description agrees as follows:\n- to update its descriptions about any changes, be it technical, organizational, or legal - especially but not limited to contractual in regards to the indicated attributes present in the descriptions.\n\nThe keypair used to sign Verifiable Credentials will be revoked where Gaia-X Association becomes aware of any inaccurate statements in regards to the claims which result in a non-compliance with the Trust Framework and policy rules defined in the Policy Rules and Labelling Document (PRLD).\"")); 
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>")); 
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\"")); 
+    // cannot compare the multiline claim below
+    //expectedClaims.add(new Claim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#termsAndConditions>", "\"The PARTICIPANT signing the Self-Description agrees as follows:\n- to update its descriptions about any changes, be it technical, organizational, or legal - especially but not limited to contractual in regards to the indicated attributes present in the descriptions.\n\nThe keypair used to sign Verifiable Credentials will be revoked where Gaia-X Association becomes aware of any inaccurate statements in regards to the claims which result in a non-compliance with the Trust Framework and policy rules defined in the Policy Rules and Labelling Document (PRLD).\""));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>"));
+    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\""));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
     for (CredentialClaim claim: expectedClaims) {
     	assertTrue(result.getClaims().contains(claim));
     }
   }
-  
+
   @Test
   void invalidComplexCredential2Types() {
     schemaStore.initializeDefaultSchemas();
@@ -424,10 +442,10 @@ public class VerificationServiceTest {
     String path = "VerificationService/syntax/complexCredential2Types.jsonld";
     Exception ex = assertThrowsExactly(VerificationException.class, () -> verificationService.verifyCredential(getAccessor(path), true, true, false, false));
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
     assertEquals("Semantic error: credential has several types: [" + TrustFrameworkBaseClass.PARTICIPANT + ", " + TrustFrameworkBaseClass.SERVICE_OFFERING + "]", ex.getMessage());
   }
-  
+
   @Test
   void extractClaims_providerTest() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -531,7 +549,7 @@ public class VerificationServiceTest {
 		assertTrue(e.getMessage().contains("VerifiablePresentation does not match with proof"), "Exception message not expecteed");
 	}
   }
-  
+
   @Test
   void extractClaims_participantTwoCSsTest() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -839,11 +857,11 @@ public class VerificationServiceTest {
   void verifyCredential_vc2JwtWrapped_passesAfterUnwrap() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
     String header = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"RS256\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
     // The DanubeTech JwtVerifiableCredentialV2 parser expects the VC under a "vc" claim (same
     // JWT envelope convention as VC 1.x). Verified: fromCompactSerialization() accepts this format.
     String payload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
     String jwt = header + "." + payload + ".AAAA";
     ContentAccessor content = new ContentAccessorDirect(jwt);
 
