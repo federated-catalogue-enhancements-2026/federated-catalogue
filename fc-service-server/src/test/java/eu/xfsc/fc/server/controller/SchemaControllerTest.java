@@ -280,8 +280,6 @@ public class SchemaControllerTest {
         .andExpect(status().isOk());
   }
 
-  // --- Non-RDF Schema Tests ---
-
   @Test
   @WithMockUser(roles = {SCHEMA_CREATE})
   public void addSchema_validJsonSchema_returns201() throws Exception {
@@ -355,9 +353,9 @@ public class SchemaControllerTest {
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.jsonSchemas").isArray())
-        .andExpect(jsonPath("$.jsonSchemas[0]").exists())
+        .andExpect(jsonPath("$.jsonSchemas[0]").value("https://example.org/schemas/test-person"))
         .andExpect(jsonPath("$.xmlSchemas").isArray())
-        .andExpect(jsonPath("$.xmlSchemas[0]").exists());
+        .andExpect(jsonPath("$.xmlSchemas[0]").value("http://example.org/test-config"));
   }
 
   @Test
@@ -392,5 +390,90 @@ public class SchemaControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.delete("/schemas/{schemaId}", schemaId)
             .with(csrf()))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void getLatestSchema_jsonType_returns200() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas/latest")
+            .param("type", "json")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("\"$schema\"")));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void getLatestSchema_xmlType_returns200() throws Exception {
+    String xsd = getMockFileDataAsString("test-xml-schema.xsd");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(xsd)
+            .with(csrf())
+            .contentType("application/xml"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas/latest")
+            .param("type", "xml")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("xs:schema")));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void getSchema_xmlSchemaById_returns200() throws Exception {
+    String xsd = getMockFileDataAsString("test-xml-schema.xsd");
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(xsd)
+            .with(csrf())
+            .contentType("application/xml"))
+        .andExpect(status().isCreated());
+
+    String schemaId = URLEncoder.encode("http://example.org/test-config", Charset.defaultCharset());
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", schemaId)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("xs:schema")));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_READ})
+  public void addSchema_invalidJsonSchema_noDbRecordCreated() throws Exception {
+    String invalidSchema = "{ this is not valid JSON at all";
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(invalidSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isUnprocessableEntity());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.jsonSchemas").isArray())
+        .andExpect(jsonPath("$.jsonSchemas").isEmpty());
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE})
+  public void addSchema_validJsonSchema_returnsUploadTime() throws Exception {
+    String jsonSchema = getMockFileDataAsString("test-json-schema.json");
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/schemas")
+            .content(jsonSchema)
+            .with(csrf())
+            .contentType("application/schema+json"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.uploadTime").isNotEmpty());
   }
 }

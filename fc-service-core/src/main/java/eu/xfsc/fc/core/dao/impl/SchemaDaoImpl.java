@@ -109,6 +109,12 @@ public class SchemaDaoImpl implements SchemaDao {
 	}
 
 	@Override
+	public String selectLatestContentByType(int typeOrdinal) {
+		String sql = "SELECT content FROM schemafiles WHERE type = ? ORDER BY uploadtime DESC LIMIT 1";
+		return jdbc.queryForObject(sql, new Object[]{typeOrdinal}, new int[]{INTEGER}, String.class);
+	}
+
+	@Override
 	public int deleteAll() {
 		return jdbc.update("delete from schemafiles");
 	}

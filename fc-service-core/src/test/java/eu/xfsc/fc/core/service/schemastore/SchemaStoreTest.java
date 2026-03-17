@@ -502,8 +502,6 @@ public class SchemaStoreTest {
     assertEquals("Schema type not supported", result.getErrorMessage());
   }
 
-  // --- Non-RDF Schema Tests ---
-
   @Test
   void analyzeNonRdfSchema_validJsonSchema_extractsId() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
@@ -645,8 +643,48 @@ public class SchemaStoreTest {
 
     assertNotNull(list.get(JSON));
     assertEquals(1, list.get(JSON).size());
+    assertTrue(list.get(JSON).contains("https://example.org/schemas/person"));
     assertNotNull(list.get(XML));
     assertEquals(1, list.get(XML).size());
+    assertTrue(list.get(XML).contains("http://example.org/config"));
+  }
+
+  @Test
+  void getCompatibleAssetContentTypes_json_returnsExpected() {
+    List<String> types = JSON.getCompatibleAssetContentTypes();
+
+    assertEquals(2, types.size());
+    assertTrue(types.contains("application/json"));
+    assertTrue(types.contains("application/schema+json"));
+  }
+
+  @Test
+  void getCompatibleAssetContentTypes_xml_returnsExpected() {
+    List<String> types = XML.getCompatibleAssetContentTypes();
+
+    assertEquals(1, types.size());
+    assertTrue(types.contains("application/xml"));
+  }
+
+  @Test
+  void getCompatibleAssetContentTypes_rdfTypes_returnRdfMediaTypes() {
+    List<String> types = SchemaType.ONTOLOGY.getCompatibleAssetContentTypes();
+
+    assertEquals(3, types.size());
+    assertTrue(types.contains("text/turtle"));
+    assertTrue(types.contains("application/rdf+xml"));
+    assertTrue(types.contains("application/ld+json"));
+  }
+
+  @Test
+  void getCompositeSchema_jsonType_returnsLatestContent() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    schemaStore.addSchema(content, JSON);
+
+    ContentAccessor latest = schemaStore.getCompositeSchema(JSON);
+
+    assertNotNull(latest);
+    assertTrue(latest.getContentAsString().contains("\"$schema\""));
   }
 
   private static boolean isExistTriple(Model model, String sub, String pre, String obj) {

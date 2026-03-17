@@ -13,11 +13,24 @@ public interface SchemaStore {
    * TODO: Remove once available as generated from the OpenAPI document.
    */
   public enum SchemaType {
-    ONTOLOGY,
-    SHAPE,
-    VOCABULARY,
-    JSON,
-    XML
+    ONTOLOGY("text/turtle", "application/rdf+xml", "application/ld+json"),
+    SHAPE("text/turtle", "application/rdf+xml", "application/ld+json"),
+    VOCABULARY("text/turtle", "application/rdf+xml", "application/ld+json"),
+    JSON("application/json", "application/schema+json"),
+    XML("application/xml");
+
+    private final List<String> compatibleAssetContentTypes;
+
+    SchemaType(String... contentTypes) {
+      this.compatibleAssetContentTypes = List.of(contentTypes);
+    }
+
+    /**
+     * Returns the asset content types that can be validated by schemas of this type.
+     */
+    public List<String> getCompatibleAssetContentTypes() {
+      return compatibleAssetContentTypes;
+    }
   }
 
   /**

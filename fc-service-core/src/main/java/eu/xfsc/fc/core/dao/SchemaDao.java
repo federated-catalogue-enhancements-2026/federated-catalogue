@@ -15,5 +15,6 @@ public interface SchemaDao {
 	int update(String id, String content, Collection<String> terms);
 	Integer delete(String schemaId);
 	int deleteAll();
+	String selectLatestContentByType(int typeOrdinal);
 
 }

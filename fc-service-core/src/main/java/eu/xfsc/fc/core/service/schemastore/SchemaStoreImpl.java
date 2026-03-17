@@ -35,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
@@ -219,8 +220,12 @@ public class SchemaStoreImpl implements SchemaStore {
   private ContentAccessor createCompositeSchema(SchemaType type) {
     log.debug("createCompositeSchema.enter; got type: {}", type);
     if (type == SchemaType.JSON || type == SchemaType.XML) {
-      log.debug("createCompositeSchema.exit; composite not supported for {}", type);
-      return new ContentAccessorDirect("");
+      try {
+        String content = dao.selectLatestContentByType(type.ordinal());
+        return new ContentAccessorDirect(content);
+      } catch (EmptyResultDataAccessException e) {
+        throw new NotFoundException("No " + type + " schemas found");
+      }
     }
 
     StringWriter out = new StringWriter();
@@ -318,9 +323,13 @@ public class SchemaStoreImpl implements SchemaStore {
       byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
       DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
       dbf.setNamespaceAware(true);
+      dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+      dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
       Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
 
       SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+      factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+      factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       factory.newSchema(new DOMSource(doc));
       result.setValid(true);
 
@@ -379,7 +388,7 @@ public class SchemaStoreImpl implements SchemaStore {
     }
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    return new SchemaStoreResult(newRecord.getId(), analysis.getWarning());
+    return new SchemaStoreResult(newRecord.getId(), analysis.getWarning(), newRecord.uploadTime());
   }
 
   @Override

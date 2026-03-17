@@ -20,9 +20,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -31,12 +32,14 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SchemasService implements SchemasApiDelegate {
-  @Autowired
-  private SchemaStore schemaStore;
 
-  @Autowired
-  private HttpServletRequest httpServletRequest;
+  private static final String CONTENT_TYPE_JSON_SCHEMA = "application/schema+json";
+  private static final String CONTENT_TYPE_XML_SCHEMA = "application/xml";
+
+  private final SchemaStore schemaStore;
+  private final HttpServletRequest httpServletRequest;
   
   /**
    * Service method for GET /schemas/{schemaId} : Get a specific schema.
@@ -121,9 +124,9 @@ public class SchemasService implements SchemasApiDelegate {
     String contentType = httpServletRequest.getContentType();
     ContentAccessor content = new ContentAccessorDirect(schema);
     SchemaStoreResult storeResult;
-    if (contentType != null && contentType.contains("application/schema+json")) {
+    if (contentType != null && contentType.contains(CONTENT_TYPE_JSON_SCHEMA)) {
       storeResult = schemaStore.addSchema(content, SchemaType.JSON);
-    } else if (contentType != null && contentType.contains("application/xml")) {
+    } else if (contentType != null && contentType.contains(CONTENT_TYPE_XML_SCHEMA)) {
       storeResult = schemaStore.addSchema(content, SchemaType.XML);
     } else {
       storeResult = schemaStore.addSchema(content);
@@ -174,6 +177,7 @@ public class SchemasService implements SchemasApiDelegate {
     SchemaResult result = new SchemaResult();
     result.setId(storeResult.id());
     result.setWarnings(storeResult.warning() != null ? List.of(storeResult.warning()) : Collections.emptyList());
+    result.setUploadTime(storeResult.uploadTime());
     return result;
   }
 }

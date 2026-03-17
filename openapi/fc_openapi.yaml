@@ -382,6 +382,10 @@ components:
           items:
             type: string
           description: 'Warnings generated during schema import (e.g. filtered protected namespace statements).'
+        uploadTime:
+          type: string
+          format: date-time
+          description: 'Timestamp when the schema was uploaded.'
     QueryInfo:
       type: object
       properties:
@@ -1045,6 +1049,12 @@ paths:
           $ref: '#/components/responses/ClientError'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          description: 'Unprocessable Entity. The schema content is syntactically invalid.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           $ref: '#/components/responses/ServerError'
   /schemas/{schemaId}:
@@ -1186,8 +1196,8 @@ paths:
               - ontology
               - shape
               - vocabulary
-              - json_schema
-              - xml_schema
+              - json
+              - xml
         - name: term
           in: query
           description: 'The URI of the term of the requested schema e.g. `http://w3id.org/gaia-x/service#ServiceOffering`'
@@ -1206,10 +1216,20 @@ paths:
               schema:
                 type: string
                 description: 'SHACL file describing the ontology of the schema.'
+            application/schema+json:
+              schema:
+                type: string
+                description: 'JSON Schema file.'
+            application/xml:
+              schema:
+                type: string
+                description: 'XML Schema (XSD) file.'
         '400':
           $ref: '#/components/responses/ClientError'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
   /verification:
