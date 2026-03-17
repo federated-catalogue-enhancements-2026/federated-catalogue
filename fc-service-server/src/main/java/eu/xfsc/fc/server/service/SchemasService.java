@@ -3,6 +3,7 @@ package eu.xfsc.fc.server.service;
 import eu.xfsc.fc.api.generated.model.OntologySchema;
 import eu.xfsc.fc.api.generated.model.SchemaResult;
 import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +50,7 @@ public class SchemasService implements SchemasApiDelegate {
    *
    * @param id Identifier of the Schema. (required)
    * @return The schema content with appropriate Content-Type for the given identifier. (status code 200)
-   * @throws eu.xfsc.fc.core.exception.NotFoundException if no schema exists with the given id (status code 404)
+   * @throws NotFoundException if no schema exists with the given id (status code 404)
    */
   @Override
   public ResponseEntity<String> getSchema(String id) {
@@ -110,21 +112,28 @@ public class SchemasService implements SchemasApiDelegate {
   /**
    * Service method for POST /schemas : Add a new Schema to the catalogue.
    *
-   * @param schema The file of the new schema. either an ontology (OWL file), shape (SHACL file)
-   *               or controlled vocabulary (SKOS file). (required)
+   * <p>Routes to the appropriate handler based on the request's Content-Type header:
+   * {@code application/schema+json} for JSON Schema, {@code application/xml} for XSD,
+   * and {@code text/turtle}, {@code application/rdf+xml}, {@code application/ld+json}
+   * for RDF schemas (OWL, SHACL, SKOS). Unsupported Content-Types are rejected with 400.
+   *
+   * @param schema The schema content. (required)
    * @return Created (status code 201)
-   *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
-   *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
-   *         or May contain hints how to solve the error or indicate what went wrong at the server.
-   *         Must not outline any information about the internal structure of the server. (status code 500)
+   * @throws ClientException if the Content-Type is not supported (status code 400)
    */
   @Override
   public ResponseEntity<SchemaResult> addSchema(String schema) {
     ContentAccessor content = new ContentAccessorDirect(schema);
     String contentType = httpServletRequest.getContentType();
-    SchemaStoreResult storeResult = SchemaType.fromContentType(contentType)
-        .map(type -> schemaStore.addSchema(content, type))
-        .orElseGet(() -> schemaStore.addSchema(content));
+    Optional<SchemaType> nonRdfType = SchemaType.fromContentType(contentType);
+    SchemaStoreResult storeResult;
+    if (nonRdfType.isPresent()) {
+      storeResult = schemaStore.addSchema(content, nonRdfType.get());
+    } else if (SchemaType.isRdfContentType(contentType)) {
+      storeResult = schemaStore.addSchema(content);
+    } else {
+      throw new ClientException("Unsupported Content-Type: %s. Supported types: application/schema+json, application/xml, text/turtle, application/rdf+xml, application/ld+json".formatted(contentType));
+    }
     SchemaResult result = toSchemaResult(storeResult);
     return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);
   }

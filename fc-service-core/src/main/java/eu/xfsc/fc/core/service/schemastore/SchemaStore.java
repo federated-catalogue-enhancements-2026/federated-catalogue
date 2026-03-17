@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.schemastore;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import lombok.Getter;
@@ -43,6 +44,16 @@ public interface SchemaStore {
         return Optional.of(XML);
       }
       return Optional.empty();
+    }
+
+    private static final Set<String> RDF_CONTENT_TYPES = Set.of(
+        "text/turtle", "application/rdf+xml", "application/ld+json");
+
+    public static boolean isRdfContentType(String contentType) {
+      if (contentType == null) {
+        return false;
+      }
+      return RDF_CONTENT_TYPES.stream().anyMatch(contentType::contains);
     }
   }
 
