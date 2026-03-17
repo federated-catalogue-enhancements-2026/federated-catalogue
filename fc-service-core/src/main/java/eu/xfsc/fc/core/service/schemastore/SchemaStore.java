@@ -29,7 +29,7 @@ public interface SchemaStore {
       this.compatibleAssetContentTypes = List.of(contentTypes);
     }
 
-      /**
+    /**
      * Resolves a SchemaType from an HTTP Content-Type header value.
      * Returns empty for RDF content types (handled by the existing RDF analysis path).
      */
