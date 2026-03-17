@@ -29,7 +29,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.apache.jena.riot.system.stream.StreamManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +38,9 @@ import org.springframework.web.client.RestTemplate;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.danubetech.dataintegrity.DataIntegrityProof;
 import com.danubetech.keyformats.jose.JWK;
 import com.danubetech.verifiablecredentials.CredentialSubject;
@@ -52,6 +54,7 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -69,6 +72,7 @@ import eu.xfsc.fc.core.util.ClaimValidator;
 import foundation.identity.jsonld.JsonLDObject;
 import info.weboftrust.ldsignatures.LdProof;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -79,9 +83,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new TitaniumClaimExtractor(), new DanubeTechClaimExtractor()};
+    private static final String VC2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Value("${federated-catalogue.verification.require-vp:true}")
     private boolean requireVP;
@@ -103,26 +110,18 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private String resourceType;
 
     private Map<TrustFrameworkBaseClass, String> trustFrameworkBaseClassUris;
-    @Autowired
-    private JwtContentPreprocessor jwtPreprocessor;
 
-    @Autowired
-    private ProtectedNamespaceFilter protectedNamespaceFilter;
-    @Autowired
-    private SchemaStore schemaStore;
-    @Autowired
-    private SchemaValidationService schemaValidationService;
-    @Autowired
-    private SignatureVerifier signVerifier;
-
-    @Autowired
+    private final JwtContentPreprocessor jwtPreprocessor;
+    private final ProtectedNamespaceFilter protectedNamespaceFilter;
+    private final SchemaStore schemaStore;
+    private final SchemaValidationService schemaValidationService;
+    private final SignatureVerifier signVerifier;
     @Qualifier("contextCacheFileStore")
-    private FileStore fileStore;
-
-    @Autowired
-    private DocumentLoader documentLoader;
-    @Autowired
-    private ValidatorCacheDao validatorCache;
+    private final FileStore fileStore;
+    private final DocumentLoader documentLoader;
+    private final ValidatorCacheDao validatorCache;
+    private final Vc11Processor vc11Processor;
+    private final Vc2Processor vc2Processor;
 
     @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
     private String trustAnchorAddr;
@@ -162,12 +161,20 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 strict, expectedClass, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
         long stamp = System.currentTimeMillis();
 
-        // JWT unwrapping (no signature verification — see Issue #12)
+        // Read content once (fixes double-read)
+        String body = payload.getContentAsString().strip();
+        payload = new ContentAccessorDirect(body);
+        // JWT guard — fires before any processor (no signature verification — see Issue #12)
         if (verifyVCSignatures && jwtPreprocessor.isJwtWrapped(payload)) {
             throw new UnsupportedOperationException(
                     "JWT signature verification is not supported; provide a JSON-LD credential with a data-integrity proof");
         }
-        payload = jwtPreprocessor.unwrap(payload);
+        // Version dispatch — payload is unwrapped JSON-LD after this point
+        // JWT-wrapped payloads are VC 2.0-only; fall back to vc2Processor when context parse fails
+        boolean isVc2 = isVc2Context(body) || jwtPreprocessor.isJwtWrapped(payload);
+        payload = (isVc2 ? vc2Processor : vc11Processor).preProcess(payload);
+        // NOTE: CAT-FR-GD-02's VcStructureDetector.isVcStructured() call MUST be placed AFTER this
+        // line, not before — a JWT-wrapped VC 2.0 payload would not be recognised as a VC until unwrapped.
 
         // syntactic validation
         JsonLDObject ld = parseContent(payload);
@@ -328,6 +335,27 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         throw new VerificationException("Semantic error: unexpected credential type: " + ld.getTypes());
     }
 
+    private boolean isVc2Context(String body) {
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(body);
+            JsonNode ctx = root.get("@context");
+            if (ctx == null) {
+                return false;
+            }
+            if (ctx.isArray()) {
+                for (JsonNode element : ctx) {
+                    if (VC2_CONTEXT.equals(element.asText())) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return VC2_CONTEXT.equals(ctx.asText());
+        } catch (JsonProcessingException ex) {
+            return false;
+        }
+    }
+
     /* Credential parsing, semantic validation */
     private JsonLDObject parseContent(ContentAccessor content) {
         try {
@@ -385,47 +413,16 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (checkAbsence(credential, "issuer")) {
             sb.append(" - VerifiableCredential[").append(idx).append("] must contain 'issuer' property").append(sep);
         }
-        boolean hasIssuanceDate = !checkAbsence(credential, "issuanceDate");
-        boolean hasValidFrom = !checkAbsence(credential, "validFrom");
-        if (!hasIssuanceDate && !hasValidFrom) {
-            sb.append(" - VerifiableCredential[").append(idx)
-                    .append("] must contain 'issuanceDate' or 'validFrom' property").append(sep);
-        }
-
-        Date today = Date.from(Instant.now());
-        Date issDate = null;
-        if (hasIssuanceDate) {
-            issDate = credential.getIssuanceDate();
-        } else if (hasValidFrom) {
-            Object validFromObj = credential.getJsonObject().get("validFrom");
-            if (validFromObj != null) {
-                try {
-                    issDate = Date.from(Instant.parse(validFromObj.toString()));
-                } catch (java.time.format.DateTimeParseException ex) {
-                    throw new ClientException("Invalid 'validFrom' date format: " + validFromObj);
-                }
-            }
-        }
-        if (issDate != null && issDate.after(today)) {
-            sb.append(" - 'issuanceDate'/'validFrom' of VerifiableCredential[").append(idx)
-                    .append("] must be in the past").append(sep);
-        }
-        Date expDate = credential.getExpirationDate();
-        if (expDate == null) {
-            Object validUntilObj = credential.getJsonObject().get("validUntil");
-            if (validUntilObj != null) {
-                try {
-                    expDate = Date.from(Instant.parse(validUntilObj.toString()));
-                } catch (java.time.format.DateTimeParseException ex) {
-                    throw new ClientException("Invalid 'validUntil' date format: " + validUntilObj);
-                }
-            }
-        }
-        if (expDate != null && expDate.before(today)) {
-            sb.append(" - 'expirationDate'/'validUntil' of VerifiableCredential[").append(idx)
-                    .append("] must be in the future").append(sep);
-        }
+        sb.append(getVersionProcessor(credential).validateDates(credential, idx));
         return sb.toString();
+    }
+
+    private VersionedCredentialProcessor getVersionProcessor(VerifiableCredential credential) {
+        Object ctx = credential.getJsonObject().get("@context");
+        boolean isVc2 = (ctx instanceof java.util.List<?>)
+                ? ((java.util.List<?>) ctx).contains(VC2_CONTEXT)
+                : VC2_CONTEXT.equals(ctx);
+        return isVc2 ? vc2Processor : vc11Processor;
     }
 
     private boolean checkAbsence(JsonLDObject container, String... keys) {

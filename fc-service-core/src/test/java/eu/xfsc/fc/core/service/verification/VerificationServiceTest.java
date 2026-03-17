@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import eu.xfsc.fc.core.config.DatabaseConfig;
@@ -48,6 +49,9 @@ import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @Slf4j
 @SpringBootTest
@@ -70,6 +74,9 @@ public class VerificationServiceTest {
   @Autowired
   private VerificationServiceImpl verificationService;
 
+  @MockitoSpyBean
+  private JwtContentPreprocessor jwtPreprocessorSpy;
+
   @Autowired
   private ProtectedNamespaceProperties protectedNsProps;
 
@@ -80,6 +87,15 @@ public class VerificationServiceTest {
   public void storageSelfCleaning() throws IOException {
     schemaStore.clear();
     verificationService.setVerifySchema(false);
+  }
+
+  @Test
+  void verifyCredential_vc11Input_unwrapNeverInvoked() {
+    ContentAccessor vc11 = getAccessor("VerificationService/jsonld/input.vc.jsonld");
+
+    verificationService.verifyCredential(vc11, false, true, false, false);
+
+    verify(jwtPreprocessorSpy, never()).unwrap(any());
   }
 
   @Test
