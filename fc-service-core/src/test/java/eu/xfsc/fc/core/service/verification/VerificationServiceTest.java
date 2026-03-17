@@ -194,7 +194,7 @@ public class VerificationServiceTest {
     String path = "VerificationService/syntax/input.vp.jsonld";
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
+    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
     //assertEquals("http://example.gov/credentials/3732", vrp.getId()); for Participants id = issuer!
     assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getId());

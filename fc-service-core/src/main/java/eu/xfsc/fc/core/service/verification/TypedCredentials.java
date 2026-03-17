@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -21,16 +22,11 @@ import lombok.extern.slf4j.Slf4j;
  * Pure data: no service dependencies, no Spring wiring.
  */
 @Slf4j
+@RequiredArgsConstructor
 class TypedCredentials {
 
   private final VerifiablePresentation presentation;
   private final Map<VerifiableCredential, TrustFrameworkBaseClass> credentials;
-
-  TypedCredentials(VerifiablePresentation presentation,
-      Map<VerifiableCredential, TrustFrameworkBaseClass> credentials) {
-    this.presentation = presentation;
-    this.credentials = credentials;
-  }
 
   private VerifiableCredential getFirstVC() {
     return credentials.isEmpty() ? null : credentials.keySet().iterator().next();

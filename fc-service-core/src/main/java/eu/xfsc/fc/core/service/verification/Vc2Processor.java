@@ -5,7 +5,6 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -49,7 +48,7 @@ public class Vc2Processor implements VersionedCredentialProcessor {
   public String validateDates(VerifiableCredential credential, int idx) {
     StringBuilder sb = new StringBuilder();
     String sep = System.lineSeparator();
-    Date today = Date.from(Instant.now());
+    Instant now = Instant.now();
 
     Object validFromObj = credential.getJsonObject().get("validFrom");
     if (validFromObj == null) {
@@ -57,8 +56,7 @@ public class Vc2Processor implements VersionedCredentialProcessor {
           .append("] must contain 'validFrom' property").append(sep);
     } else {
       try {
-        Date issDate = Date.from(Instant.parse(validFromObj.toString()));
-        if (issDate.after(today)) {
+        if (Instant.parse(validFromObj.toString()).isAfter(now)) {
           sb.append(" - 'validFrom' of VerifiableCredential[").append(idx)
               .append("] must be in the past").append(sep);
         }
@@ -70,8 +68,7 @@ public class Vc2Processor implements VersionedCredentialProcessor {
     Object validUntilObj = credential.getJsonObject().get("validUntil");
     if (validUntilObj != null) {
       try {
-        Date expDate = Date.from(Instant.parse(validUntilObj.toString()));
-        if (expDate.before(today)) {
+        if (Instant.parse(validUntilObj.toString()).isBefore(now)) {
           sb.append(" - 'validUntil' of VerifiableCredential[").append(idx)
               .append("] must be in the future").append(sep);
         }

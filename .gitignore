@@ -41,5 +41,4 @@ fc-service-server/logs/
 ### vim ###
 *.swp
 
-### Local certs (company-specific, must not be committed) ###
 docker/certs/
