@@ -78,8 +78,8 @@ public class SchemasService implements SchemasApiDelegate {
     schema.setOntologies(schemaListMap.get(SchemaType.ONTOLOGY));
     schema.setShapes(schemaListMap.get(SchemaType.SHAPE));
     schema.setVocabularies(schemaListMap.get(SchemaType.VOCABULARY));
-    schema.setJsonSchemas(schemaListMap.getOrDefault(SchemaType.JSON_SCHEMA, Collections.emptyList()));
-    schema.setXmlSchemas(schemaListMap.getOrDefault(SchemaType.XML_SCHEMA, Collections.emptyList()));
+    schema.setJsonSchemas(schemaListMap.getOrDefault(SchemaType.JSON, Collections.emptyList()));
+    schema.setXmlSchemas(schemaListMap.getOrDefault(SchemaType.XML, Collections.emptyList()));
      return ResponseEntity.ok(schema);
   }
 
@@ -122,9 +122,9 @@ public class SchemasService implements SchemasApiDelegate {
     ContentAccessor content = new ContentAccessorDirect(schema);
     SchemaStoreResult storeResult;
     if (contentType != null && contentType.contains("application/schema+json")) {
-      storeResult = schemaStore.addSchema(content, SchemaType.JSON_SCHEMA);
+      storeResult = schemaStore.addSchema(content, SchemaType.JSON);
     } else if (contentType != null && contentType.contains("application/xml")) {
-      storeResult = schemaStore.addSchema(content, SchemaType.XML_SCHEMA);
+      storeResult = schemaStore.addSchema(content, SchemaType.XML);
     } else {
       storeResult = schemaStore.addSchema(content);
     }

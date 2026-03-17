@@ -75,7 +75,7 @@ public class SecurityConfig {
 
           // Verification APIs
           .requestMatchers("/verification").permitAll()
-
+          
           // Asset APIs
           .requestMatchers(HttpMethod.POST, "/assets/*/revoke").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
           .requestMatchers(HttpMethod.GET, "/assets", "/assets/*").hasAnyRole(ASSET_READ, ADMIN_ALL)

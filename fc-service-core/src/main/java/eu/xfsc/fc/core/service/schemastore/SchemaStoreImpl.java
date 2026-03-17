@@ -1,30 +1,23 @@
 package eu.xfsc.fc.core.service.schemastore;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.xml.XMLConstants;
-import javax.xml.validation.SchemaFactory;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
-
+import eu.xfsc.fc.core.dao.SchemaDao;
+import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.NotFoundException;
+import eu.xfsc.fc.core.exception.ServerException;
+import eu.xfsc.fc.core.exception.VerificationException;
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.FilteredModel;
+import eu.xfsc.fc.core.service.filestore.FileStore;
+import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
+import eu.xfsc.fc.core.util.HashUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -44,23 +37,28 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.w3c.dom.Document;
 
-import eu.xfsc.fc.core.dao.SchemaDao;
-import eu.xfsc.fc.core.exception.ClientException;
-import eu.xfsc.fc.core.exception.ConflictException;
-import eu.xfsc.fc.core.exception.NotFoundException;
-import eu.xfsc.fc.core.exception.ServerException;
-import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.FilteredModel;
-import eu.xfsc.fc.core.service.filestore.FileStore;
-import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
-import eu.xfsc.fc.core.util.HashUtils;
-
-import com.google.common.base.Strings;
-
-import lombok.extern.slf4j.Slf4j;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.validation.SchemaFactory;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -220,7 +218,7 @@ public class SchemaStoreImpl implements SchemaStore {
 
   private ContentAccessor createCompositeSchema(SchemaType type) {
     log.debug("createCompositeSchema.enter; got type: {}", type);
-    if (type == SchemaType.JSON_SCHEMA || type == SchemaType.XML_SCHEMA) {
+    if (type == SchemaType.JSON || type == SchemaType.XML) {
       log.debug("createCompositeSchema.exit; composite not supported for {}", type);
       return new ContentAccessorDirect("");
     }
@@ -279,7 +277,7 @@ public class SchemaStoreImpl implements SchemaStore {
    * Analyze a non-RDF schema (JSON Schema or XML Schema).
    *
    * @param schema The schema content to analyze.
-   * @param type The expected schema type ({@link SchemaType#JSON_SCHEMA} or {@link SchemaType#XML_SCHEMA}).
+   * @param type The expected schema type ({@link SchemaType#JSON} or {@link SchemaType#XML}).
    * @return The analysis result containing validity, extracted ID, and type information.
    */
   SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
@@ -288,8 +286,8 @@ public class SchemaStoreImpl implements SchemaStore {
     result.setExtractedUrls(Collections.emptySet());
 
     switch (type) {
-      case JSON_SCHEMA -> analyzeJsonSchema(schema, result);
-      case XML_SCHEMA -> analyzeXmlSchema(schema, result);
+      case JSON -> analyzeJsonSchema(schema, result);
+      case XML -> analyzeXmlSchema(schema, result);
       default -> {
         result.setValid(false);
         result.setErrorMessage("Not a non-RDF schema type: " + type);
@@ -318,12 +316,12 @@ public class SchemaStoreImpl implements SchemaStore {
   private void analyzeXmlSchema(ContentAccessor schema, SchemaAnalysisResult result) {
     try {
       byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
-      javax.xml.parsers.DocumentBuilderFactory dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
       dbf.setNamespaceAware(true);
-      org.w3c.dom.Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
+      Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
 
       SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-      factory.newSchema(new javax.xml.transform.dom.DOMSource(doc));
+      factory.newSchema(new DOMSource(doc));
       result.setValid(true);
 
       String targetNs = doc.getDocumentElement().getAttribute("targetNamespace");

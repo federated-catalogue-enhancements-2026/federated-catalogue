@@ -16,8 +16,8 @@ public interface SchemaStore {
     ONTOLOGY,
     SHAPE,
     VOCABULARY,
-    JSON_SCHEMA,
-    XML_SCHEMA
+    JSON,
+    XML
   }
 
   /**
@@ -50,7 +50,7 @@ public interface SchemaStore {
    * Store a non-RDF schema with a known type.
    *
    * @param schema The schema content to be stored.
-   * @param type The schema type (JSON_SCHEMA or XML_SCHEMA).
+   * @param type The schema type (JSON or XML).
    * @return The result containing the internal identifier and any warnings.
    */
   SchemaStoreResult addSchema(ContentAccessor schema, SchemaType type);
