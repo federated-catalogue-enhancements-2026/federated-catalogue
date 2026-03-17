@@ -831,6 +831,8 @@ public class VerificationServiceTest {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
     String header = java.util.Base64.getUrlEncoder().withoutPadding()
         .encodeToString("{\"alg\":\"RS256\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    // The DanubeTech JwtVerifiableCredentialV2 parser expects the VC under a "vc" claim (same
+    // JWT envelope convention as VC 1.x). Verified: fromCompactSerialization() accepts this format.
     String payload = java.util.Base64.getUrlEncoder().withoutPadding()
         .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
     String jwt = header + "." + payload + ".AAAA";
@@ -839,6 +841,17 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, false, false, false, false);
 
     assertNotNull(vr, "JWT-wrapped VC 2.0 must be unwrapped and processed without exception");
+  }
+
+  @Test
+  void verifyCredential_invalidJwtLikeContent_throwsClientException() {
+    // Content starts with "eyJ" (looks like a JWT) but cannot be parsed as VC 2.0 or VP 2.0 JWT
+    String invalidJwt = "eyJub3RhcmVhbGp3dA.invalidsegment.AAAA";
+    ContentAccessor content = new ContentAccessorDirect(invalidJwt);
+
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false),
+        "Invalid JWT-like content must throw ClientException, not a server error");
   }
 
 }

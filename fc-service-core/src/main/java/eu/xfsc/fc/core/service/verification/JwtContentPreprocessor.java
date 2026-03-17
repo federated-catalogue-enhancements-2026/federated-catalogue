@@ -29,6 +29,16 @@ public class JwtContentPreprocessor {
   private static final String JWT_PREFIX = "eyJ";
 
   /**
+   * Returns true if the content appears to be JWT-wrapped (starts with the base64url JWT header prefix).
+   *
+   * @param content the incoming content accessor
+   * @return true if the content looks like a compact JWT serialization
+   */
+  public boolean isJwtWrapped(ContentAccessor content) {
+    return content.getContentAsString().strip().startsWith(JWT_PREFIX);
+  }
+
+  /**
    * Unwraps a JWT-wrapped credential or presentation to JSON-LD.
    *
    * @param content the incoming content accessor

@@ -162,6 +162,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     long stamp = System.currentTimeMillis();
 
     // JWT unwrapping (no signature verification — see Issue #12)
+    if (verifyVCSignatures && jwtPreprocessor.isJwtWrapped(payload)) {
+      throw new UnsupportedOperationException(
+          "JWT signature verification is not supported; provide a JSON-LD credential with a data-integrity proof");
+    }
     payload = jwtPreprocessor.unwrap(payload);
 
     // syntactic validation
@@ -394,7 +398,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     } else if (hasValidFrom) {
       Object validFromObj = credential.getJsonObject().get("validFrom");
       if (validFromObj != null) {
-        issDate = Date.from(Instant.parse(validFromObj.toString()));
+        try {
+          issDate = Date.from(Instant.parse(validFromObj.toString()));
+        } catch (java.time.format.DateTimeParseException ex) {
+          throw new ClientException("Invalid 'validFrom' date format: " + validFromObj);
+        }
       }
     }
     if (issDate != null && issDate.after(today)) {
@@ -405,7 +413,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     if (expDate == null) {
       Object validUntilObj = credential.getJsonObject().get("validUntil");
       if (validUntilObj != null) {
-        expDate = Date.from(Instant.parse(validUntilObj.toString()));
+        try {
+          expDate = Date.from(Instant.parse(validUntilObj.toString()));
+        } catch (java.time.format.DateTimeParseException ex) {
+          throw new ClientException("Invalid 'validUntil' date format: " + validUntilObj);
+        }
       }
     }
     if (expDate != null && expDate.before(today)) {
@@ -736,7 +748,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (validFrom != null) {
           return Instant.parse(validFrom.toString());
         }
-        return Instant.now();
+        return null;
       }
       return issDate.toInstant();
     }

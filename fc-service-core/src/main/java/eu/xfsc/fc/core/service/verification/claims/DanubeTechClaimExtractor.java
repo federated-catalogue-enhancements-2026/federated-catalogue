@@ -23,7 +23,7 @@ public class DanubeTechClaimExtractor implements ClaimExtractor {
 
   private static final String VC2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
 
-  private ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
   public List<CredentialClaim> extractClaims(ContentAccessor content) throws Exception {
@@ -34,7 +34,7 @@ public class DanubeTechClaimExtractor implements ClaimExtractor {
     if (isVc2Context(raw)) {
       return extractClaimsVc2(str, raw);
     }
-    return extractClaimsVc1(str);
+    return extractClaimsVc1(str, raw);
   }
 
   private boolean isVc2Context(Map<String, Object> raw) {
@@ -74,25 +74,35 @@ public class DanubeTechClaimExtractor implements ClaimExtractor {
   }
 
   @SuppressWarnings("unchecked")
-  private List<CredentialClaim> extractClaimsVc1(String str) throws Exception {
+  private List<CredentialClaim> extractClaimsVc1(String str, Map<String, Object> raw) throws Exception {
     List<CredentialClaim> claims = new ArrayList<>();
-    VerifiablePresentation vp = VerifiablePresentation.fromJson(str);
-    Map<String, Object> vpm = vp.getJsonObject();
+    Object typeObj = raw.get("type");
+    boolean isVP = typeObj instanceof List
+        ? ((List<?>) typeObj).contains("VerifiablePresentation")
+        : "VerifiablePresentation".equals(typeObj);
+
     List<Map<String, Object>> vcms;
-    Object obj = vp.getJsonObject().get(JSONLD_TERM_VERIFIABLECREDENTIAL);
-    log.trace("extractClaims; got VC: {}", obj);
-    if (obj instanceof Map) {
-      vcms = List.of((Map<String, Object>) obj);
-    } else if (obj instanceof List) {
-      vcms = (List<Map<String, Object>>) obj;
+    if (isVP) {
+      VerifiablePresentation vp = VerifiablePresentation.fromJson(str);
+      Map<String, Object> vpm = vp.getJsonObject();
+      Object obj = vp.getJsonObject().get(JSONLD_TERM_VERIFIABLECREDENTIAL);
+      log.trace("extractClaims; got VC: {}", obj);
+      if (obj instanceof Map) {
+        vcms = List.of((Map<String, Object>) obj);
+      } else if (obj instanceof List) {
+        vcms = (List<Map<String, Object>>) obj;
+      } else {
+        // vc is a String ?
+        vcms = List.of(vpm);
+      }
     } else {
-      // vc is a String ?
-      vcms = List.of(vpm);
+      // standalone VC 1.1 (not VP-wrapped)
+      vcms = List.of(raw);
     }
     CredentialSubject cs;
     List<Map<String, Object>> csms;
     for (Map<String, Object> vcm : vcms) {
-      obj = vcm.get(JSONLD_TERM_CREDENTIALSUBJECT);
+      Object obj = vcm.get(JSONLD_TERM_CREDENTIALSUBJECT);
       log.trace("extractClaims; got CS: {}", obj);
       if (obj instanceof Map) {
         csms = List.of((Map<String, Object>) obj);
