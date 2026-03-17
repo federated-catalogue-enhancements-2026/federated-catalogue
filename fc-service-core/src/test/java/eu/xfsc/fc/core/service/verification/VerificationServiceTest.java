@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.verification;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
@@ -107,9 +108,9 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
+    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals(vrp.getIssuer(), "did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k");
+    assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getIssuer());
     assertEquals(vrp.getParticipantName(), vrp.getIssuer());
     assertEquals(vrp.getId(), vrp.getIssuer()); // not sure this is correct..
   }
@@ -193,8 +194,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultOffering);
-    assertFalse(vr instanceof CredentialVerificationResultParticipant);
+    assertInstanceOf(CredentialVerificationResultOffering.class, vr);
     CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
     assertEquals("https://www.example.org/mySoftwareOffering", vro.getId());
     assertEquals("http://gaiax.de", vro.getIssuer());
@@ -211,8 +211,7 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson1.jsonld");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
-    assertFalse(vr instanceof CredentialVerificationResultOffering);
+    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
     assertEquals("http://gaiax.de", vrp.getId());
     assertEquals("http://gaiax.de", vrp.getIssuer());
@@ -232,8 +231,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant"); 
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
-    assertFalse(vr instanceof CredentialVerificationResultOffering);
+    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
     assertEquals("http://gaiax.de", vrp.getId());
     assertEquals("http://gaiax.de", vrp.getIssuer());
@@ -253,8 +251,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "http://w3id.org/gaia-x/resource#Resource"); 
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultResource);
-    assertFalse(vr instanceof CredentialVerificationResultOffering);
+    assertInstanceOf(CredentialVerificationResultResource.class, vr);
     CredentialVerificationResultResource vrr = (CredentialVerificationResultResource) vr;
     assertEquals("did:example:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2", vrr.getId());
     assertEquals("did:web:compliance.lab.gaia-x.eu", vrr.getIssuer());
@@ -272,8 +269,7 @@ public class VerificationServiceTest {
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant"); 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
-    assertFalse(vr instanceof CredentialVerificationResultOffering);
+    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
     CredentialVerificationResultParticipant vrr = (CredentialVerificationResultParticipant) vr;
     //assertEquals("did:example:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2", vrr.getId());
     //assertEquals("did:web:compliance.lab.gaia-x.eu", vrr.getIssuer());
@@ -340,14 +336,14 @@ public class VerificationServiceTest {
     assertEquals("Signatures error; VerifiableCredential does not match with proof", ex.getMessage());
   }
 
-  private static String pkey = """
+  private final static String pkey = """
 	{
 		"kty": "RSA",
 		"e": "AQAB",
 		"alg": "PS256",
 		"n": "0nYZU6EuuzHKBCzkcBZqsMkVZXngYO7VujfLU_4ys7onF4HxTJPP3OGKEjbjbMgmpa7vKaWRomt_XXTjemA3r3f5t8bj0IoqFfvbTIq65GUIIh4y2mVbomdcQLRK2Auf79vDiqiONknTSstoPjAiCg6t6z_KruGFZbDOhYkZwqrjGnmB_LfFSlpeLwkQQ-5dVLhhXkImmWhnACoAo8ECny24Ap7wLbN9i9o1fNSz2uszACj0zxFhl3NGunHFUm3YkGd0URvoToXpK9a4zfihSUxHjeT0_7a9puVF4E3w1AAjSh4nV3pLE0cJyDITVb2M4d3m9tjjz_3XwjYiAAJ1MKVBSKDM27pexRFCJj_Dvb-dr-AImhqBhPDHn_gjdaRZIVoADC4zwBULkpvUaUIKmNFyYOjDYWWTBzTf4Gs9QL5adlVfVyK14MZPBOyq-cqIIymgp6A5_R3hKnCCBP8C_S0-VDidhI6Pr5VJPx9DydI0eB2DiOyOZvbfg7sKVkJXFUEJRiBTMhujyjYqeTtCHjCFHctZVQ8hU279eyk7mpmpDrktfCFJFi-00ZzQWTgtzBoGhke5hj0hjtG1n4jN6BfypdT5oB-DeXl2P1hp_hNC9I5gveWUYHAqN4VKve_52A3ub8vBlISQhEUeZoFUterTiDA3NyK7wsj_V7-KM6U"
-	}""";  
-    
+	}""";
+
   //@Test //TODO: think how to run it with the static key above
   void validSyntax_ValidSO() {
     //schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -494,7 +490,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void extractClaims_jsonValueCharacterTest() throws Exception {
+  void extractClaims_jsonValueCharacterTest() {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/specialCharacters.jsonld");
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource");
@@ -508,7 +504,7 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void extractClaims_participantTwoAdditionalContextTest() throws Exception {
+  void extractClaims_participantTwoAdditionalContextTest() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoAdditionalContext.jsonld");
     try {
@@ -552,8 +548,6 @@ public class VerificationServiceTest {
 
     if (!validationResult.isConforming()) {
       assertTrue(validationResult.getValidationReport().contains("Property needs to have at least 1 value"));
-    } else {
-      assertFalse(validationResult.isConforming());
     }
   }
 
@@ -658,8 +652,8 @@ public class VerificationServiceTest {
     assertEquals(expectedClaims, new HashSet<>(actualClaims));
     assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");
     assertFalse(result.getWarnings().isEmpty(), "Warning list should not be empty when fcmeta triples were filtered");
-    assertTrue(result.getWarnings().get(0).contains("1 triple(s)"), "Warning should mention count of filtered triples");
-    assertTrue(result.getWarnings().get(0).contains(protectedNsProps.getNamespace()), "Warning should mention the protected namespace");
+    assertTrue(result.getWarnings().getFirst().contains("1 triple(s)"), "Warning should mention count of filtered triples");
+    assertTrue(result.getWarnings().getFirst().contains(protectedNsProps.getNamespace()), "Warning should mention the protected namespace");
   }
 
   @Test
@@ -765,8 +759,7 @@ public class VerificationServiceTest {
 
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
     assertNotNull(vr);
-    assertTrue(vr instanceof CredentialVerificationResultParticipant,
-        "VC 2.0 with gaia-x/core#Participant type must be recognized");
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr, "VC 2.0 with gaia-x/core#Participant type must be recognized");
     assertNotNull(vr.getIssuedDateTime(), "issuedDateTime must be non-null for VC 2.0 validFrom");
     assertEquals(Instant.parse("2026-01-30T00:00:00Z"), vr.getIssuedDateTime());
   }
@@ -823,11 +816,11 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
 
     assertNotNull(vr, "VC 1.1 with issuanceDate must still pass (regression)");
-    assertTrue(vr instanceof CredentialVerificationResultParticipant);
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
   }
 
   @Test
-  void verifyCredential_vc2JwtWrapped_passesAfterUnwrap() throws Exception {
+  void verifyCredential_vc2JwtWrapped_passesAfterUnwrap() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
     String header = java.util.Base64.getUrlEncoder().withoutPadding()
         .encodeToString("{\"alg\":\"RS256\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));

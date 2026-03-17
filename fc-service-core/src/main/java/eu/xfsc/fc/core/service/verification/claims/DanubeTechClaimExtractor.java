@@ -29,7 +29,8 @@ public class DanubeTechClaimExtractor implements ClaimExtractor {
   public List<CredentialClaim> extractClaims(ContentAccessor content) throws Exception {
     log.debug("extractClaims.enter; got content: {}", content);
     String str = content.getContentAsString();
-    Map<String, Object> raw = objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> raw = objectMapper.readValue(str, new TypeReference<>() {
+    });
 
     if (isVc2Context(raw)) {
       return extractClaimsVc2(str, raw);
