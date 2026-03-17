@@ -1,66 +1,27 @@
 package eu.xfsc.fc.core.service.verification;
 
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.PARTICIPANT;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.RESOURCE;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.SERVICE_OFFERING;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNOWN;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import org.apache.jena.riot.system.stream.StreamManager;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.danubetech.dataintegrity.DataIntegrityProof;
 import com.danubetech.keyformats.jose.JWK;
-import com.danubetech.verifiablecredentials.CredentialSubject;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.ValidatorCacheDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.FilteredClaims;
-import eu.xfsc.fc.core.pojo.Validator;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
+import eu.xfsc.fc.core.pojo.FilteredClaims;
+import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
@@ -74,6 +35,39 @@ import info.weboftrust.ldsignatures.LdProof;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.riot.system.stream.StreamManager;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.PARTICIPANT;
+import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.RESOURCE;
+import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.SERVICE_OFFERING;
+import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNOWN;
 
 
 /**
@@ -437,14 +431,31 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private TypedCredentials getCredentials(VerifiablePresentation vp) {
         log.trace("getCredentials.enter; got VP: {}", vp);
-        TypedCredentials tcs = new TypedCredentials(vp);
+        Object obj = vp.getJsonObject().get("verifiableCredential");
+        Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
+        if (obj == null) {
+            creds = Collections.emptyMap();
+        } else if (obj instanceof List) {
+            List<Map<String, Object>> l = (List<Map<String, Object>>) obj;
+            creds = new LinkedHashMap<>(l.size());
+            for (Map<String, Object> _vc : l) {
+                VerifiableCredential vc = VerifiableCredential.fromMap(_vc);
+                vc.setDocumentLoader(vp.getDocumentLoader());
+                creds.put(vc, resolveBaseClass(vc));
+            }
+        } else {
+            VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) obj);
+            vc.setDocumentLoader(vp.getDocumentLoader());
+            creds = Map.of(vc, resolveBaseClass(vc));
+        }
+        TypedCredentials tcs = new TypedCredentials(vp, creds);
         log.trace("getCredentials.exit; returning: {}", tcs);
         return tcs;
     }
 
     private TypedCredentials getCredentials(VerifiableCredential vc) {
         log.trace("getCredentials.enter; got VC: {}", vc);
-        TypedCredentials tcs = new TypedCredentials(vc);
+        TypedCredentials tcs = new TypedCredentials(null, Map.of(vc, resolveBaseClass(vc)));
         log.trace("getCredentials.exit; returning: {}", tcs);
         return tcs;
     }
@@ -500,6 +511,17 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     public void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
         trustFrameworkBaseClassUris.put(baseClass, uri);
+    }
+
+    private TrustFrameworkBaseClass resolveBaseClass(VerifiableCredential credential) {
+        ContentAccessor ontology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
+        TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(
+                ontology, getStreamManager(), credential.toJson(), trustFrameworkBaseClassUris);
+        if (result == null) {
+            result = UNKNOWN;
+        }
+        log.debug("resolveBaseClass; got type result: {}", result);
+        return result;
     }
 
 
@@ -642,194 +664,5 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         Instant exp = relevant == null ? null : relevant.getNotAfter().toInstant();
         log.debug("hasPEMTrustAnchorAndIsNotExpired.exit; returning: {}", exp);
         return exp;
-    }
-
-
-    private class TypedCredentials {
-
-        private final VerifiablePresentation presentation;
-        private Map<VerifiableCredential, TrustFrameworkBaseClass> credentials;
-
-        TypedCredentials(VerifiablePresentation presentation) {
-            this.presentation = presentation;
-            initCredentials();
-        }
-
-        TypedCredentials(VerifiableCredential credential) {
-            this.presentation = null;
-            Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
-            TrustFrameworkBaseClass bc = getCredentialBaseClass(credential);
-            creds = Map.of(credential, bc);
-            this.credentials = creds;
-        }
-
-        @SuppressWarnings("unchecked")
-        private void initCredentials() {
-            Object obj = presentation.getJsonObject().get("verifiableCredential");
-            Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
-            if (obj == null) {
-                creds = Collections.emptyMap();
-            } else if (obj instanceof List) {
-                List<Map<String, Object>> l = (List<Map<String, Object>>) obj;
-                creds = new LinkedHashMap<>(l.size());
-                for (Map<String, Object> _vc : l) {
-                    VerifiableCredential vc = VerifiableCredential.fromMap(_vc);
-                    vc.setDocumentLoader(this.presentation.getDocumentLoader());
-                    TrustFrameworkBaseClass bc = getCredentialBaseClass(vc);
-                    creds.put(vc, bc);
-                }
-            } else {
-                VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) obj);
-                vc.setDocumentLoader(this.presentation.getDocumentLoader());
-                TrustFrameworkBaseClass bc = getCredentialBaseClass(vc);
-                creds = Map.of(vc, bc);
-            }
-            this.credentials = creds;
-        }
-
-        private VerifiableCredential getFirstVC() {
-            return credentials.isEmpty() ? null : credentials.keySet().iterator().next();
-        }
-
-        Collection<TrustFrameworkBaseClass> getBaseClasses() {
-            return credentials.values().stream().filter(bc -> bc != UNKNOWN).distinct().toList();
-        }
-
-        Collection<VerifiableCredential> getCredentials() {
-            return credentials.keySet();
-        }
-
-        String getHolder() {
-            if (presentation == null) {
-                return null;
-            }
-            URI holder = presentation.getHolder();
-            if (holder == null) {
-                return null;
-            }
-            return holder.toString();
-        }
-
-        String getID() {
-            VerifiableCredential first = getFirstVC();
-            if (first == null) {
-                return null;
-            }
-
-            List<CredentialSubject> subjects = getSubjects(first);
-            if (subjects.isEmpty()) {
-                return getID(first.getJsonObject());
-            }
-            return getID(subjects.getFirst().getJsonObject());
-        }
-
-        String getIssuer() {
-            VerifiableCredential first = getFirstVC();
-            if (first == null) {
-                return null;
-            }
-            URI issuer = first.getIssuer();
-            if (issuer == null) {
-                return null;
-            }
-            return issuer.toString();
-        }
-
-        Instant getIssuanceDate() {
-            VerifiableCredential first = getFirstVC();
-            if (first == null) {
-                return null;
-            }
-            Date issDate = first.getIssuanceDate();
-            if (issDate == null) {
-                // VC 2.0 uses "validFrom" instead of "issuanceDate"
-                Object validFrom = first.getJsonObject().get("validFrom");
-                if (validFrom != null) {
-                    return Instant.parse(validFrom.toString());
-                }
-                return null;
-            }
-            return issDate.toInstant();
-        }
-
-        VerifiablePresentation getPresentation() {
-            return presentation;
-        }
-
-        String getProofMethod() {
-            DataIntegrityProof proof = null;
-            if (presentation == null) {
-                if (!credentials.isEmpty()) {
-                    proof = credentials.keySet().iterator().next().getDataIntegrityProof();
-                }
-            } else {
-                proof = presentation.getDataIntegrityProof();
-            }
-            URI method = proof == null ? null : proof.getVerificationMethod();
-            return method == null ? null : method.toString();
-        }
-
-        boolean hasClasses() {
-            return credentials.values().stream().anyMatch(bc -> bc != UNKNOWN);
-        }
-
-        private TrustFrameworkBaseClass getCredentialBaseClass(VerifiableCredential credential) {
-            ContentAccessor gaxOntology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
-            TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(gaxOntology, getStreamManager(), credential.toJson(), trustFrameworkBaseClassUris);
-            if (result == null) {
-                result = UNKNOWN;
-            }
-            log.debug("getCredentialBaseClass; got type result: {}", result);
-            return result;
-        }
-
-        private List<CredentialSubject> getSubjects(VerifiableCredential credential) {
-            Object obj = credential.getJsonObject().get("credentialSubject");
-            return switch (obj) {
-                case null -> Collections.emptyList();
-                case List<?> list -> {
-                    List<CredentialSubject> result = new ArrayList<>(list.size());
-                    int idx = 0;
-                    for (Object item : list) {
-                        Map<String, Object> subjectMap = toStringKeyMap(item, "credentialSubject[" + idx + "]");
-                        result.add(CredentialSubject.fromMap(subjectMap));
-                        idx++;
-                    }
-                    yield result;
-                }
-                case Map<?, ?> map -> {
-                    Map<String, Object> subjectMap = toStringKeyMap(map, "credentialSubject");
-                    yield List.of(CredentialSubject.fromMap(subjectMap));
-                }
-                default -> throw new VerificationException(
-                        "Semantic error: credentialSubject must be an object or array of objects");
-            };
-        }
-
-        private Map<String, Object> toStringKeyMap(Object value, String context) {
-            if (!(value instanceof Map<?, ?> rawMap)) {
-                throw new VerificationException("Semantic error: " + context + " must be an object");
-            }
-            Map<String, Object> map = new LinkedHashMap<>(rawMap.size());
-            for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
-                if (!(entry.getKey() instanceof String key)) {
-                    throw new VerificationException("Semantic error: " + context + " must use string keys");
-                }
-                map.put(key, entry.getValue());
-            }
-            return map;
-        }
-
-        private String getID(Map<String, Object> map) {
-            Object id = map.get("id");
-            if (id != null) {
-                return id.toString();
-            }
-            id = map.get("@id");
-            if (id != null) {
-                return id.toString();
-            }
-            return null;
-        }
     }
 }
