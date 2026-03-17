@@ -10,9 +10,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 
 import org.bouncycastle.util.Arrays;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,14 +23,15 @@ import org.springframework.stereotype.Component;
 import eu.xfsc.fc.core.dao.SchemaDao;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SchemaDaoImpl implements SchemaDao {
 
-	@Autowired
-	private JdbcTemplate jdbc;
+	private final JdbcTemplate jdbc;
 
 	@Override
 	public int getSchemaCount() {
@@ -110,9 +111,13 @@ public class SchemaDaoImpl implements SchemaDao {
 	}
 
 	@Override
-	public String selectLatestContentByType(String typeName) {
+	public Optional<String> selectLatestContentByType(String typeName) {
 		String sql = "select content from schemafiles where type = ? order by uploadtime desc limit 1";
-		return jdbc.queryForObject(sql, new Object[]{typeName}, new int[]{VARCHAR}, String.class);
+		try {
+			return Optional.ofNullable(jdbc.queryForObject(sql, new Object[]{typeName}, new int[]{VARCHAR}, String.class));
+		} catch (EmptyResultDataAccessException ex) {
+			return Optional.empty();
+		}
 	}
 
 	@Override
@@ -122,10 +127,9 @@ public class SchemaDaoImpl implements SchemaDao {
 
 	private class SchemaAggregateExtractor implements ResultSetExtractor<Map<String, Collection<String>>> {
 
-    	private Map<String, Collection<String>> result = new HashMap<>();
-
 		@Override
 		public Map<String, Collection<String>> extractData(ResultSet rs) throws SQLException, DataAccessException {
+			Map<String, Collection<String>> result = new HashMap<>();
 			while (rs.next()) {
 				result.computeIfAbsent(rs.getString(1), t -> new HashSet<>()).add(rs.getString(2));
 			}

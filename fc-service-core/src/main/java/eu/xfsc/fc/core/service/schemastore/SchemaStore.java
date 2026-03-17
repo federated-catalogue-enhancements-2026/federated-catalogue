@@ -2,8 +2,10 @@ package eu.xfsc.fc.core.service.schemastore;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import lombok.Getter;
 
 public interface SchemaStore {
 
@@ -12,6 +14,7 @@ public interface SchemaStore {
    *
    * TODO: Remove once available as generated from the OpenAPI document.
    */
+  @Getter
   public enum SchemaType {
     ONTOLOGY("text/turtle", "application/rdf+xml", "application/ld+json"),
     SHAPE("text/turtle", "application/rdf+xml", "application/ld+json"),
@@ -25,11 +28,21 @@ public interface SchemaStore {
       this.compatibleAssetContentTypes = List.of(contentTypes);
     }
 
-    /**
-     * Returns the asset content types that can be validated by schemas of this type.
+      /**
+     * Resolves a SchemaType from an HTTP Content-Type header value.
+     * Returns empty for RDF content types (handled by the existing RDF analysis path).
      */
-    public List<String> getCompatibleAssetContentTypes() {
-      return compatibleAssetContentTypes;
+    public static Optional<SchemaType> fromContentType(String contentType) {
+      if (contentType == null) {
+        return Optional.empty();
+      }
+      if (contentType.contains("application/schema+json")) {
+        return Optional.of(JSON);
+      }
+      if (contentType.contains("application/xml")) {
+        return Optional.of(XML);
+      }
+      return Optional.empty();
     }
   }
 

@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.dao;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 
@@ -15,6 +16,6 @@ public interface SchemaDao {
 	int update(String id, String content, Collection<String> terms);
 	String delete(String schemaId);
 	int deleteAll();
-	String selectLatestContentByType(String typeName);
+	Optional<String> selectLatestContentByType(String typeName);
 
 }

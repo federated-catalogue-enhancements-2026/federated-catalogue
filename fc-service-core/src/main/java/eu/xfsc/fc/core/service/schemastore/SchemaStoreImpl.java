@@ -35,7 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
@@ -220,12 +219,9 @@ public class SchemaStoreImpl implements SchemaStore {
   private ContentAccessor createCompositeSchema(SchemaType type) {
     log.debug("createCompositeSchema.enter; got type: {}", type);
     if (type == SchemaType.JSON || type == SchemaType.XML) {
-      try {
-        String content = dao.selectLatestContentByType(type.name());
-        return new ContentAccessorDirect(content);
-      } catch (EmptyResultDataAccessException e) {
-        throw new NotFoundException("No " + type + " schemas found");
-      }
+      String content = dao.selectLatestContentByType(type.name())
+          .orElseThrow(() -> new NotFoundException("No " + type + " schemas found"));
+      return new ContentAccessorDirect(content);
     }
 
     StringWriter out = new StringWriter();

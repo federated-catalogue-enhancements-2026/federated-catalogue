@@ -541,6 +541,16 @@ public class SchemaStoreTest {
   }
 
   @Test
+  void addSchema_xmlSchemaWithoutNamespace_generatesUuidUrn() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema-no-namespace.xsd");
+
+    SchemaStoreResult result = schemaStore.addSchema(content, XML);
+
+    assertTrue(result.id().startsWith("urn:uuid:"));
+    assertNotNull(result.uploadTime());
+  }
+
+  @Test
   void addSchema_invalidXmlSchema_throwsVerificationException() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-xml-schema.xsd");
 
@@ -563,7 +573,7 @@ public class SchemaStoreTest {
     ContentAccessor retrieved = schemaStore.getSchema("https://example.org/schemas/person");
 
     assertNotNull(retrieved);
-    assertTrue(retrieved.getContentAsString().contains("\"$schema\""));
+    assertTrue(retrieved.getContentAsString().contains("https://example.org/schemas/person"));
   }
 
   @Test
@@ -581,6 +591,8 @@ public class SchemaStoreTest {
   void deleteSchema_jsonSchema_succeeds() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
     schemaStore.addSchema(content, JSON);
+
+    assertNotNull(schemaStore.getSchemaList().get(JSON));
 
     schemaStore.deleteSchema("https://example.org/schemas/person");
 
@@ -640,7 +652,7 @@ public class SchemaStoreTest {
     ContentAccessor latest = schemaStore.getCompositeSchema(JSON);
 
     assertNotNull(latest);
-    assertTrue(latest.getContentAsString().contains("\"$schema\""));
+    assertTrue(latest.getContentAsString().contains("https://example.org/schemas/person"));
   }
 
   @Test

@@ -370,9 +370,9 @@ public class SchemaControllerTest {
 
     String schemaId = URLEncoder.encode("https://example.org/schemas/test-person", Charset.defaultCharset());
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", schemaId)
-            .with(csrf())
-            .accept(MediaType.APPLICATION_JSON))
+            .with(csrf()))
         .andExpect(status().isOk())
+        .andExpect(content().contentType("application/schema+json"))
         .andExpect(content().string(org.hamcrest.Matchers.containsString("\"$schema\"")));
   }
 
@@ -440,9 +440,9 @@ public class SchemaControllerTest {
 
     String schemaId = URLEncoder.encode("http://example.org/test-config", Charset.defaultCharset());
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", schemaId)
-            .with(csrf())
-            .accept(MediaType.APPLICATION_JSON))
+            .with(csrf()))
         .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.APPLICATION_XML))
         .andExpect(content().string(org.hamcrest.Matchers.containsString("xs:schema")));
   }
 

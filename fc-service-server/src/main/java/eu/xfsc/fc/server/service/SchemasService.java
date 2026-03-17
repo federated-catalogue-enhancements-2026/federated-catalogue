@@ -36,9 +36,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SchemasService implements SchemasApiDelegate {
 
-  private static final String CONTENT_TYPE_JSON_SCHEMA = "application/schema+json";
-  private static final String CONTENT_TYPE_XML_SCHEMA = "application/xml";
-
   private final SchemaStore schemaStore;
   private final HttpServletRequest httpServletRequest;
   
@@ -59,8 +56,8 @@ public class SchemasService implements SchemasApiDelegate {
     SchemaRecord record = schemaStore.getSchemaRecord(schemaId);
     var responseBuilder = ResponseEntity.ok();
     switch (record.type()) {
-      case JSON -> responseBuilder.contentType(MediaType.parseMediaType(CONTENT_TYPE_JSON_SCHEMA));
-      case XML -> responseBuilder.contentType(MediaType.parseMediaType(CONTENT_TYPE_XML_SCHEMA));
+      case JSON -> responseBuilder.contentType(MediaType.parseMediaType("application/schema+json"));
+      case XML -> responseBuilder.contentType(MediaType.APPLICATION_XML);
       default -> {} // RDF types: preserve original content negotiation behavior
     }
     return responseBuilder.body(record.content());
@@ -123,16 +120,11 @@ public class SchemasService implements SchemasApiDelegate {
    */
   @Override
   public ResponseEntity<SchemaResult> addSchema(String schema) {
-    String contentType = httpServletRequest.getContentType();
     ContentAccessor content = new ContentAccessorDirect(schema);
-    SchemaStoreResult storeResult;
-    if (contentType != null && contentType.contains(CONTENT_TYPE_JSON_SCHEMA)) {
-      storeResult = schemaStore.addSchema(content, SchemaType.JSON);
-    } else if (contentType != null && contentType.contains(CONTENT_TYPE_XML_SCHEMA)) {
-      storeResult = schemaStore.addSchema(content, SchemaType.XML);
-    } else {
-      storeResult = schemaStore.addSchema(content);
-    }
+    String contentType = httpServletRequest.getContentType();
+    SchemaStoreResult storeResult = SchemaType.fromContentType(contentType)
+        .map(type -> schemaStore.addSchema(content, type))
+        .orElseGet(() -> schemaStore.addSchema(content));
     SchemaResult result = toSchemaResult(storeResult);
     return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);
   }
