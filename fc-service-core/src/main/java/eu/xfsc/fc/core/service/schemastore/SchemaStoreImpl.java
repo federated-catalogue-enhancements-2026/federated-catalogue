@@ -221,7 +221,7 @@ public class SchemaStoreImpl implements SchemaStore {
     log.debug("createCompositeSchema.enter; got type: {}", type);
     if (type == SchemaType.JSON || type == SchemaType.XML) {
       try {
-        String content = dao.selectLatestContentByType(type.ordinal());
+        String content = dao.selectLatestContentByType(type.name());
         return new ContentAccessorDirect(content);
       } catch (EmptyResultDataAccessException e) {
         throw new NotFoundException("No " + type + " schemas found");
@@ -278,14 +278,7 @@ public class SchemaStoreImpl implements SchemaStore {
     return result;
   }
 
-  /**
-   * Analyze a non-RDF schema (JSON Schema or XML Schema).
-   *
-   * @param schema The schema content to analyze.
-   * @param type The expected schema type ({@link SchemaType#JSON} or {@link SchemaType#XML}).
-   * @return The analysis result containing validity, extracted ID, and type information.
-   */
-  SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
+  private SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
     SchemaAnalysisResult result = new SchemaAnalysisResult();
     result.setSchemaType(type);
     result.setExtractedUrls(Collections.emptySet());
@@ -423,48 +416,49 @@ public class SchemaStoreImpl implements SchemaStore {
 
   @Override
   public void deleteSchema(String identifier) {
-	Integer type = dao.delete(identifier);
-    log.debug("deleteSchema; delete result: {} for id: {}", type, identifier);
-    if (type == null) {
+	String typeName = dao.delete(identifier);
+    log.debug("deleteSchema; delete result: {} for id: {}", typeName, identifier);
+    if (typeName == null) {
       throw new NotFoundException("Schema with id " + identifier + " was not found");
     }
-    COMPOSITE_SCHEMAS.remove(SchemaType.values()[type]);
+    COMPOSITE_SCHEMAS.remove(SchemaType.valueOf(typeName));
   }
 
   @Override
   public Map<SchemaType, List<String>> getSchemaList() {
-    Map<Integer, Collection<String>> res = dao.selectSchemas();
-    //return res.entrySet().stream().map(e -> Pair.of(SchemaType.values()[e.getKey()], e.getValue()).collect(Collectors.toMap(p.getLeft(), p.getRight())));
-    Map<SchemaType, List<String>> result = new HashMap<>();
-    for (Map.Entry<Integer, Collection<String>> e: res.entrySet()) {
-      result.put(SchemaType.values()[e.getKey()], new ArrayList<>(e.getValue()));	
-    }
-    return result;
+    return toSchemaTypeMap(dao.selectSchemas());
   }
 
   @Override
   public ContentAccessor getSchema(String identifier) {
-	SchemaRecord existing = dao.select(identifier);  
+    return new ContentAccessorDirect(getSchemaRecord(identifier).content());
+  }
+
+  @Override
+  public SchemaRecord getSchemaRecord(String identifier) {
+    SchemaRecord existing = dao.select(identifier);
     if (existing == null) {
       throw new NotFoundException("Schema with id " + identifier + " was not found");
     }
-    return new ContentAccessorDirect(existing.content());
+    return existing;
   }
 
   @Override
   public Map<SchemaType, List<String>> getSchemasForTerm(String entity) {
-    Map<Integer, Collection<String>> res = dao.selectSchemasByTerm(entity);
-    //return result.entrySet().stream().map(e -> SchemaType.values()[e.getKey()]).collect(Collectors.toMap(e.null, null))
+    return toSchemaTypeMap(dao.selectSchemasByTerm(entity));
+  }
+
+  private Map<SchemaType, List<String>> toSchemaTypeMap(Map<String, Collection<String>> input) {
     Map<SchemaType, List<String>> result = new HashMap<>();
-    for (Map.Entry<Integer, Collection<String>> e: res.entrySet()) {
-      result.put(SchemaType.values()[e.getKey()], new ArrayList<>(e.getValue()));	
+    for (Map.Entry<String, Collection<String>> e : input.entrySet()) {
+      result.put(SchemaType.valueOf(e.getKey()), new ArrayList<>(e.getValue()));
     }
     return result;
   }
 
   @Override
   public ContentAccessor getCompositeSchema(SchemaType type) {
-    return COMPOSITE_SCHEMAS.computeIfAbsent(type, t -> createCompositeSchema(t));
+    return COMPOSITE_SCHEMAS.computeIfAbsent(type, this::createCompositeSchema);
   }
 
   @Override

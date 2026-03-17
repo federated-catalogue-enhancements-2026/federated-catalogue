@@ -28,10 +28,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class SchemaDaoImpl implements SchemaDao {
-	
+
 	@Autowired
 	private JdbcTemplate jdbc;
-	
+
 	@Override
 	public int getSchemaCount() {
 		String sql = "select count(*) from schemafiles";
@@ -45,19 +45,19 @@ public class SchemaDaoImpl implements SchemaDao {
 
 			@Override
 			public SchemaRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
-				return new SchemaRecord(rs.getString(1), rs.getString(2), SchemaType.values()[rs.getInt(3)], rs.getTimestamp(4).toInstant(), rs.getTimestamp(5).toInstant(), rs.getString(6), null);
+				return new SchemaRecord(rs.getString(1), rs.getString(2), SchemaType.valueOf(rs.getString(3)), rs.getTimestamp(4).toInstant(), rs.getTimestamp(5).toInstant(), rs.getString(6), null);
 			}
-		}); 
+		});
 	}
 
 	@Override
-	public Map<Integer, Collection<String>> selectSchemas() {
+	public Map<String, Collection<String>> selectSchemas() {
 	    String sql = "select s.type, s.schemaId from schemafiles s";
 	    return jdbc.query(sql, new SchemaAggregateExtractor());
 	}
-	
+
 	@Override
-	public Map<Integer, Collection<String>> selectSchemasByTerm(String term) {
+	public Map<String, Collection<String>> selectSchemasByTerm(String term) {
 	    String sql = "select s.type, s.schemaId from schemafiles s join schematerms t on t.schemaid = s.schemaid where t.term = ?";
 	    return jdbc.query(sql, new Object[] {term}, new int[] {VARCHAR}, new SchemaAggregateExtractor());
 	}
@@ -65,8 +65,9 @@ public class SchemaDaoImpl implements SchemaDao {
 	@Override
 	public boolean insert(SchemaRecord sr) {
 		log.debug("insert.enter; got schema: {}", sr.getId());
-		String insertSchemaSql = "insert into schemafiles(schemaId, nameHash, type, uploadTime, updateTime, content) values(?, ?, ?, ?, ?, ?)";
-		int rows = jdbc.update(insertSchemaSql, sr.getId(), sr.nameHash(), sr.type().ordinal(),
+		String insertSchemaSql = "insert into schemafiles(schemaId, nameHash, type, uploadTime, updateTime, content)"
+				+ " values(?, ?, ?, ?, ?, ?)";
+		int rows = jdbc.update(insertSchemaSql, sr.getId(), sr.nameHash(), sr.type().name(),
 				Timestamp.from(sr.updateTime()), Timestamp.from(sr.updateTime()), sr.content());
 		if (rows > 0 && sr.terms() != null && !sr.terms().isEmpty()) {
 			String insertTermsSql = "insert into schematerms(term, schemaid) select * from unnest(?::varchar[], ?::varchar[])";
@@ -99,34 +100,34 @@ public class SchemaDaoImpl implements SchemaDao {
 	}
 
 	@Override
-	public Integer delete(String schemaId) {
+	public String delete(String schemaId) {
 		String sql = "delete from schemafiles where schemaid = ? returning type";
 		try {
-		  return jdbc.queryForObject(sql, new Object[] {schemaId}, new int[] {java.sql.Types.VARCHAR}, Integer.class);
+		  return jdbc.queryForObject(sql, new Object[] {schemaId}, new int[] {VARCHAR}, String.class);
 		} catch (EmptyResultDataAccessException ex) {
-		  return null;	
+		  return null;
 		}
 	}
 
 	@Override
-	public String selectLatestContentByType(int typeOrdinal) {
-		String sql = "SELECT content FROM schemafiles WHERE type = ? ORDER BY uploadtime DESC LIMIT 1";
-		return jdbc.queryForObject(sql, new Object[]{typeOrdinal}, new int[]{INTEGER}, String.class);
+	public String selectLatestContentByType(String typeName) {
+		String sql = "select content from schemafiles where type = ? order by uploadtime desc limit 1";
+		return jdbc.queryForObject(sql, new Object[]{typeName}, new int[]{VARCHAR}, String.class);
 	}
 
 	@Override
 	public int deleteAll() {
 		return jdbc.update("delete from schemafiles");
 	}
-	
-	private class SchemaAggregateExtractor implements ResultSetExtractor<Map<Integer, Collection<String>>> {
-    	
-    	private Map<Integer, Collection<String>> result = new HashMap<>();
-    	
+
+	private class SchemaAggregateExtractor implements ResultSetExtractor<Map<String, Collection<String>>> {
+
+    	private Map<String, Collection<String>> result = new HashMap<>();
+
 		@Override
-		public Map<Integer, Collection<String>> extractData(ResultSet rs) throws SQLException, DataAccessException {
+		public Map<String, Collection<String>> extractData(ResultSet rs) throws SQLException, DataAccessException {
 			while (rs.next()) {
-				result.computeIfAbsent(rs.getInt(1), t -> new HashSet<>()).add(rs.getString(2));
+				result.computeIfAbsent(rs.getString(1), t -> new HashSet<>()).add(rs.getString(2));
 			}
 			return result;
 		}

@@ -3,9 +3,9 @@ package eu.xfsc.fc.server.service;
 import eu.xfsc.fc.api.generated.model.OntologySchema;
 import eu.xfsc.fc.api.generated.model.SchemaResult;
 import eu.xfsc.fc.core.exception.ClientException;
-import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreResult;
@@ -24,6 +24,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -44,24 +45,25 @@ public class SchemasService implements SchemasApiDelegate {
   /**
    * Service method for GET /schemas/{schemaId} : Get a specific schema.
    *
+   * <p>Sets the Content-Type header based on schema type: {@code application/schema+json} for
+   * JSON schemas, {@code application/xml} for XML schemas, and default content negotiation for
+   * RDF types (ontologies, shapes, vocabularies).
+   *
    * @param id Identifier of the Schema. (required)
-   * @return The schema for the given identifier. Depending on the type of the schema, either an ontology,
-   *         shape graph or controlled vocabulary is returned. (status code 200)
-   *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
-   *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
-   *         or The specified resource was not found (status code 404)
-   *         or May contain hints how to solve the error or indicate what went wrong at the server.
-   *         Must not outline any information about the internal structure of the server. (status code 500)
+   * @return The schema content with appropriate Content-Type for the given identifier. (status code 200)
+   * @throws eu.xfsc.fc.core.exception.NotFoundException if no schema exists with the given id (status code 404)
    */
   @Override
   public ResponseEntity<String> getSchema(String id) {
     String schemaId = URLDecoder.decode(id, Charset.defaultCharset());
-   ContentAccessor accessor = schemaStore.getSchema(schemaId);
-    if (accessor == null) {
-      throw new NotFoundException("There is no Schema with id " + schemaId);
+    SchemaRecord record = schemaStore.getSchemaRecord(schemaId);
+    var responseBuilder = ResponseEntity.ok();
+    switch (record.type()) {
+      case JSON -> responseBuilder.contentType(MediaType.parseMediaType(CONTENT_TYPE_JSON_SCHEMA));
+      case XML -> responseBuilder.contentType(MediaType.parseMediaType(CONTENT_TYPE_XML_SCHEMA));
+      default -> {} // RDF types: preserve original content negotiation behavior
     }
-    String schema = accessor.getContentAsString();
-     return ResponseEntity.ok(schema);
+    return responseBuilder.body(record.content());
   }
 
   /**

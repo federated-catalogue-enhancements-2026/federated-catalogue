@@ -100,6 +100,14 @@ public interface SchemaStore {
   ContentAccessor getSchema(String identifier);
 
   /**
+   * Get the full schema record for the given identifier.
+   *
+   * @param identifier The identifier of the schema.
+   * @return The schema record including type information.
+   */
+  SchemaRecord getSchemaRecord(String identifier);
+
+  /**
    * Get the schemas that defines the given term, grouped by schema type.
    *
    * @param termURI The term to get the defining schemas for.

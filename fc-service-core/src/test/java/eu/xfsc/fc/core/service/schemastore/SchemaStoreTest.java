@@ -51,6 +51,7 @@ import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -503,69 +504,23 @@ public class SchemaStoreTest {
   }
 
   @Test
-  void analyzeNonRdfSchema_validJsonSchema_extractsId() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
-
-    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON);
-
-    assertTrue(result.isValid());
-    assertEquals(JSON, result.getSchemaType());
-    assertEquals("https://example.org/schemas/person", result.getExtractedId());
-    assertNotNull(result.getExtractedUrls());
-    assertTrue(result.getExtractedUrls().isEmpty());
-  }
-
-  @Test
-  void analyzeNonRdfSchema_jsonSchemaWithoutId_generatesUuidUrn() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema-no-id.json");
-
-    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON);
-
-    assertTrue(result.isValid());
-    assertEquals(JSON, result.getSchemaType());
-    assertTrue(result.getExtractedId().startsWith("urn:uuid:"));
-  }
-
-  @Test
-  void analyzeNonRdfSchema_invalidJsonSchema_notValid() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-json-schema.json");
-
-    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, JSON);
-
-    assertFalse(result.isValid());
-    assertNotNull(result.getErrorMessage());
-    assertTrue(result.getErrorMessage().startsWith("Invalid JSON Schema:"));
-  }
-
-  @Test
-  void analyzeNonRdfSchema_validXmlSchema_extractsNamespace() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
-
-    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, XML);
-
-    assertTrue(result.isValid());
-    assertEquals(XML, result.getSchemaType());
-    assertEquals("http://example.org/config", result.getExtractedId());
-  }
-
-  @Test
-  void analyzeNonRdfSchema_invalidXmlSchema_notValid() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/invalid-xml-schema.xsd");
-
-    SchemaAnalysisResult result = schemaStore.analyzeNonRdfSchema(content, XML);
-
-    assertFalse(result.isValid());
-    assertNotNull(result.getErrorMessage());
-    assertTrue(result.getErrorMessage().startsWith("Invalid XML Schema:"));
-  }
-
-  @Test
   void addSchema_validJsonSchema_returnsResult() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
 
     SchemaStoreResult result = schemaStore.addSchema(content, JSON);
 
     assertEquals("https://example.org/schemas/person", result.id());
+    assertNotNull(result.uploadTime());
+  }
+
+  @Test
+  void addSchema_jsonSchemaWithoutId_generatesUuidUrn() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema-no-id.json");
+
+    SchemaStoreResult result = schemaStore.addSchema(content, JSON);
+
+    assertTrue(result.id().startsWith("urn:uuid:"));
+    assertNotNull(result.uploadTime());
   }
 
   @Test
@@ -582,6 +537,7 @@ public class SchemaStoreTest {
     SchemaStoreResult result = schemaStore.addSchema(content, XML);
 
     assertEquals("http://example.org/config", result.id());
+    assertNotNull(result.uploadTime());
   }
 
   @Test
@@ -685,6 +641,16 @@ public class SchemaStoreTest {
 
     assertNotNull(latest);
     assertTrue(latest.getContentAsString().contains("\"$schema\""));
+  }
+
+  @Test
+  void getCompositeSchema_emptyJsonStore_throwsNotFoundException() {
+    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getCompositeSchema(JSON));
+  }
+
+  @Test
+  void getCompositeSchema_emptyXmlStore_throwsNotFoundException() {
+    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getCompositeSchema(XML));
   }
 
   private static boolean isExistTriple(Model model, String sub, String pre, String obj) {
