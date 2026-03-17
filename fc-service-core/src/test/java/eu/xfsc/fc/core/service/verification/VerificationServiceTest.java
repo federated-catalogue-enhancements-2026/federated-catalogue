@@ -16,6 +16,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -678,6 +680,165 @@ public class VerificationServiceTest {
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
     assertTrue(result.getWarnings() == null || result.getWarnings().isEmpty(),
         "No warnings expected when upload contains no fcmeta triples");
+  }
+
+  // --- VC 2.0 tests ---
+
+  @Test
+  void extractClaims_vc2StandaloneVC_returnsOnlyCredentialSubjectTriples() {
+    ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
+
+    List<CredentialClaim> claims = verificationService.extractClaims(content);
+
+    assertNotNull(claims);
+    assertFalse(claims.isEmpty(), "VC 2.0 standalone VC should produce non-empty claims");
+    CredentialClaim expectedType = new CredentialClaim(
+        "<did:web:participant.example.com>",
+        "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+        "<https://w3id.org/gaia-x/core#Participant>");
+    CredentialClaim expectedName = new CredentialClaim(
+        "<did:web:participant.example.com>",
+        "<https://w3id.org/gaia-x/core#legalName>",
+        "\"Example Corp\"");
+    assertTrue(claims.contains(expectedType), "rdf:type triple must be present");
+    assertTrue(claims.contains(expectedName), "legalName triple must be present");
+    boolean noIssuerSubject = claims.stream()
+        .noneMatch(c -> c.getSubjectString().contains("issuer.example.com"));
+    assertTrue(noIssuerSubject, "Issuer IRI must not appear as a subject");
+  }
+
+  @Test
+  void extractClaims_vc2VpWithSingleVC_returnsOnlyCredentialSubjectTriples() {
+    ContentAccessor content = getAccessor("Claims-Tests/participantVP2.jsonld");
+
+    List<CredentialClaim> claims = verificationService.extractClaims(content);
+
+    assertNotNull(claims);
+    assertFalse(claims.isEmpty(), "VC 2.0 VP should produce non-empty claims");
+    CredentialClaim expectedType = new CredentialClaim(
+        "<did:web:participant.example.com>",
+        "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
+        "<https://w3id.org/gaia-x/core#Participant>");
+    assertTrue(claims.contains(expectedType), "rdf:type triple from VP-wrapped VC must be present");
+    boolean noHolderSubject = claims.stream()
+        .noneMatch(c -> c.getSubjectString().contains("vp2-1"));
+    assertTrue(noHolderSubject, "VP holder IRI must not appear as a subject");
+  }
+
+  @Test
+  void extractClaims_vc2VpWithMultipleVCs_returnsAllCredentialSubjectTriples() {
+    ContentAccessor content = getAccessor("Claims-Tests/participantVP2_multi.jsonld");
+
+    List<CredentialClaim> claims = verificationService.extractClaims(content);
+
+    assertNotNull(claims);
+    Set<String> subjects = new HashSet<>();
+    claims.forEach(c -> subjects.add(c.getSubjectString()));
+    assertTrue(subjects.contains("<did:web:participant-a.example.com>"),
+        "Claims from first VC must be present");
+    assertTrue(subjects.contains("<did:web:participant-b.example.com>"),
+        "Claims from second VC must be present");
+  }
+
+  @Test
+  void extractClaims_vc2MultipleCredentialSubjects_returnsAllSubjectTriples() {
+    ContentAccessor content = getAccessor("Claims-Tests/participantVC2_multi_cs.jsonld");
+
+    List<CredentialClaim> claims = verificationService.extractClaims(content);
+
+    assertNotNull(claims);
+    Set<String> subjects = new HashSet<>();
+    claims.forEach(c -> subjects.add(c.getSubjectString()));
+    assertTrue(subjects.contains("<did:web:participant-a.example.com>"),
+        "Claims from first credentialSubject must be present");
+    assertTrue(subjects.contains("<did:web:participant-b.example.com>"),
+        "Claims from second credentialSubject must be present");
+  }
+
+  @Test
+  void verifyCredential_vc2WithValidFrom_passesSemanticValidation() {
+    schemaStore.initializeDefaultSchemas();
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+
+    ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
+    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
+
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    assertNotNull(vr);
+    assertTrue(vr instanceof CredentialVerificationResultParticipant,
+        "VC 2.0 with gaia-x/core#Participant type must be recognized");
+    assertNotNull(vr.getIssuedDateTime(), "issuedDateTime must be non-null for VC 2.0 validFrom");
+    assertEquals(Instant.parse("2026-01-30T00:00:00Z"), vr.getIssuedDateTime());
+  }
+
+  @Test
+  void verifyCredential_vc2WithValidUntilInFuture_passesSemanticValidation() {
+    schemaStore.initializeDefaultSchemas();
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+
+    String vcJson = "{"
+        + "\"@context\":[\"https://www.w3.org/ns/credentials/v2\"],"
+        + "\"type\":[\"VerifiableCredential\"],"
+        + "\"issuer\":\"did:web:issuer.example.com\","
+        + "\"validFrom\":\"2026-01-30T00:00:00Z\","
+        + "\"validUntil\":\"2099-01-01T00:00:00Z\","
+        + "\"credentialSubject\":{"
+        + "\"id\":\"did:web:participant.example.com\","
+        + "\"@type\":[\"https://w3id.org/gaia-x/core#Participant\"],"
+        + "\"https://w3id.org/gaia-x/core#legalName\":[{\"@value\":\"Example Corp\"}]"
+        + "}}";
+    ContentAccessor content = new ContentAccessorDirect(vcJson);
+    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
+
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    assertNotNull(vr, "VC 2.0 with future validUntil must pass semantic validation");
+  }
+
+  @Test
+  void verifyCredential_vc2WithValidUntilInPast_failsSemanticValidation() {
+    String vcJson = "{"
+        + "\"@context\":[\"https://www.w3.org/ns/credentials/v2\"],"
+        + "\"type\":[\"VerifiableCredential\"],"
+        + "\"issuer\":\"did:web:issuer.example.com\","
+        + "\"validFrom\":\"2020-01-01T00:00:00Z\","
+        + "\"validUntil\":\"2021-01-01T00:00:00Z\","
+        + "\"credentialSubject\":{"
+        + "\"id\":\"did:web:participant.example.com\","
+        + "\"@type\":[\"https://w3id.org/gaia-x/core#Participant\"],"
+        + "\"https://w3id.org/gaia-x/core#legalName\":[{\"@value\":\"Example Corp\"}]"
+        + "}}";
+    ContentAccessor content = new ContentAccessorDirect(vcJson);
+
+    Exception ex = assertThrowsExactly(VerificationException.class,
+        () -> verificationService.verifyCredential(content, true, false, false, false));
+    assertTrue(ex.getMessage().contains("validUntil") || ex.getMessage().contains("expirationDate"),
+        "Error must mention expired date field, got: " + ex.getMessage());
+  }
+
+  @Test
+  void verifyCredential_vc1WithIssuanceDate_stillPasses() {
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
+
+    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
+
+    assertNotNull(vr, "VC 1.1 with issuanceDate must still pass (regression)");
+    assertTrue(vr instanceof CredentialVerificationResultParticipant);
+  }
+
+  @Test
+  void verifyCredential_vc2JwtWrapped_passesAfterUnwrap() throws Exception {
+    String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
+    String header = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    String jwt = header + "." + payload + ".AAAA";
+    ContentAccessor content = new ContentAccessorDirect(jwt);
+
+    CredentialVerificationResult vr = verificationService.verifyCredential(content, false, false, false, false);
+
+    assertNotNull(vr, "JWT-wrapped VC 2.0 must be unwrapped and processed without exception");
   }
 
 }

@@ -103,6 +103,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
   private Map<TrustFrameworkBaseClass, String> trustFrameworkBaseClassUris;
   @Autowired
+  private JwtContentPreprocessor jwtPreprocessor;
+
+  @Autowired
   private ProtectedNamespaceFilter protectedNamespaceFilter;
   @Autowired
   private SchemaStore schemaStore;
@@ -157,6 +160,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     log.debug("verifyCredential.enter; strict: {}, expectedType: {}, verifySemantics: {}, verifySchema: {}, verifyVPSignatures: {}, verifyVCSignatures: {}",
             strict, expectedClass, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     long stamp = System.currentTimeMillis();
+
+    // JWT unwrapping (no signature verification — see Issue #12)
+    payload = jwtPreprocessor.unwrap(payload);
 
     // syntactic validation
     JsonLDObject ld = parseContent(payload);
@@ -374,18 +380,37 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     if (checkAbsence(credential, "issuer")) {
       sb.append(" - VerifiableCredential[").append(idx).append("] must contain 'issuer' property").append(sep);
     }
-    if (checkAbsence(credential, "issuanceDate")) {
-      sb.append(" - VerifiableCredential[").append(idx).append("] must contain 'issuanceDate' property").append(sep);
+    boolean hasIssuanceDate = !checkAbsence(credential, "issuanceDate");
+    boolean hasValidFrom = !checkAbsence(credential, "validFrom");
+    if (!hasIssuanceDate && !hasValidFrom) {
+      sb.append(" - VerifiableCredential[").append(idx)
+          .append("] must contain 'issuanceDate' or 'validFrom' property").append(sep);
     }
 
     Date today = Date.from(Instant.now());
-    Date issDate = credential.getIssuanceDate();
+    Date issDate = null;
+    if (hasIssuanceDate) {
+      issDate = credential.getIssuanceDate();
+    } else if (hasValidFrom) {
+      Object validFromObj = credential.getJsonObject().get("validFrom");
+      if (validFromObj != null) {
+        issDate = Date.from(Instant.parse(validFromObj.toString()));
+      }
+    }
     if (issDate != null && issDate.after(today)) {
-      sb.append(" - 'issuanceDate' of VerifiableCredential[").append(idx).append("] must be in the past").append(sep);
+      sb.append(" - 'issuanceDate'/'validFrom' of VerifiableCredential[").append(idx)
+          .append("] must be in the past").append(sep);
     }
     Date expDate = credential.getExpirationDate();
+    if (expDate == null) {
+      Object validUntilObj = credential.getJsonObject().get("validUntil");
+      if (validUntilObj != null) {
+        expDate = Date.from(Instant.parse(validUntilObj.toString()));
+      }
+    }
     if (expDate != null && expDate.before(today)) {
-      sb.append(" - 'expirationDate' of VerifiableCredential[").append(idx).append("] must be in the future").append(sep);
+      sb.append(" - 'expirationDate'/'validUntil' of VerifiableCredential[").append(idx)
+          .append("] must be in the future").append(sep);
     }
     return sb.toString();
   }
@@ -706,6 +731,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
       }
       Date issDate = first.getIssuanceDate();
       if (issDate == null) {
+        // VC 2.0 uses "validFrom" instead of "issuanceDate"
+        Object validFrom = first.getJsonObject().get("validFrom");
+        if (validFrom != null) {
+          return Instant.parse(validFrom.toString());
+        }
         return Instant.now();
       }
       return issDate.toInstant();

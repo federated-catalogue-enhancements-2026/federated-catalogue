@@ -127,6 +127,8 @@ federated-catalogue:
   rdf:
     content-types:
       - application/ld+json
+      - application/vc
+      - application/vp
       # Uncomment as VerificationService gains support for these formats:
       # - text/turtle
       # - application/n-triples
