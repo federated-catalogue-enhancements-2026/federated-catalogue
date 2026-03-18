@@ -120,7 +120,6 @@
         <dependency>
             <groupId>com.google.crypto.tink</groupId>
             <artifactId>tink</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
