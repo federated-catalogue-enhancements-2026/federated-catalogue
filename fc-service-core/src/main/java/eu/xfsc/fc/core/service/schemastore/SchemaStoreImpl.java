@@ -218,12 +218,6 @@ public class SchemaStoreImpl implements SchemaStore {
 
   private ContentAccessor createCompositeSchema(SchemaType type) {
     log.debug("createCompositeSchema.enter; got type: {}", type);
-    if (type == SchemaType.JSON || type == SchemaType.XML) {
-      String content = dao.selectLatestContentByType(type.name())
-          .orElseThrow(() -> new NotFoundException("No " + type + " schemas found"));
-      return new ContentAccessorDirect(content);
-    }
-
     StringWriter out = new StringWriter();
     Map<SchemaType, List<String>> schemaList = getSchemaList();
 
@@ -432,11 +426,8 @@ public class SchemaStoreImpl implements SchemaStore {
 
   @Override
   public SchemaRecord getSchemaRecord(String identifier) {
-    SchemaRecord existing = dao.select(identifier);
-    if (existing == null) {
-      throw new NotFoundException("Schema with id " + identifier + " was not found");
-    }
-    return existing;
+      return dao.select(identifier)
+              .orElseThrow(() -> new NotFoundException("Schema with id " + identifier + " was not found"));
   }
 
   @Override
@@ -455,6 +446,13 @@ public class SchemaStoreImpl implements SchemaStore {
   @Override
   public ContentAccessor getCompositeSchema(SchemaType type) {
     return COMPOSITE_SCHEMAS.computeIfAbsent(type, this::createCompositeSchema);
+  }
+
+  @Override
+  public ContentAccessor getLatestSchemaByType(SchemaType type) {
+    String content = dao.selectLatestContentByType(type.name())
+        .orElseThrow(() -> new NotFoundException("No " + type + " schemas found"));
+    return new ContentAccessorDirect(content);
   }
 
   @Override

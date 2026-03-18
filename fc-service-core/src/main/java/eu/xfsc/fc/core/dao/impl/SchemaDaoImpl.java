@@ -40,18 +40,13 @@ public class SchemaDaoImpl implements SchemaDao {
 	}
 
 	@Override
-	public SchemaRecord select(String schemaId) {
+	public Optional<SchemaRecord> select(String schemaId) {
 		String sql = "select schemaId, nameHash, type, uploadTime, updateTime, content from schemafiles where schemaid = ?";
 		try {
-			return jdbc.queryForObject(sql, new Object[] {schemaId}, new int[] {VARCHAR}, new RowMapper<SchemaRecord>() {
-
-				@Override
-				public SchemaRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
-					return new SchemaRecord(rs.getString(1), rs.getString(2), SchemaType.valueOf(rs.getString(3)), rs.getTimestamp(4).toInstant(), rs.getTimestamp(5).toInstant(), rs.getString(6), null);
-				}
-			});
+			return Optional.ofNullable(jdbc.queryForObject(sql, new Object[]{schemaId}, new int[]{VARCHAR},
+					(rs, rowNum) -> new SchemaRecord(rs.getString(1), rs.getString(2), SchemaType.valueOf(rs.getString(3)), rs.getTimestamp(4).toInstant(), rs.getTimestamp(5).toInstant(), rs.getString(6), null)));
 		} catch (EmptyResultDataAccessException ex) {
-			return null;
+			return Optional.empty();
 		}
 	}
 

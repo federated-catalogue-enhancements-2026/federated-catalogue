@@ -105,8 +105,11 @@ public class SchemasService implements SchemasApiDelegate {
       throw new ClientException("Please check the value of the type query parameter!");
     }
     // TODO: 31.08.2022 Why is the term parameter used here (not passed anywhere, not specified in the doс)?
-    String schema = schemaStore.getCompositeSchema(SchemaType.valueOf(type.toUpperCase())).getContentAsString();
-    return ResponseEntity.ok(schema);
+    SchemaType schemaType = SchemaType.valueOf(type.toUpperCase());
+    ContentAccessor content = (schemaType == SchemaType.JSON || schemaType == SchemaType.XML)
+        ? schemaStore.getLatestSchemaByType(schemaType)
+        : schemaStore.getCompositeSchema(schemaType);
+    return ResponseEntity.ok(content.getContentAsString());
   }
 
   /**

@@ -9,7 +9,7 @@ import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 public interface SchemaDao {
 
 	int getSchemaCount();
-	SchemaRecord select(String schemaId);
+	Optional<SchemaRecord> select(String schemaId);
 	Map<String, Collection<String>> selectSchemas();
 	Map<String, Collection<String>> selectSchemasByTerm(String term);
 	boolean insert(SchemaRecord schema);

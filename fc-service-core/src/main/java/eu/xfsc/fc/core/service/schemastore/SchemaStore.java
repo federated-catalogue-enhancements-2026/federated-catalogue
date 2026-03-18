@@ -149,6 +149,14 @@ public interface SchemaStore {
   ContentAccessor getCompositeSchema(SchemaType schemaType);
 
   /**
+   * Get the latest schema for a non-RDF type.
+   *
+   * @param schemaType The schema type (JSON or XML).
+   * @return The content of the latest schema of the given type.
+   */
+  ContentAccessor getLatestSchemaByType(SchemaType schemaType);
+
+  /**
    * Remove all Schemas from the SchemaStore.
    */
   void clear();

@@ -645,24 +645,24 @@ public class SchemaStoreTest {
   }
 
   @Test
-  void getCompositeSchema_jsonType_returnsLatestContent() {
+  void getLatestSchemaByType_jsonType_returnsLatestContent() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
     schemaStore.addSchema(content, JSON);
 
-    ContentAccessor latest = schemaStore.getCompositeSchema(JSON);
+    ContentAccessor latest = schemaStore.getLatestSchemaByType(JSON);
 
     assertNotNull(latest);
     assertTrue(latest.getContentAsString().contains("https://example.org/schemas/person"));
   }
 
   @Test
-  void getCompositeSchema_emptyJsonStore_throwsNotFoundException() {
-    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getCompositeSchema(JSON));
+  void getLatestSchemaByType_emptyJsonStore_throwsNotFoundException() {
+    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getLatestSchemaByType(JSON));
   }
 
   @Test
-  void getCompositeSchema_emptyXmlStore_throwsNotFoundException() {
-    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getCompositeSchema(XML));
+  void getLatestSchemaByType_emptyXmlStore_throwsNotFoundException() {
+    assertThrowsExactly(NotFoundException.class, () -> schemaStore.getLatestSchemaByType(XML));
   }
 
   private static boolean isExistTriple(Model model, String sub, String pre, String obj) {
