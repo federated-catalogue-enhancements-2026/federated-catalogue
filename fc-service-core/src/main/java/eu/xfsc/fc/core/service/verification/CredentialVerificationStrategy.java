@@ -157,7 +157,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         // Read content once (fixes double-read)
         String body = payload.getContentAsString().strip();
-        payload = new ContentAccessorDirect(body);
+        payload = new ContentAccessorDirect(body, payload.getContentType());
         boolean isJwt = jwtPreprocessor.isJwtWrapped(payload);
         // JWT guard — fires before any processor (no signature verification — see Issue #12)
         if (verifyVCSignatures && isJwt) {
