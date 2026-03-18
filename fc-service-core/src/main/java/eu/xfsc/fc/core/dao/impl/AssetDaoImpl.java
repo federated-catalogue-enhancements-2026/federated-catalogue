@@ -57,10 +57,10 @@ public class AssetDaoImpl implements AssetDao {
 	    log.debug("selectBySubjectId.enter; subjectId: '{}'", subjectId);
 	    String sql = "select asset_hash, subjectid, status, issuer, uploadtime, statustime, expirationtime, "
 	        + "validators, content_type, file_size, original_filename, content "
-	        + "from assets where subjectid = :subjectId order by status asc limit 1";
+	        + "from assets where subjectid = :subjectId and status = :activeStatus";
 	    AssetRecord assetRecord;
 	    try {
-	      assetRecord = jdbc.queryForObject(sql, Map.of("subjectId", subjectId), new AssetMetaMapper());
+	      assetRecord = jdbc.queryForObject(sql, Map.of("subjectId", subjectId, "activeStatus", AssetStatus.ACTIVE.ordinal()), new AssetMetaMapper());
 	      log.debug("selectBySubjectId.exit; found asset with hash: {}", assetRecord.getAssetHash());
 	    } catch (EmptyResultDataAccessException ex) {
 	      assetRecord = null;

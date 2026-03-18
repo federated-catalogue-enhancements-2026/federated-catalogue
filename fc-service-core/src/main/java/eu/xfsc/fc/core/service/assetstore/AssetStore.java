@@ -100,9 +100,10 @@ public interface AssetStore {
    * @throws eu.xfsc.fc.core.exception.ConflictException if an asset with the same hash already exists.
    * @throws IllegalStateException if the asset ID is null.
    */
-  AssetMetadata storeUnverfiied(AssetMetadata assetMetadata, String originalFilename);
+  AssetMetadata storeUnverified(AssetMetadata assetMetadata, String originalFilename);
 
   // --- IRI-based methods for public API ---
+  // Note: All IRI-based methods resolve to the active asset only.
 
   /**
    * Fetch an active asset by its IRI (subjectId).

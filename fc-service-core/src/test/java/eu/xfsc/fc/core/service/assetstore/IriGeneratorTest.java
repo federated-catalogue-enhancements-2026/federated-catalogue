@@ -29,7 +29,7 @@ class IriGeneratorTest {
     // --- UUID URN generation ---
 
     @Test
-    void shouldGenerateValidUuidUrn() {
+    void generateUuidUrn_called_returnsValidRfc4122Urn() {
         String urn = iriGenerator.generateUuidUrn();
         assertNotNull(urn);
         assertTrue(urn.startsWith("urn:uuid:"));
@@ -38,22 +38,22 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldGenerateUniqueUrns() {
+    void generateUuidUrn_calledTwice_returnsUniqueValues() {
         String urn1 = iriGenerator.generateUuidUrn();
         String urn2 = iriGenerator.generateUuidUrn();
         assertNotEquals(urn1, urn2);
     }
 
-    // --- DID generation (demonstration per SRS verification) ---
+    // --- DID generation (demonstration utility) ---
 
     @Test
-    void shouldGenerateDidWeb() {
+    void generateDid_webMethod_returnsDidWebString() {
         String did = iriGenerator.generateDid("web", "example.com");
         assertEquals("did:web:example.com", did);
     }
 
     @Test
-    void shouldGenerateDidKey() {
+    void generateDid_keyMethod_returnsDidKeyString() {
         String did = iriGenerator.generateDid("key", "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
         assertEquals("did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK", did);
     }
@@ -61,7 +61,7 @@ class IriGeneratorTest {
     // --- RDF ID extraction ---
 
     @Test
-    void shouldExtractIdFromCredentialSubject() {
+    void resolveIri_credentialSubjectWithId_returnsExtractedDid() {
         String jsonLd = """
                 {
                     "@context": ["https://www.w3.org/2018/credentials/v1"],
@@ -78,7 +78,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldExtractIdFromCredentialSubjectArray() {
+    void resolveIri_credentialSubjectArray_returnsFirstId() {
         String jsonLd = """
                 {
                     "@context": ["https://www.w3.org/2018/credentials/v1"],
@@ -94,7 +94,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldExtractIdFromJsonLdAtId() {
+    void resolveIri_jsonLdWithAtId_returnsAtIdValue() {
         String jsonLd = """
                 {
                     "@context": "https://www.w3.org/ns/shacl",
@@ -108,7 +108,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldExtractOwlOntologyIri() {
+    void resolveIri_owlOntology_returnsOntologyIri() {
         String jsonLd = """
                 {
                     "@id": "http://example.org/MyOntology",
@@ -122,7 +122,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldExtractSkosConceptSchemeIri() {
+    void resolveIri_skosConceptScheme_returnsSchemeIri() {
         String jsonLd = """
                 {
                     "@id": "http://example.org/MyScheme",
@@ -136,7 +136,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldFallbackToUuidWhenNoIdInRdf() {
+    void resolveIri_rdfWithoutId_fallsBackToUuidUrn() {
         String jsonLd = """
                 {
                     "@context": "https://schema.org/",
@@ -149,7 +149,7 @@ class IriGeneratorTest {
     }
 
     @Test
-    void shouldFallbackToUuidWhenContentIsInvalidJson() {
+    void resolveIri_invalidJsonContent_fallsBackToUuidUrn() {
         ContentAccessorDirect content = new ContentAccessorDirect("not json at all");
         String iri = iriGenerator.resolveIri(content, true);
         assertTrue(iri.startsWith("urn:uuid:"));
@@ -158,14 +158,14 @@ class IriGeneratorTest {
     // --- Non-RDF resolution ---
 
     @Test
-    void shouldGenerateUuidForNonRdf() {
+    void resolveIri_nonRdfNullContent_returnsUuidUrn() {
         String iri = iriGenerator.resolveIri(null, false);
         assertTrue(iri.startsWith("urn:uuid:"));
         assertTrue(UUID_URN_PATTERN.matcher(iri).matches());
     }
 
     @Test
-    void shouldGenerateUuidForNonRdfEvenWithContent() {
+    void resolveIri_nonRdfWithContent_returnsUuidUrn() {
         ContentAccessorDirect content = new ContentAccessorDirect("some pdf bytes");
         String iri = iriGenerator.resolveIri(content, false);
         assertTrue(iri.startsWith("urn:uuid:"));
@@ -174,7 +174,7 @@ class IriGeneratorTest {
     // --- credentialSubject.id takes priority over @id ---
 
     @Test
-    void credentialSubjectIdTakesPriorityOverAtId() {
+    void resolveIri_bothCredentialSubjectAndAtId_prefersCredentialSubject() {
         String jsonLd = """
                 {
                     "@id": "http://example.org/presentation",

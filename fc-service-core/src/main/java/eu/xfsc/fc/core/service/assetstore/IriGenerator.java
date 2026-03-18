@@ -21,9 +21,9 @@ import lombok.extern.slf4j.Slf4j;
  * SHACL shape IRI, or SKOS concept scheme IRI).
  * If no IRI can be extracted, a UUID URN is generated as fallback.</p>
  *
- * <p>DIDs are <b>extracted</b> from RDF content, not generated for assets.
- * The {@link #generateDid} method is a utility for demonstration purposes
- * per the SRS verification requirement.</p>
+ * <p><b>Note:</b> DIDs are <b>extracted</b> from RDF content, not generated for assets.
+ * The {@link #generateDid} method is a utility for demonstration purposes,
+ * verifying that DID construction and validation work correctly.</p>
  */
 @Slf4j
 @Component
@@ -69,8 +69,10 @@ public class IriGenerator {
 
     /**
      * Generate a DID for a given method and identifier.
-     * Utility method for demonstration per SRS verification requirement.
-     * Not used in the asset upload flow — DIDs are extracted from RDF content.
+     * Utility method for demonstration and testing — verifies DID construction
+     * and validation.
+     *
+     * <p><b>Note:</b> Not used in the asset upload flow; DIDs are extracted from RDF content.</p>
      *
      * @param method     the DID method (e.g. "web", "key")
      * @param identifier the method-specific identifier
@@ -91,7 +93,7 @@ public class IriGenerator {
      *   <li>{@code @id} — generic JSON-LD</li>
      * </ol>
      *
-     * <p>For OWL ontologies, SHACL shapes, and SKOS concept schemes,
+     * <p><b>Note:</b> For OWL ontologies, SHACL shapes, and SKOS concept schemes,
      * the {@code @id} extraction covers them as they use standard JSON-LD.</p>
      *
      * @param content the RDF content accessor
