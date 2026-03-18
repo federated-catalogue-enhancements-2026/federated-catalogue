@@ -1,21 +1,34 @@
 package eu.xfsc.fc.core.service.assetstore;
 
-import static eu.xfsc.fc.core.util.TestUtil.assertThatAssetHasTheSameData;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
+import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.core.config.DatabaseConfig;
+import eu.xfsc.fc.core.config.DidResolverConfig;
+import eu.xfsc.fc.core.config.DocumentLoaderConfig;
+import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
-import org.junit.jupiter.api.AfterAll;
+import eu.xfsc.fc.core.dao.impl.AssetDaoImpl;
+import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.NotFoundException;
+import eu.xfsc.fc.core.pojo.AssetFilter;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
+import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.pojo.PaginatedResults;
+import eu.xfsc.fc.core.pojo.Validator;
+import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
+import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
+import eu.xfsc.fc.core.util.HashUtils;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
@@ -26,35 +39,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.DidResolverConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderProperties;
-import eu.xfsc.fc.core.dao.impl.AssetDaoImpl;
-import eu.xfsc.fc.core.exception.ConflictException;
-import eu.xfsc.fc.core.exception.NotFoundException;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.GraphQuery;
-import eu.xfsc.fc.core.pojo.PaginatedResults;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.pojo.AssetFilter;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.Validator;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
-import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
-import eu.xfsc.fc.core.util.HashUtils;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static eu.xfsc.fc.core.util.TestUtil.assertThatAssetHasTheSameData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -62,7 +62,7 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {AssetStoreTest.TestApplication.class, AssetStoreImpl.class, AssetDaoImpl.class, AssetStoreTest.class,
   DummyGraphStore.class, DatabaseConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, DidResolverConfig.class, HttpDocumentResolver.class,
-  RdfContentTypeProperties.class, FileStoreConfig.class})
+  RdfContentTypeProperties.class, FileStoreConfig.class, DidDocumentResolver.class, JwtSignatureVerifier.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 //@Import(EmbeddedNeo4JConfig.class)
@@ -169,7 +169,7 @@ public class AssetStoreTest {
     claims = graphStore.queryData(new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
     Assertions.assertEquals(0, claims.size());
 
-    Assertions.assertThrows(NotFoundException.class, () -> {assetStorePublisher.getByHash(hash);
+    assertThrows(NotFoundException.class, () -> {assetStorePublisher.getByHash(hash);
     });
   }
 
@@ -202,10 +202,10 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash1);
     assetStorePublisher.deleteAsset(hash2);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash2);
     });
   }
@@ -229,7 +229,7 @@ public class AssetStoreTest {
 
     final AssetMetadata assetMeta2 = createAssetMetadata("TestAsset/1", "TestUser/1",
         Instant.parse("2022-01-01T13:00:00Z"), Instant.parse("2022-01-02T13:00:00Z"), content1);
-    Assertions.assertThrows(ConflictException.class, () -> {
+    assertThrows(ConflictException.class, () -> {
       assetStorePublisher.storeCredential(assetMeta2, createVerificationResult(assetMeta2));
     });
 
@@ -246,7 +246,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash1);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
   }
@@ -278,7 +278,7 @@ public class AssetStoreTest {
     byHash = assetStorePublisher.getByHash(hash);
     assertEquals(AssetStatus.REVOKED, byHash.getStatus(), "Status should have been changed to 'revoked'");
 
-    Assertions.assertThrows(ConflictException.class, () -> {
+    assertThrows(ConflictException.class, () -> {
       assetStorePublisher.changeLifeCycleStatus(hash, AssetStatus.ACTIVE);
     });
     byHash = assetStorePublisher.getByHash(hash);
@@ -292,7 +292,7 @@ public class AssetStoreTest {
     log.debug("test04ChangeAssetStatus-2; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked asset should not appear in queries");
 
-    Assertions.assertThrows(ConflictException.class, () -> {
+    assertThrows(ConflictException.class, () -> {
       assetStorePublisher.storeCredential(assetMeta, createVerificationResult(0));
     }, "Adding the same asset after revocation should not be possible.");
 
@@ -305,7 +305,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
   }
@@ -366,7 +366,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
     log.info("#### Test 05 succeeded.");
@@ -397,7 +397,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
 
@@ -431,7 +431,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
     log.info("#### Test 07 succeeded.");
@@ -462,7 +462,7 @@ public class AssetStoreTest {
     assertEquals(0, matchCount, "expected 0 filter matches, but got " + matchCount);
 
     assetStorePublisher.deleteAsset(hash);
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
 
@@ -519,13 +519,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash2);
     assetStorePublisher.deleteAsset(hash3);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash2);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash3);
     });
 
@@ -571,25 +571,19 @@ public class AssetStoreTest {
     final AssetMetadata filterAssetMeta1 = byFilter.getResults().get(0);
     final AssetMetadata filterAssetMeta2 = byFilter.getResults().get(1);
     final AssetMetadata filterAssetMeta3 = byFilter.getResults().get(2);
-    assertEquals(true, assetMeta1.getId().equals(filterAssetMeta1.getId()) || assetMeta1.getId().equals(filterAssetMeta2.getId())
-        || assetMeta1.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta1 missing in results");
-    assertEquals(true, assetMeta2.getId().equals(filterAssetMeta1.getId()) || assetMeta2.getId().equals(filterAssetMeta2.getId())
-        || assetMeta2.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta2 missing in results");
-    assertEquals(true, assetMeta3.getId().equals(filterAssetMeta1.getId()) || assetMeta3.getId().equals(filterAssetMeta2.getId())
-        || assetMeta3.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta3 missing in results");
+    assertTrue(assetMeta1.getId().equals(filterAssetMeta1.getId()) || assetMeta1.getId().equals(filterAssetMeta2.getId())
+              || assetMeta1.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta1 missing in results");
+    assertTrue(assetMeta2.getId().equals(filterAssetMeta1.getId()) || assetMeta2.getId().equals(filterAssetMeta2.getId())
+              || assetMeta2.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta2 missing in results");
+    assertTrue(assetMeta3.getId().equals(filterAssetMeta1.getId()) || assetMeta3.getId().equals(filterAssetMeta2.getId())
+              || assetMeta3.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta3 missing in results");
     assetStorePublisher.deleteAsset(hash1);
     assetStorePublisher.deleteAsset(hash2);
     assetStorePublisher.deleteAsset(hash3);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
-      assetStorePublisher.getByHash(hash1);
-    });
-    Assertions.assertThrows(NotFoundException.class, () -> {
-      assetStorePublisher.getByHash(hash2);
-    });
-    Assertions.assertThrows(NotFoundException.class, () -> {
-      assetStorePublisher.getByHash(hash3);
-    });
+    assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
+    assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
+    assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
 
     log.info("#### Test 10 succeeded.");
   }
@@ -620,7 +614,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
 
@@ -653,7 +647,7 @@ public class AssetStoreTest {
 
     assetStorePublisher.deleteAsset(hash);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash);
     });
 
@@ -701,13 +695,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash2);
     assetStorePublisher.deleteAsset(hash3);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash2);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash3);
     });
     log.info("#### Test 12 succeeded.");
@@ -763,13 +757,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash2);
     assetStorePublisher.deleteAsset(hash3);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash2);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash3);
     });
     log.info("#### Test 13 succeeded.");
@@ -818,13 +812,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash2);
     assetStorePublisher.deleteAsset(hash3);
 
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash1);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash2);
     });
-    Assertions.assertThrows(NotFoundException.class, () -> {
+    assertThrows(NotFoundException.class, () -> {
       assetStorePublisher.getByHash(hash3);
     });
     log.info("#### Test 13 succeeded.");

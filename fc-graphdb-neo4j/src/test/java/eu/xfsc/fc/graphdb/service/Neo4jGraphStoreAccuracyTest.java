@@ -39,13 +39,18 @@ import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
+import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.assetstore.AssetStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
+import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
+import eu.xfsc.fc.core.service.verification.Vc11Processor;
+import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.graphdb.config.GraphDbConfig;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -58,7 +63,9 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @ContextConfiguration(classes = {Neo4jGraphStoreAccuracyTest.TestApplication.class, DatabaseConfig.class, GraphDbConfig.class, FileStoreConfig.class, Neo4jGraphStoreAccuracyTest.class,
 	Neo4jGraphStore.class, AssetStoreImpl.class, AssetDaoImpl.class, VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaDaoImpl.class, ValidatorCacheDaoImpl.class,
 	DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
-	CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+	CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+	JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
+	JwtSignatureVerifier.class, DidDocumentResolver.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class Neo4jGraphStoreAccuracyTest {
