@@ -28,8 +28,11 @@ import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractor;
 import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
 import eu.xfsc.fc.core.service.verification.claims.TitaniumClaimExtractor;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.verification.signature.SignatureVerifier;
 import eu.xfsc.fc.core.util.ClaimValidator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import foundation.identity.jsonld.JsonLDObject;
 import info.weboftrust.ldsignatures.LdProof;
 import jakarta.annotation.PostConstruct;
@@ -116,6 +119,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final ValidatorCacheDao validatorCache;
     private final Vc11Processor vc11Processor;
     private final Vc2Processor vc2Processor;
+    private final JwtSignatureVerifier jwtSignatureVerifier;
 
     @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
     private String trustAnchorAddr;
@@ -159,10 +163,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         String body = payload.getContentAsString().strip();
         payload = new ContentAccessorDirect(body, payload.getContentType());
         boolean isJwt = jwtPreprocessor.isJwtWrapped(payload);
-        // JWT guard — fires before any processor (no signature verification — see Issue #12)
-        if (verifyVCSignatures && isJwt) {
-            throw new UnsupportedOperationException(
-                    "JWT signature verification is not supported; provide a JSON-LD credential with a data-integrity proof");
+        // JWT signature verification — fires before unwrap (Issue #12)
+        Validator jwtValidator = null;
+        if (isJwt && (verifyVCSignatures || verifyVPSignatures)) {
+            jwtValidator = jwtSignatureVerifier.verify(body);
         }
         // Version dispatch — payload is unwrapped JSON-LD after this point
         // JWT-wrapped payloads are VC 2.0-only; fall back to vc2Processor when context parse fails
@@ -264,12 +268,29 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
 
+        // VP JWT iss == holder semantic guard (ADR-3: semantic check here, not in JwtSignatureVerifier)
+        if (isJwt && verifySemantics && jwtValidator != null) {
+            checkVpJwtHolder(body);
+        }
+
         // signature verification
         List<Validator> validators;
-        if (verifyVPSignatures || verifyVCSignatures) {
+        if (isJwt) {
+            validators = jwtValidator != null ? new ArrayList<>(List.of(jwtValidator)) : null;
+            if (verifyVCSignatures) {
+                List<Validator> innerValidators = verifyInnerVcCredentials(ld);
+                if (!innerValidators.isEmpty()) {
+                    if (validators == null) {
+                        validators = innerValidators;
+                    } else {
+                        validators.addAll(innerValidators);
+                    }
+                }
+            }
+        } else if (verifyVPSignatures || verifyVCSignatures) {
             validators = checkCryptography(typedCredentials, verifyVPSignatures, verifyVCSignatures);
         } else {
-            validators = null; //is it ok?
+            validators = null;
         }
 
         String id = typedCredentials.getID();
@@ -549,6 +570,108 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         timestamp = System.currentTimeMillis() - timestamp;
         log.debug("checkCryptography.exit; returning: {}; time taken: {}", validators, timestamp);
         return new ArrayList<>(validators);
+    }
+
+    /**
+     * Checks that VP JWT {@code iss} matches the VP {@code holder} field (ICAM v24.07, ADR-3).
+     * Called only when verifySemantics=true and the outer JWT was successfully verified.
+     */
+    private void checkVpJwtHolder(String jwtBody) {
+        try {
+            SignedJWT signedJwt = SignedJWT.parse(jwtBody);
+            JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
+
+            // Detect VP JWT: ICAM v24.07 uses top-level "type"; older format uses "vp" claim
+            Object typeObj = claims.getClaim("type");
+            boolean isVpJwt = false;
+            if (typeObj instanceof List<?> types) {
+                isVpJwt = types.contains("VerifiablePresentation");
+            } else if (typeObj instanceof String typeStr) {
+                isVpJwt = "VerifiablePresentation".equals(typeStr);
+            }
+            if (!isVpJwt && claims.getClaim("vp") != null) {
+                isVpJwt = true;
+            }
+
+            if (isVpJwt) {
+                // ICAM v24.07: holder is a top-level claim; older format: nested in vp claim
+                String holder = claims.getStringClaim("holder");
+                if (holder == null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> vpClaim = (Map<String, Object>) claims.getClaim("vp");
+                    if (vpClaim != null) {
+                        holder = (String) vpClaim.get("holder");
+                    }
+                }
+                String iss = claims.getIssuer();
+                if (holder != null && !iss.equals(holder)) {
+                    throw new VerificationException(
+                            "VP JWT iss '" + iss + "' does not match VP holder '" + holder + "'");
+                }
+            }
+        } catch (VerificationException ex) {
+            throw ex;
+        } catch (java.text.ParseException ex) {
+            // JWT was already verified by JwtSignatureVerifier, unexpected parse error
+            log.warn("checkVpJwtHolder; unexpected parse error: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * Verifies inner VC credentials in a VP JWT.
+     * Handles EnvelopedVerifiableCredential (ICAM v24.07), plain compact JWT strings,
+     * and inline JSON-LD VCs with proof fields.
+     */
+    private List<Validator> verifyInnerVcCredentials(JsonLDObject ld) {
+        Object vcArrayObj = ld.getJsonObject().get("verifiableCredential");
+        if (vcArrayObj == null) {
+            return List.of();
+        }
+
+        List<Object> vcEntries;
+        if (vcArrayObj instanceof List<?> list) {
+            @SuppressWarnings("unchecked")
+            List<Object> cast = (List<Object>) list;
+            vcEntries = cast;
+        } else {
+            vcEntries = List.of(vcArrayObj);
+        }
+
+        List<Validator> validators = new ArrayList<>();
+        for (Object entry : vcEntries) {
+            if (entry instanceof String jwtStr && jwtStr.startsWith("eyJ")) {
+                // Plain compact JWT string
+                validators.add(jwtSignatureVerifier.verify(jwtStr));
+            } else if (entry instanceof Map<?, ?> vcMap) {
+                if (isEnvelopedVerifiableCredential(vcMap.get("type"))) {
+                    // ICAM v24.07 EnvelopedVerifiableCredential: extract JWT from data: URL
+                    Object idObj = vcMap.get("id");
+                    if (!(idObj instanceof String idStr)) {
+                        throw new ClientException(
+                                "EnvelopedVerifiableCredential missing 'id' field");
+                    }
+                    validators.add(jwtSignatureVerifier.verifyFromDataUrl(idStr));
+                } else {
+                    // Inline JSON-LD VC with proof — existing LD verification path
+                    @SuppressWarnings("unchecked")
+                    VerifiableCredential innerVc = VerifiableCredential.fromMap(
+                            (Map<String, Object>) vcMap);
+                    innerVc.setDocumentLoader(ld.getDocumentLoader());
+                    validators.add(checkSignature(innerVc));
+                }
+            }
+        }
+        return validators;
+    }
+
+    private boolean isEnvelopedVerifiableCredential(Object typeObj) {
+        if (typeObj instanceof String typeStr) {
+            return "EnvelopedVerifiableCredential".equals(typeStr);
+        }
+        if (typeObj instanceof List<?> types) {
+            return types.contains("EnvelopedVerifiableCredential");
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")

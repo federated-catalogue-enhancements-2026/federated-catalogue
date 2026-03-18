@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -45,14 +46,18 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
+import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @Slf4j
 @SpringBootTest
@@ -74,6 +79,9 @@ public class VerificationServiceTest {
 
   @Autowired
   private VerificationServiceImpl verificationService;
+
+  @MockitoBean
+  private JwtSignatureVerifier jwtVerifierMock;
 
   @MockitoSpyBean
   private JwtContentPreprocessor jwtPreprocessorSpy;
@@ -699,6 +707,127 @@ public class VerificationServiceTest {
     assertTrue(claims.isEmpty(), "All fcmeta: claims should have been filtered, leaving an empty list");
     assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");
     assertFalse(result.getWarnings().isEmpty(), "Warning list should not be empty when all claims are filtered");
+  }
+
+  // --- T5: JWT signature verification smoke tests ---
+
+  /**
+   * AC 1 / AC 3 (guard removed): JWT credential with verifyVCSignatures=true no longer throws
+   * UnsupportedOperationException; JwtSignatureVerifier is invoked and returns a Validator.
+   */
+  @Test
+  void verifyCredential_jwtVcWithVerifyVcSigsTrue_returnsValidators() {
+    String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
+    String header = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
+    ContentAccessor jwtVc = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+
+    Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
+    when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
+
+    CredentialVerificationResult result =
+        verificationService.verifyCredential(jwtVc, false, false, false, true);
+
+    assertNotNull(result);
+    assertNotNull(result.getValidators(), "JWT VC with verifyVCSignatures=true must have validators");
+    assertFalse(result.getValidators().isEmpty());
+    verify(jwtVerifierMock).verify(any()); // confirms guard removed — verifier was called
+  }
+
+  /**
+   * AC 9 (backward compatibility): LD credential with verifyVCSignatures=true goes through the
+   * LD proof path; JwtSignatureVerifier is NOT invoked.
+   */
+  @Test
+  void verifyCredential_ldCredentialWithVerifyVcSigsTrue_jwtVerifierNotInvoked() {
+    ContentAccessor ldContent = getAccessor("VerificationService/jsonld/input.vc.jsonld");
+
+    try {
+      verificationService.verifyCredential(ldContent, false, false, false, true);
+    } catch (VerificationException ex) {
+      // Expected — LD credential has no proof; key assertion is that JWT verifier was not called
+    }
+
+    verify(jwtVerifierMock, never()).verify(any());
+  }
+
+  /**
+   * AC 7 (VP JWT iss ≠ holder): VP JWT where iss does not match holder must throw
+   * VerificationException when verifySemantics=true.
+   */
+  @Test
+  void verifyCredential_vpJwtIssNotEqualHolder_throwsVerificationException() {
+    String jwtHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"EdDSA\"}".getBytes(StandardCharsets.UTF_8));
+    String jwtPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"iss\":\"did:web:issuer.example.com\","
+            + "\"holder\":\"did:web:other.example.com\","
+            + "\"type\":[\"VerifiablePresentation\"]}").getBytes(StandardCharsets.UTF_8));
+    String jwtSig = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("fakesig".getBytes(StandardCharsets.UTF_8));
+    ContentAccessor vpJwt = new ContentAccessorDirect(
+        jwtHeader + "." + jwtPayload + "." + jwtSig);
+
+    Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
+    when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
+    // Mock the unwrap so the VP passes the preProcess step
+    ContentAccessor vpJsonLd = getAccessor("VerificationService/syntax/input.vp.jsonld");
+    doReturn(vpJsonLd).when(vc2ProcessorSpy).preProcess(any());
+
+    VerificationException ex = assertThrowsExactly(VerificationException.class,
+        () -> verificationService.verifyCredential(vpJwt, true, false, true, false));
+
+    assertTrue(ex.getMessage().contains("holder"), "Error must mention holder: " + ex.getMessage());
+  }
+
+  /**
+   * AC 2 (VP JWT happy path): VP JWT with iss == holder and verifyVPSignatures=true succeeds
+   * and result contains validators.
+   */
+  @Test
+  void verifyCredential_vpJwtIssEqualsHolder_returnsValidators() {
+    String jwtHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"EdDSA\"}".getBytes(StandardCharsets.UTF_8));
+    String jwtPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"iss\":\"did:web:issuer.example.com\","
+            + "\"holder\":\"did:web:issuer.example.com\","
+            + "\"type\":[\"VerifiablePresentation\"]}").getBytes(StandardCharsets.UTF_8));
+    String jwtSig = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("fakesig".getBytes(StandardCharsets.UTF_8));
+    ContentAccessor vpJwt = new ContentAccessorDirect(
+        jwtHeader + "." + jwtPayload + "." + jwtSig);
+
+    Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
+    when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
+    ContentAccessor vpJsonLd = getAccessor("VerificationService/syntax/input.vp.jsonld");
+    doReturn(vpJsonLd).when(vc2ProcessorSpy).preProcess(any());
+
+    // verifySemantics=false to skip class detection; verifyVPSignatures=true for JWT verification
+    CredentialVerificationResult result =
+        verificationService.verifyCredential(vpJwt, false, false, true, false);
+
+    assertNotNull(result);
+    assertNotNull(result.getValidators(), "VP JWT happy path must return validators");
+    assertFalse(result.getValidators().isEmpty());
+  }
+
+  /**
+   * AC 3 (skip path): JWT credential with both signature flags=false must not invoke JwtSignatureVerifier.
+   */
+  @Test
+  void verifyCredential_jwtWithBothSigFlagsFalse_jwtVerifierNotInvoked() {
+    String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
+    String header = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
+    ContentAccessor jwtVc = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+
+    verificationService.verifyCredential(jwtVc, false, false, false, false);
+
+    verify(jwtVerifierMock, never()).verify(any());
   }
 
   @Test
