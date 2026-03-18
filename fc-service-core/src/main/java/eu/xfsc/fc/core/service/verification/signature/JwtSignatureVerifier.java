@@ -134,7 +134,7 @@ public class JwtSignatureVerifier {
   private Validator verifyWithKid(SignedJWT signedJwt, JWSHeader header,
       String kid, String iss, List<VerificationMethod> methods) {
     // find exact match by kid
-    String kidFinal = kid;
+    final String kidFinal = kid;
     VerificationMethod matched = methods.stream()
         .filter(vm -> kidFinal.equals(methodId(vm)))
         .findFirst()
@@ -147,7 +147,7 @@ public class JwtSignatureVerifier {
     }
 
     JWK jwk = resolveJwk(matched, kid);
-    JWSVerifier verifier = createVerifier(header, jwk, kid);
+    JWSVerifier verifier = createVerifier(header, jwk);
     verifySignature(signedJwt, verifier, kid);
 
     log.debug("verify; verified kid '{}' for issuer '{}'", kid, iss);
@@ -190,7 +190,7 @@ public class JwtSignatureVerifier {
       }
 
       try {
-        JWSVerifier jwtVerifier = createVerifier(header, jwk, methodId);
+        JWSVerifier jwtVerifier = createVerifier(header, jwk);
         if (signedJwt.verify(jwtVerifier)) {
           String resultKid = methodId != null ? methodId : iss;
           log.debug("verify; verified via method '{}' for issuer '{}'", methodId, iss);
@@ -221,7 +221,6 @@ public class JwtSignatureVerifier {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private JWK resolveJwk(VerificationMethod method, String kid) {
     Map<String, Object> jwkMap = (Map<String, Object>) method.getPublicKeyJwk();
     if (jwkMap == null) {
@@ -244,7 +243,7 @@ public class JwtSignatureVerifier {
     }
   }
 
-  private JWSVerifier createVerifier(JWSHeader header, JWK jwk, String kid) {
+  private JWSVerifier createVerifier(JWSHeader header, JWK jwk) {
     try {
       if (jwk instanceof OctetKeyPair okp) {
         // Ed25519Verifier accepts OctetKeyPair directly; toPublicKey() is not supported for OKP

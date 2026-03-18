@@ -13,26 +13,24 @@ import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
-import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import org.junit.jupiter.api.Test;
-
-import java.io.*;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 
 @Slf4j
@@ -60,7 +58,7 @@ public class ValidatorCacheTest {
   private ValidatorCacheDao validatorCache;
 
   @Test
-  void test01AddingAndRemoving() throws IOException {
+  void test01AddingAndRemoving() {
     log.info("test01AddingAndRemoving");
     Validator validator = new Validator("SomeUrl", "Some Text Content", getInstantNow());
     validatorCache.addToCache(validator);
@@ -74,7 +72,7 @@ public class ValidatorCacheTest {
   }
 
   @Test
-  void test02Expiration() throws IOException {
+  void test02Expiration() {
     log.info("test02Expiration");
     Validator v1 = new Validator("SomeUrl1", "Some Text Content", getInstantNow().minus(1, ChronoUnit.MINUTES));
     validatorCache.addToCache(v1);

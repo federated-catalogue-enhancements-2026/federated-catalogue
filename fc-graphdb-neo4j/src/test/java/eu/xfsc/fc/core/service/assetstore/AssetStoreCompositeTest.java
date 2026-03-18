@@ -191,7 +191,7 @@ public class AssetStoreCompositeTest {
   }
 
   @Test
-  void test03RebuildGraphDb_filtersProtectedNamespaceClaims() throws Exception {
+  void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
     log.info("test03RebuildGraphDb_filtersProtectedNamespaceClaims");
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");

@@ -95,7 +95,7 @@ public class Neo4jGraphStoreAccuracyTest {
 
   
   @BeforeAll
-  void addDBEntries() throws Exception {
+  void addDBEntries() throws IOException {
     initialiseAllDataBaseWithManuallyAddingCredential();
   }
 
@@ -105,7 +105,7 @@ public class Neo4jGraphStoreAccuracyTest {
   }
 
   @Test
-  public void testCypherServiceOfferingAccuracy() throws Exception {
+  public void testCypherServiceOfferingAccuracy() {
 
 
     List<Map<String, Object>> resultListExpected = List.of(Map.of("n", Map.of("name", "Portal", "claimsGraphUri", List.of("http://w3id.org/gaia-x/indiv#serviceMVGPortal.json"))));
@@ -118,7 +118,7 @@ public class Neo4jGraphStoreAccuracyTest {
   }
 
   @Test
-  public void testCypherServiceOfferingByURIAccuracy() throws Exception {
+  public void testCypherServiceOfferingByURIAccuracy() {
     /*expected only one node as previous added claims with same ID deleted from code*/
     List<Map<String, String>> resultListExpected = List.of(
             Map.of("n.name", "Portal3"));
@@ -131,7 +131,7 @@ public class Neo4jGraphStoreAccuracyTest {
   }
 
   @Test
-  public void testCypherAllServiceOfferingAccuracy() throws Exception {
+  public void testCypherAllServiceOfferingAccuracy() {
 
     List<Map<String, Object>> resultListExpected = List.of(Map.of("n", Map.of("name", "Portal", "claimsGraphUri", List.of("http://w3id.org/gaia-x/indiv#serviceMVGPortal.json"))),Map.of("n", Map.of("name", "Portal2", "claimsGraphUri", List.of("http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json"))),Map.of("n", Map.of("name", "Portal3", "claimsGraphUri", List.of("http://w3id.org/gaia-x/indiv#serviceMVGPortal3.json"))),Map.of("n",Map.of("name","Portal2","claimsGraphUri", List.of("http://w3id.org/gaia-x/indiv#serviceMVGPortal4.json"))));
 
@@ -143,7 +143,7 @@ public class Neo4jGraphStoreAccuracyTest {
 
 
   @Test
-  void testCypherAllServiceOfferingWithNameAndURI_IN_ClauseAccuracy() throws Exception {
+  void testCypherAllServiceOfferingWithNameAndURI_IN_ClauseAccuracy() {
 
     List<Map<String, String>> resultListExpected = List.of(
             Map.of("name", "Portal2", "uri", "http://w3id.org/gaia-x/indiv#serviceMVGPortal2.json"),
@@ -158,7 +158,7 @@ public class Neo4jGraphStoreAccuracyTest {
   }
 
   @Test
-  void testCypherTotalCount() throws Exception {
+  void testCypherTotalCount() {
 
     GraphQuery queryDelta = new GraphQuery(
             "MATCH (n)  RETURN n LIMIT $limit", Map.of("limit", 25));
@@ -318,7 +318,7 @@ public class Neo4jGraphStoreAccuracyTest {
 
 
     List<Map<String, Object>> responseCypherByLocality = neo4jGraphStore.queryData(queryCypherByLocality).getResults();
-    Map<String, Object>  resultActualMap = responseCypherByLocality.get(0);
+    Map<String, Object>  resultActualMap = responseCypherByLocality.getFirst();
     Assertions.assertEquals(2,responseCypherByLocality.size());
     //Assertions.assertEquals(Collections.singletonList("http://example.org/test-issuer2"), resultActualMap.get("n.claimsGraphUri"));
 
@@ -328,7 +328,7 @@ public class Neo4jGraphStoreAccuracyTest {
     neo4jGraphStore.deleteClaims(credentialSubject3);
   }
 
-  private void initialiseAllDataBaseWithManuallyAddingCredential() throws Exception {
+  private void initialiseAllDataBaseWithManuallyAddingCredential() throws IOException {
 
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME));
     CredentialVerificationResultOffering verificationResult =
@@ -347,7 +347,7 @@ public class Neo4jGraphStoreAccuracyTest {
     List<CredentialClaim> claimFile = List.of(claim, claimName);
 
     verificationResult.setClaims(claimFile);
-    verificationResult.setId(claimFile.get(0).getSubjectValue());
+    verificationResult.setId(claimFile.getFirst().getSubjectValue());
 
     AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
             verificationResult.getIssuer(), new ArrayList<>(), contentAccessor);
@@ -370,7 +370,7 @@ public class Neo4jGraphStoreAccuracyTest {
     List<CredentialClaim> claimFile1 = List.of(claim1, claimName1);
 
     verificationResult2.setClaims(claimFile1);
-    verificationResult2.setId(claimFile1.get(0).getSubjectValue());
+    verificationResult2.setId(claimFile1.getFirst().getSubjectValue());
 
     AssetMetadata assetMetadata2 = new AssetMetadata(
             verificationResult2.getId(),
@@ -394,7 +394,7 @@ public class Neo4jGraphStoreAccuracyTest {
     List<CredentialClaim> claimFile3 = List.of(claim3, claimName3);
 
     verificationResult3.setClaims(claimFile3);
-    verificationResult3.setId(claimFile3.get(0).getSubjectValue());
+    verificationResult3.setId(claimFile3.getFirst().getSubjectValue());
 
     AssetMetadata assetMetadata3 = new AssetMetadata(
             verificationResult3.getId(),
@@ -421,7 +421,7 @@ public class Neo4jGraphStoreAccuracyTest {
     List<CredentialClaim> claimFile4 = List.of(claim4, claimName4);
 
     verificationResult4.setClaims(claimFile4);
-    verificationResult4.setId(claimFile4.get(0).getSubjectValue());
+    verificationResult4.setId(claimFile4.getFirst().getSubjectValue());
 
     AssetMetadata assetMetadata4 = new AssetMetadata(
             verificationResult4.getId(),
