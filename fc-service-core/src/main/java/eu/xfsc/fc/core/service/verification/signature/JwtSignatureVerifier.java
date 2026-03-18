@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.Ed25519Verifier;
 import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
@@ -52,6 +53,7 @@ import org.springframework.stereotype.Component;
 public class JwtSignatureVerifier {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final DefaultJWSVerifierFactory JWS_VERIFIER_FACTORY = new DefaultJWSVerifierFactory();
   private static final String DATA_URL_PREFIX = "data:application/vc+ld+json+jwt,";
 
   private final DidDocumentResolver didResolver;
@@ -145,8 +147,7 @@ public class JwtSignatureVerifier {
     }
 
     JWK jwk = resolveJwk(matched, kid);
-    PublicKey publicKey = toPublicKey(jwk, kid);
-    JWSVerifier verifier = createVerifier(header, publicKey, kid);
+    JWSVerifier verifier = createVerifier(header, jwk, kid);
     verifySignature(signedJwt, verifier, kid);
 
     log.debug("verify; verified kid '{}' for issuer '{}'", kid, iss);
@@ -162,12 +163,18 @@ public class JwtSignatureVerifier {
 
     for (VerificationMethod method : methods) {
       String methodId = methodId(method);
-      @SuppressWarnings("unchecked")
-      Map<String, Object> jwkMap = (Map<String, Object>) method.getPublicKeyJwk();
-      if (jwkMap == null) {
+      Object publicKeyJwkRaw = method.getPublicKeyJwk();
+      if (publicKeyJwkRaw == null) {
         log.debug("verify; skipping method '{}' — no publicKeyJwk", methodId);
         continue;
       }
+      if (!(publicKeyJwkRaw instanceof Map<?, ?> rawMap)) {
+        log.debug("verify; skipping method '{}' — publicKeyJwk is not a map ({})",
+            methodId, publicKeyJwkRaw.getClass().getSimpleName());
+        continue;
+      }
+      @SuppressWarnings("unchecked")
+      Map<String, Object> jwkMap = (Map<String, Object>) rawMap;
 
       JWK jwk;
       try {
@@ -183,14 +190,13 @@ public class JwtSignatureVerifier {
       }
 
       try {
-        PublicKey publicKey = toPublicKey(jwk, methodId);
-        JWSVerifier verifier = new DefaultJWSVerifierFactory().createJWSVerifier(header, publicKey);
-        if (signedJwt.verify(verifier)) {
+        JWSVerifier jwtVerifier = createVerifier(header, jwk, methodId);
+        if (signedJwt.verify(jwtVerifier)) {
           String resultKid = methodId != null ? methodId : iss;
           log.debug("verify; verified via method '{}' for issuer '{}'", methodId, iss);
           return new Validator(resultKid, jwk.toJSONString(), null);
         }
-      } catch (JOSEException ex) {
+      } catch (VerificationException | JOSEException ex) {
         log.debug("verify; skipping method '{}' — {}", methodId, ex.getMessage());
       }
     }
@@ -225,6 +231,7 @@ public class JwtSignatureVerifier {
     if (jwk.getKeyType() == null) {
       throw new ClientException("verification method missing 'kty' in publicKeyJwk");
     }
+    log.trace("resolveJwk; kid='{}' resolved kty='{}'", kid, jwk.getKeyType());
     return jwk;
   }
 
@@ -237,27 +244,22 @@ public class JwtSignatureVerifier {
     }
   }
 
-  private PublicKey toPublicKey(JWK jwk, String kid) {
+  private JWSVerifier createVerifier(JWSHeader header, JWK jwk, String kid) {
     try {
+      if (jwk instanceof OctetKeyPair okp) {
+        // Ed25519Verifier accepts OctetKeyPair directly; toPublicKey() is not supported for OKP
+        return new Ed25519Verifier(okp.toPublicJWK());
+      }
+      PublicKey publicKey;
       if (jwk instanceof RSAKey rsaKey) {
-        return rsaKey.toPublicKey();
+        publicKey = rsaKey.toPublicKey();
       } else if (jwk instanceof ECKey ecKey) {
-        return ecKey.toPublicKey();
-      } else if (jwk instanceof OctetKeyPair okp) {
-        return okp.toPublicKey();
+        publicKey = ecKey.toPublicKey();
       } else {
         throw new VerificationException(
             "unsupported JWK key type for JWT verification: " + jwk.getKeyType());
       }
-    } catch (JOSEException ex) {
-      throw new VerificationException(
-          "JWT alg incompatible with key type: " + ex.getMessage(), ex);
-    }
-  }
-
-  private JWSVerifier createVerifier(JWSHeader header, PublicKey publicKey, String kid) {
-    try {
-      return new DefaultJWSVerifierFactory().createJWSVerifier(header, publicKey);
+      return JWS_VERIFIER_FACTORY.createJWSVerifier(header, publicKey);
     } catch (JOSEException ex) {
       throw new VerificationException(
           "JWT alg incompatible with key type: " + ex.getMessage(), ex);

@@ -10,12 +10,12 @@ import static org.mockito.Mockito.when;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.Ed25519Signer;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.OctetKeyPair;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -52,24 +52,24 @@ class JwtSignatureVerifierTest {
   @InjectMocks
   private JwtSignatureVerifier verifier;
 
-  private ECKey keyPair;
-  private ECKey attackerKey;
+  private OctetKeyPair keyPair;
+  private OctetKeyPair attackerKey;
 
   @BeforeEach
   void setup() throws Exception {
-    keyPair = new ECKeyGenerator(Curve.P_256).keyID(KID).generate();
-    attackerKey = new ECKeyGenerator(Curve.P_256).keyID(KID).generate();
+    keyPair = new OctetKeyPairGenerator(Curve.Ed25519).keyID(KID).generate();
+    attackerKey = new OctetKeyPairGenerator(Curve.Ed25519).keyID(KID).generate();
   }
 
   // --- T4: JwtSignatureVerifier unit tests ---
 
   @Test
-  void verify_validEcdsaVcJwt_returnsValidatorWithKid() throws Exception {
+  void verify_validEdDsaVcJwt_returnsValidatorWithKid() throws Exception {
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     Validator result = verifier.verify(compact);
 
@@ -79,16 +79,16 @@ class JwtSignatureVerifierTest {
   }
 
   @Test
-  void verify_validEcdsaVpJwt_returnsValidator() throws Exception {
+  void verify_validEdDsaVpJwt_returnsValidator() throws Exception {
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer(ISS)
         .claim("holder", ISS)
         .claim("type", List.of("VerifiablePresentation"))
         .build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     Validator result = verifier.verify(compact);
 
@@ -118,9 +118,9 @@ class JwtSignatureVerifierTest {
 
   @Test
   void verify_missingIss_throwsClientException() throws Exception {
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().subject("no-iss").build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     assertThrows(ClientException.class, () -> verifier.verify(compact));
   }
@@ -128,13 +128,12 @@ class JwtSignatureVerifierTest {
   @Test
   void verify_expiredJwt_throwsVerificationException() throws Exception {
     // no DID lookup needed — exp check fires before DID resolution
-
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer(ISS)
         .expirationTime(Date.from(Instant.now().minusSeconds(3600)))
         .build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     assertThrows(VerificationException.class, () -> verifier.verify(compact));
   }
@@ -149,9 +148,9 @@ class JwtSignatureVerifierTest {
     when(mockDoc.getAssertionMethodVerificationMethodsDereferenced()).thenReturn(List.of(vmB));
     when(didResolver.resolveDidDocument(ISS)).thenReturn(mockDoc);
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     VerificationException ex = assertThrows(VerificationException.class,
         () -> verifier.verify(compact));
@@ -163,14 +162,14 @@ class JwtSignatureVerifierTest {
 
   @Test
   void verify_badSignature_throwsVerificationException() throws Exception {
-    ECKey differentKey = new ECKeyGenerator(Curve.P_256).keyID(KID).generate();
+    OctetKeyPair differentKey = new OctetKeyPairGenerator(Curve.Ed25519).keyID(KID).generate();
 
     // DID doc has differentKey, but JWT is signed with keyPair
     mockDidDoc(KID, differentKey.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     assertThrows(VerificationException.class, () -> verifier.verify(compact));
   }
@@ -180,12 +179,12 @@ class JwtSignatureVerifierTest {
     // DID doc has legitimateKey; JWT is signed with attackerKey and embeds attackerKey in jwk header
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)
         .keyID(KID)
         .jwk(attackerKey.toPublicJWK()) // attacker embeds own key — must be ignored
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(attackerKey));
+    String compact = signJwt(header, claims, new Ed25519Signer(attackerKey));
 
     // Code ignores jwk header → uses DID doc key (legitimate) → signature mismatch → VerificationException
     assertThrows(VerificationException.class, () -> verifier.verify(compact));
@@ -195,9 +194,9 @@ class JwtSignatureVerifierTest {
   void verify_missingKid_iteratesAllAssertionMethods_returnsValidator() throws Exception {
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).build(); // no kid
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).build(); // no kid
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     Validator result = verifier.verify(compact);
 
@@ -215,9 +214,9 @@ class JwtSignatureVerifierTest {
     when(mockDoc.getAssertionMethodVerificationMethodsDereferenced()).thenReturn(List.of(vm));
     when(didResolver.resolveDidDocument(ISS)).thenReturn(mockDoc);
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     VerificationException ex = assertThrows(VerificationException.class,
         () -> verifier.verify(compact));
@@ -226,13 +225,13 @@ class JwtSignatureVerifierTest {
 
   @Test
   void verify_algKeyTypeMismatch_throwsVerificationException() throws Exception {
-    // JWT has ES256 (EC) alg but DID doc has RSA key → JOSEException wrapped as VerificationException
+    // JWT has EdDSA alg but DID doc has RSA key → JOSEException wrapped as VerificationException
     RSAKey rsaKey = new RSAKeyGenerator(2048).keyID(KID).generate();
     mockDidDoc(KID, rsaKey.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     VerificationException ex = assertThrows(VerificationException.class,
         () -> verifier.verify(compact));
@@ -245,9 +244,9 @@ class JwtSignatureVerifierTest {
     // kid: #key-1 normalized with iss → did:web:example.com#key-1
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID("#key-1").build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID("#key-1").build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
 
     Validator result = verifier.verify(compact);
 
@@ -261,9 +260,9 @@ class JwtSignatureVerifierTest {
   void verifyFromDataUrl_validEnvelopedVcJwt_returnsValidator() throws Exception {
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
     String dataUrl = "data:application/vc+ld+json+jwt," + compact;
 
     Validator result = verifier.verifyFromDataUrl(dataUrl);
@@ -276,9 +275,9 @@ class JwtSignatureVerifierTest {
   void verifyFromDataUrl_multipleCallsSucceed() throws Exception {
     mockDidDoc(KID, keyPair.toPublicJWK().toJSONObject());
 
-    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KID).build();
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA).keyID(KID).build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(ISS).build();
-    String compact = signJwt(header, claims, new ECDSASigner(keyPair));
+    String compact = signJwt(header, claims, new Ed25519Signer(keyPair));
     String dataUrl = "data:application/vc+ld+json+jwt," + compact;
 
     Validator r1 = verifier.verifyFromDataUrl(dataUrl);

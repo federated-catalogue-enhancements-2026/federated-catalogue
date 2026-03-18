@@ -116,7 +116,12 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>mockwebserver</artifactId>
             <scope>test</scope>
-        </dependency>       
+        </dependency>
+        <dependency>
+            <groupId>com.google.crypto.tink</groupId>
+            <artifactId>tink</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

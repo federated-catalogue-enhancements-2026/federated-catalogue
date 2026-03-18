@@ -268,16 +268,26 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
 
-        // VP JWT iss == holder semantic guard (ADR-3: semantic check here, not in JwtSignatureVerifier)
-        if (isJwt && verifySemantics && jwtValidator != null) {
-            checkVpJwtHolder(body);
+        // VP JWT: detect VP type, run semantic holder check, and guard inner VC verification
+        boolean isVpJwt = false;
+        if (isJwt && jwtValidator != null) {
+            try {
+                JWTClaimsSet jwtClaims = SignedJWT.parse(body).getJWTClaimsSet();
+                isVpJwt = isVpJwtClaims(jwtClaims);
+                if (verifySemantics) {
+                    checkVpJwtHolder(jwtClaims);
+                }
+            } catch (java.text.ParseException ex) {
+                // body was already verified by JwtSignatureVerifier — unexpected
+                log.warn("verifyCredential; JWT claims re-parse error: {}", ex.getMessage());
+            }
         }
 
         // signature verification
         List<Validator> validators;
         if (isJwt) {
             validators = jwtValidator != null ? new ArrayList<>(List.of(jwtValidator)) : null;
-            if (verifyVCSignatures) {
+            if (verifyVCSignatures && isVpJwt) {
                 List<Validator> innerValidators = verifyInnerVcCredentials(ld);
                 if (!innerValidators.isEmpty()) {
                     if (validators == null) {
@@ -573,47 +583,52 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
+     * Returns true if the JWT claims represent a Verifiable Presentation.
+     * Detects ICAM v24.07 (top-level {@code type} claim) and older format ({@code vp} claim).
+     */
+    private boolean isVpJwtClaims(JWTClaimsSet claims) {
+        Object typeObj = claims.getClaim("type");
+        if (typeObj instanceof List<?> types && types.contains("VerifiablePresentation")) {
+            return true;
+        }
+        if (typeObj instanceof String typeStr && "VerifiablePresentation".equals(typeStr)) {
+            return true;
+        }
+        return claims.getClaim("vp") != null;
+    }
+
+    /**
      * Checks that VP JWT {@code iss} matches the VP {@code holder} field (ICAM v24.07, ADR-3).
      * Called only when verifySemantics=true and the outer JWT was successfully verified.
+     *
+     * @param claims already-parsed JWT claims (avoids re-parsing the JWT body)
      */
-    private void checkVpJwtHolder(String jwtBody) {
+    private void checkVpJwtHolder(JWTClaimsSet claims) {
+        if (!isVpJwtClaims(claims)) {
+            return;
+        }
         try {
-            SignedJWT signedJwt = SignedJWT.parse(jwtBody);
-            JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
-
-            // Detect VP JWT: ICAM v24.07 uses top-level "type"; older format uses "vp" claim
-            Object typeObj = claims.getClaim("type");
-            boolean isVpJwt = false;
-            if (typeObj instanceof List<?> types) {
-                isVpJwt = types.contains("VerifiablePresentation");
-            } else if (typeObj instanceof String typeStr) {
-                isVpJwt = "VerifiablePresentation".equals(typeStr);
-            }
-            if (!isVpJwt && claims.getClaim("vp") != null) {
-                isVpJwt = true;
-            }
-
-            if (isVpJwt) {
-                // ICAM v24.07: holder is a top-level claim; older format: nested in vp claim
-                String holder = claims.getStringClaim("holder");
-                if (holder == null) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> vpClaim = (Map<String, Object>) claims.getClaim("vp");
-                    if (vpClaim != null) {
-                        holder = (String) vpClaim.get("holder");
-                    }
-                }
-                String iss = claims.getIssuer();
-                if (holder != null && !iss.equals(holder)) {
-                    throw new VerificationException(
-                            "VP JWT iss '" + iss + "' does not match VP holder '" + holder + "'");
+            // ICAM v24.07: holder is a top-level claim; older format: nested in vp claim
+            String holder = claims.getStringClaim("holder");
+            if (holder == null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> vpClaim = (Map<String, Object>) claims.getClaim("vp");
+                if (vpClaim != null) {
+                    holder = (String) vpClaim.get("holder");
                 }
             }
-        } catch (VerificationException ex) {
-            throw ex;
+            String iss = claims.getIssuer();
+            if (holder == null) {
+                throw new VerificationException(
+                        "VP JWT missing 'holder' claim — iss/holder binding cannot be verified");
+            }
+            if (!iss.equals(holder)) {
+                throw new VerificationException(
+                        "VP JWT iss '" + iss + "' does not match VP holder '" + holder + "'");
+            }
         } catch (java.text.ParseException ex) {
-            // JWT was already verified by JwtSignatureVerifier, unexpected parse error
-            log.warn("checkVpJwtHolder; unexpected parse error: {}", ex.getMessage());
+            // getStringClaim can throw ParseException on malformed claims
+            log.warn("checkVpJwtHolder; unexpected claims parse error: {}", ex.getMessage());
         }
     }
 
@@ -643,7 +658,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 // Plain compact JWT string
                 validators.add(jwtSignatureVerifier.verify(jwtStr));
             } else if (entry instanceof Map<?, ?> vcMap) {
-                if (isEnvelopedVerifiableCredential(vcMap.get("type"))) {
+                if (isEnvelopedVerifiableCredential(vcMap.get("type"), vcMap.get("@context"))) {
                     // ICAM v24.07 EnvelopedVerifiableCredential: extract JWT from data: URL
                     Object idObj = vcMap.get("id");
                     if (!(idObj instanceof String idStr)) {
@@ -664,12 +679,24 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return validators;
     }
 
-    private boolean isEnvelopedVerifiableCredential(Object typeObj) {
+    private static final String VC_2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
+
+    private boolean isEnvelopedVerifiableCredential(Object typeObj, Object contextObj) {
+        boolean hasType = false;
         if (typeObj instanceof String typeStr) {
-            return "EnvelopedVerifiableCredential".equals(typeStr);
+            hasType = "EnvelopedVerifiableCredential".equals(typeStr);
+        } else if (typeObj instanceof List<?> types) {
+            hasType = types.contains("EnvelopedVerifiableCredential");
         }
-        if (typeObj instanceof List<?> types) {
-            return types.contains("EnvelopedVerifiableCredential");
+        if (!hasType) {
+            return false;
+        }
+        // Also verify the VC 2.0 context to avoid false-positives from other vocabularies
+        if (contextObj instanceof String ctx) {
+            return VC_2_CONTEXT.equals(ctx);
+        }
+        if (contextObj instanceof List<?> contexts) {
+            return contexts.contains(VC_2_CONTEXT);
         }
         return false;
     }
