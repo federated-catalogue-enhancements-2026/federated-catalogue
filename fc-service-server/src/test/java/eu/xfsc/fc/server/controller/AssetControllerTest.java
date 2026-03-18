@@ -20,6 +20,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +52,6 @@ import eu.xfsc.fc.core.util.HashUtils;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,8 +73,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.util.UriUtils;
 
-@Slf4j
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -123,10 +124,22 @@ public class AssetControllerTest {
     
     @AfterEach
     public void deleteTestAsset() throws IOException {
+        // Clean up all test assets to avoid cross-test pollution
+        // Try by the default test fixture hash
         try {
             assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
         } catch (NotFoundException e) {
-            // expected
+            // expected if not created
+        }
+        
+        // Also try to clean up any asset created via API using the default credential
+        try {
+            String defaultCredentialHash = HashUtils.calculateSha256AsHex(getMockFileDataAsString(ASSET_FILE_NAME));
+            if (!defaultCredentialHash.equals(assetMeta.getAssetHash())) {
+                assetStorePublisher.deleteAsset(defaultCredentialHash);
+            }
+        } catch (NotFoundException | IOException e) {
+            // expected if not created
         }
     }
     
@@ -252,7 +265,7 @@ public class AssetControllerTest {
     @Test
     @WithMockUser(roles = {ASSET_READ})
     public void readAssetByHashShouldReturnNotFoundResponse() throws Exception {
-      mockMvc.perform(MockMvcRequestBuilders.get("/assets/123").with(csrf()))
+      mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", "urn:uuid:00000000-0000-0000-0000-000000000099").with(csrf()))
           .andExpect(status().isNotFound());
     }
 
@@ -261,15 +274,14 @@ public class AssetControllerTest {
     public void readAssetByHashShouldReturnSuccessResponse() throws Exception {
         assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/assets/" + assetMeta.getAssetHash())
+        mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", assetMeta.getId())
                 .with(csrf()))
-                //.accept("application/ld+json"))
             .andExpect(status().isOk());
     }
 
     @Test
     public void deleteAssetShouldReturnUnauthorizedResponse() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetMeta.getAssetHash())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -279,7 +291,7 @@ public class AssetControllerTest {
     @Test
     @WithMockUser
     public void deleteAssetReturnForbiddenResponse() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetMeta.getAssetHash())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -291,7 +303,7 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = "")})))
     public void deleteAssetWithoutIssuerReturnForbiddenResponse() throws Exception {
       assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
-      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetMeta.getAssetHash())
+      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -302,7 +314,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_DELETE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteAssetReturnNotFoundResponse() throws Exception {
-      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetMeta.getAssetHash())
+      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -315,7 +327,7 @@ public class AssetControllerTest {
     public void deleteAssetReturnSuccessResponse() throws Exception {
         assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetMeta.getAssetHash())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -456,8 +468,11 @@ public class AssetControllerTest {
     public void addDuplicateAssetReturnConflictWithAssetStorage() throws Exception {
       String asset = getMockFileDataAsString(ASSET_FILE_NAME);
       ContentAccessorDirect contentAccessor = new ContentAccessorDirect(asset);
+      String hash = HashUtils.calculateSha256AsHex(asset);
 
-      AssetMetadata assetMetadata = new AssetMetadata("id123", TEST_ISSUER, new ArrayList<>(), contentAccessor);
+      // Use actual ID from credential (matches credentialSubject.@id)
+      AssetMetadata assetMetadata = new AssetMetadata(TEST_ISSUER, TEST_ISSUER, new ArrayList<>(), contentAccessor);
+      assetMetadata.setAssetHash(hash);
 
       assetStorePublisher.storeCredential(assetMetadata, getStaticVerificationResult());
       mockMvc.perform(MockMvcRequestBuilders
@@ -467,8 +482,8 @@ public class AssetControllerTest {
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
           .andExpect(status().isConflict());
-      assetStorePublisher.deleteAsset(assetMetadata.getAssetHash());
-      assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(assetMetadata.getAssetHash()));
+      assetStorePublisher.deleteAsset(hash);
+      assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
 
     // TODO: 05.09.2022 Need to add a test to check the correct scenario with graph storage when it is added
@@ -517,7 +532,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeAssetReturnNotFound() throws Exception {
-      mockMvc.perform(MockMvcRequestBuilders.post("/assets/" + assetMeta.getAssetHash() + "/revoke")
+      mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -531,8 +546,7 @@ public class AssetControllerTest {
         final CredentialVerificationResult vr = new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer",
                 Instant.now(), "vhash", List.of(), List.of());
         assetStorePublisher.storeCredential(assetMeta, vr);
-//        assetStore.storeCredential(assetMeta, getStaticVerificationResult());
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/" + assetMeta.getAssetHash() + "/revoke")
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -566,10 +580,11 @@ public class AssetControllerTest {
         List<Map<String, Object>> nodes = graphStore.queryData(new GraphQuery(
                 "MATCH (n {claimsGraphUri: [$uri]}) RETURN n", Map.of("uri", TEST_ISSUER)
         )).getResults();
-        log.debug("revokeThenAddAssetReturnCorrectResponse.1; got {} nodes", nodes.size());
+
         assertEquals(2, nodes.size());
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/" + hash + "/revoke")
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                    URI.create("/assets/" + UriUtils.encodePathSegment(asset.getId(), StandardCharsets.UTF_8) + "/revoke"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
             	.with(csrf()))
@@ -578,7 +593,7 @@ public class AssetControllerTest {
         nodes = graphStore.queryData(new GraphQuery(
                 "MATCH (n {claimsGraphUri: [$uri]}) RETURN n", Map.of("uri", TEST_ISSUER)
         )).getResults();
-        log.debug("revokeThenAddAssetReturnCorrectResponse.2; got {} nodes", nodes.size());
+
         assertEquals(0, nodes.size());
         
         result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
@@ -592,10 +607,9 @@ public class AssetControllerTest {
         nodes = graphStore.queryData(new GraphQuery(
                 "MATCH (n {claimsGraphUri: [$uri]}) RETURN n", Map.of("uri", TEST_ISSUER)
         )).getResults();
-        log.debug("revokeThenAddAssetReturnCorrectResponse.3; got {} nodes", nodes.size());
+
         assertEquals(0, nodes.size());
         
-        // this call fails for some reason. why cannot we delete revoked asset? 
         assetStorePublisher.deleteAsset(hash);
     }
     
@@ -609,7 +623,7 @@ public class AssetControllerTest {
         metadata.setStatus(AssetStatus.DEPRECATED);
         assetStorePublisher.storeCredential(metadata, vr);
         MvcResult result = mockMvc
-            .perform(MockMvcRequestBuilders.post("/assets/" + assetMeta.getAssetHash() + "/revoke")
+            .perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
@@ -666,14 +680,20 @@ public class AssetControllerTest {
     }
 
     private static AssetMetadata createAssetMetadata() throws IOException {
+        String credentialContent = getMockFileDataAsString(ASSET_FILE_NAME);
+        String actualHash = HashUtils.calculateSha256AsHex(credentialContent);
+
         AssetMetadata assetMeta = new AssetMetadata();
-        assetMeta.setId("test id");
+        // Use a DID-style ID for tests — HTTP URLs with slashes break MockMvc path matching.
+        // Real RDF credentials have their ID extracted by the verification service;
+        // for direct storeCredential calls in tests we set the ID explicitly.
+        assetMeta.setId("did:web:example.org:test-issuer");
         assetMeta.setIssuer(TEST_ISSUER);
-        assetMeta.setAssetHash(HashUtils.calculateSha256AsHex("test hash"));
+        assetMeta.setAssetHash(actualHash);
         assetMeta.setStatus(AssetStatus.ACTIVE);
         assetMeta.setStatusDatetime(Instant.parse("2022-01-01T12:00:00Z"));
         assetMeta.setUploadDatetime(Instant.parse("2022-01-02T12:00:00Z"));
-        assetMeta.setContentAccessor(new ContentAccessorDirect(getMockFileDataAsString(ASSET_FILE_NAME)));
+        assetMeta.setContentAccessor(new ContentAccessorDirect(credentialContent));
         return assetMeta;
     }
 

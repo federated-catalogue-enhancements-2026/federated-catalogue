@@ -448,7 +448,7 @@
           "response": []
         },
         {
-          "name": "/assets/{hash} Copy",
+          "name": "/assets/{id} Copy",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {},
             "disableBodyPruning": true
@@ -481,18 +481,18 @@
               }
             },
             "url": {
-              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:hash",
+              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
               "protocol": "{{federated_catalogue_protocol}}",
               "host": [
                 "{{federated_catalogue_address}}"
               ],
               "path": [
                 "assets",
-                ":hash"
+                ":id"
               ],
               "variable": [
                 {
-                  "key": "hash",
+                  "key": "id",
                   "value": ""
                 }
               ]
@@ -501,7 +501,7 @@
           "response": []
         },
         {
-          "name": "/assets/{hash} Copy",
+          "name": "/assets/{id} Copy",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {}
           },
@@ -533,18 +533,18 @@
               }
             },
             "url": {
-              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:hash",
+              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
               "protocol": "{{federated_catalogue_protocol}}",
               "host": [
                 "{{federated_catalogue_address}}"
               ],
               "path": [
                 "assets",
-                ":hash"
+                ":id"
               ],
               "variable": [
                 {
-                  "key": "hash",
+                  "key": "id",
                   "value": ""
                 }
               ]

@@ -1,0 +1,137 @@
+package eu.xfsc.fc.core.service.assetstore;
+
+import java.io.IOException;
+import java.util.UUID;
+
+import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Generates or extracts IRIs for assets.
+ *
+ * <p>For non-RDF assets, a UUID URN is generated per RFC 4122.
+ * For RDF assets, the IRI is extracted from the content
+ * ({@code credentialSubject.id}, {@code @id}, OWL ontology IRI,
+ * SHACL shape IRI, or SKOS concept scheme IRI).
+ * If no IRI can be extracted, a UUID URN is generated as fallback.</p>
+ *
+ * <p>DIDs are <b>extracted</b> from RDF content, not generated for assets.
+ * The {@link #generateDid} method is a utility for demonstration purposes
+ * per the SRS verification requirement.</p>
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class IriGenerator {
+
+    private static final String URN_UUID_PREFIX = "urn:uuid:";
+
+    private final IriValidator iriValidator;
+    private final ObjectMapper objectMapper;
+
+    /**
+     * Resolve the IRI for an asset. For RDF content, attempts extraction first.
+     * Falls back to UUID URN generation.
+     *
+     * @param content the asset content (may be null for non-RDF)
+     * @param isRdf   whether the content was detected as RDF
+     * @return a valid IRI for the asset
+     */
+    public String resolveIri(ContentAccessor content, boolean isRdf) {
+        if (isRdf && content != null) {
+            String extracted = extractIdFromRdf(content);
+            if (extracted != null) {
+                iriValidator.validate(extracted);
+                log.debug("resolveIri; extracted IRI from RDF content: {}", extracted);
+                return extracted;
+            }
+            log.debug("resolveIri; no IRI found in RDF content, generating UUID URN");
+        }
+        return generateUuidUrn();
+    }
+
+    /**
+     * Generate a UUID URN per RFC 4122.
+     *
+     * @return a URN in the format {@code urn:uuid:{uuid-v4}}
+     */
+    public String generateUuidUrn() {
+        String urn = URN_UUID_PREFIX + UUID.randomUUID().toString();
+        log.debug("generateUuidUrn; generated: {}", urn);
+        return urn;
+    }
+
+    /**
+     * Generate a DID for a given method and identifier.
+     * Utility method for demonstration per SRS verification requirement.
+     * Not used in the asset upload flow — DIDs are extracted from RDF content.
+     *
+     * @param method     the DID method (e.g. "web", "key")
+     * @param identifier the method-specific identifier
+     * @return a DID string
+     */
+    public String generateDid(String method, String identifier) {
+        String did = "did:" + method + ":" + identifier;
+        iriValidator.validate(did);
+        return did;
+    }
+
+    /**
+     * Attempt to extract an IRI from RDF content.
+     *
+     * <p>Extraction priority:
+     * <ol>
+     *   <li>{@code credentialSubject.id} — Verifiable Credentials</li>
+     *   <li>{@code @id} — generic JSON-LD</li>
+     * </ol>
+     *
+     * <p>For OWL ontologies, SHACL shapes, and SKOS concept schemes,
+     * the {@code @id} extraction covers them as they use standard JSON-LD.</p>
+     *
+     * @param content the RDF content accessor
+     * @return the extracted IRI, or null if none found
+     */
+    String extractIdFromRdf(ContentAccessor content) {
+        try {
+            String text = content.getContentAsString();
+            if (text == null || text.isBlank()) {
+                return null;
+            }
+
+            JsonNode json = objectMapper.readTree(text);
+
+            // Verifiable Credential / Presentation: credentialSubject.id
+            if (json.has("credentialSubject")) {
+                JsonNode subject = json.get("credentialSubject");
+                if (subject.isArray() && subject.size() > 0) {
+                    subject = subject.get(0);
+                }
+                if (subject != null && subject.has("id")) {
+                    String id = subject.get("id").asText();
+                    if (!id.isBlank()) {
+                        return id;
+                    }
+                }
+            }
+
+            // Direct @id (covers OWL ontologies, SHACL shapes, SKOS concept schemes)
+            if (json.has("@id")) {
+                String id = json.get("@id").asText();
+                if (!id.isBlank()) {
+                    return id;
+                }
+            }
+
+            return null;
+        } catch (IOException e) {
+            log.warn("extractIdFromRdf; could not parse RDF content as JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+}

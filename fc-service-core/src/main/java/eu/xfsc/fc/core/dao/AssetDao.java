@@ -11,6 +11,7 @@ import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
 public interface AssetDao {
 
 	AssetRecord select(String hash);
+	AssetRecord selectBySubjectId(String subjectId);
     PaginatedResults<AssetRecord> selectByFilter(AssetFilter filter, boolean withMeta, boolean withContent);
 	List<String> selectHashes(String startHash, int count, int chunks, int chunkId);
 	List<String> selectExpiredHashes();

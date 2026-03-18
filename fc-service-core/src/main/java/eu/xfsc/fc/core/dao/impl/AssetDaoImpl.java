@@ -53,6 +53,22 @@ public class AssetDaoImpl implements AssetDao {
 	}
 	
 	@Override
+	public AssetRecord selectBySubjectId(String subjectId) {
+	    log.debug("selectBySubjectId.enter; subjectId: '{}'", subjectId);
+	    String sql = "select asset_hash, subjectid, status, issuer, uploadtime, statustime, expirationtime, "
+	        + "validators, content_type, file_size, original_filename, content "
+	        + "from assets where subjectid = :subjectId order by status asc limit 1";
+	    AssetRecord assetRecord;
+	    try {
+	      assetRecord = jdbc.queryForObject(sql, Map.of("subjectId", subjectId), new AssetMetaMapper());
+	      log.debug("selectBySubjectId.exit; found asset with hash: {}", assetRecord.getAssetHash());
+	    } catch (EmptyResultDataAccessException ex) {
+	      assetRecord = null;
+	    }
+	    return assetRecord;
+	}
+
+	@Override
     public PaginatedResults<AssetRecord> selectByFilter(AssetFilter filter, boolean withMeta, boolean withContent) {
 	    log.debug("selectByFilter.enter; got filter: {}, withMeta: {}, withContent: {}", filter, withMeta, withContent);
 	    final FilterQueryBuilder queryBuilder = new FilterQueryBuilder(withMeta, withContent);

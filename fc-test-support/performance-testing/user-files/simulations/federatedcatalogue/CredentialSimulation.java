@@ -15,7 +15,7 @@ public class CredentialSimulation extends CommonSimulation {
   private static final String DURING_TIME_PARAM = "fc-performance-testing.asset.duringTime";
 
   ChainBuilder get = exec(http("Get credential")
-      .get(session -> "/assets/" + session.get(ASSET_HASH_PARAM))
+      .get(session -> "/assets/" + session.get(ASSET_ID_PARAM))
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token").toString())
       .check(status().is(200)));
@@ -33,16 +33,17 @@ public class CredentialSimulation extends CommonSimulation {
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().saveAs(IS_ADDED_PARAM))
       .check(status().is(201))
-      .check(jsonPath("$..assetHash").saveAs(ASSET_HASH_PARAM)));
+      .check(jsonPath("$..assetHash").saveAs(ASSET_HASH_PARAM))
+      .check(jsonPath("$..id").saveAs(ASSET_ID_PARAM)));
 
   ChainBuilder revoke = exec(http("Revoke credential")
-      .post(session -> "/assets/" + session.get(ASSET_HASH_PARAM).toString() + "/revoke")
+      .post(session -> "/assets/" + session.get(ASSET_ID_PARAM).toString() + "/revoke")
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().is(200)));
 
   ChainBuilder delete = exec(http("Delete credential")
-      .delete(session -> "/assets/" + session.get(ASSET_HASH_PARAM).toString())
+      .delete(session -> "/assets/" + session.get(ASSET_ID_PARAM).toString())
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().is(200)));

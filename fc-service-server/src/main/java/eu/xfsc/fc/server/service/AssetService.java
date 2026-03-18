@@ -4,6 +4,7 @@ import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
 import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -11,9 +12,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.UriUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.Assets;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.AssetFilter;
@@ -108,10 +110,10 @@ public class AssetService implements AssetsApiDelegate {
   }
   
   /**
-   * Service method for GET /assets/{asset_id} : Read an asset by its hash. Returns the content
-   * of the single asset.
+   * Service method for GET /assets/{id} : Read an asset by its IRI.
+   * Returns the content of the single asset.
    *
-   * @param assetId Hash of the asset (required)
+   * @param id IRI of the asset (required)
    * @return The requested asset (status code 200)
    *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
    *         or Asset not found (status code 404)
@@ -119,23 +121,28 @@ public class AssetService implements AssetsApiDelegate {
    *         Must not outline any information about the internal structure of the server. (status code 500)
    */
   @Override
-  public ResponseEntity<String> readAssetByHash(String assetId) {
-    log.debug("readAssetById.enter; got hash: {}", assetId);
-    AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetId);
+  public ResponseEntity<String> readAssetById(String id) {
+    log.debug("readAssetById.enter; got id: {}", id);
+    AssetMetadata assetMetadata = assetStorePublisher.getById(id);
 
-    HttpHeaders responseHeaders = new HttpHeaders();
-    //responseHeaders.set("Content-Type", "application/ld+json");
+    // Only RDF assets have content in DB. Non-RDF assets (PDF, binary) are in FileStore
+    // and require a dedicated download endpoint 
+    ContentAccessor content = assetMetadata.getContentAccessor();
+    if (content == null) {
+      throw new ClientException("Asset " + id + " (hash: " + assetMetadata.getAssetHash()
+          + ") is a non-RDF asset (content-type: " + assetMetadata.getContentType()
+          + "). Raw content download is not supported via this endpoint.");
+    }
 
-    log.debug("readAssetById.exit; returning asset by hash: {}", assetId);
+    log.debug("readAssetById.exit; returning asset by id: {}", id);
     return ResponseEntity.ok()
-        .headers(responseHeaders)
-        .body(assetMetadata.getContentAccessor().getContentAsString());
+        .body(content.getContentAsString());
   }
 
   /**
-   * Service method for DELETE /assets/{asset_id} : Completely delete an asset.
+   * Service method for DELETE /assets/{id} : Completely delete an asset.
    *
-   * @param assetId Hash of the asset (required)
+   * @param id IRI of the asset (required)
    * @return OK (status code 200)
    *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
    *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
@@ -144,16 +151,15 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Void> deleteAsset(String assetId) {
-    log.debug("deleteAsset.enter; got hash: {}", assetId);
-    // TODO: 27.07.2022 The method is not described in the documentation.
+  public ResponseEntity<Void> deleteAsset(String id) {
+    log.debug("deleteAsset.enter; got id: {}", id);
 
-    AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetId);
+    AssetMetadata assetMetadata = assetStorePublisher.getById(id);
 
     checkParticipantAccess(assetMetadata.getIssuer());
 
-    assetStorePublisher.deleteAsset(assetId);
-    log.debug("deleteAsset.exit; deleted asset by hash: {}", assetMetadata.getAssetHash());
+    assetStorePublisher.deleteAssetById(id);
+    log.debug("deleteAsset.exit; deleted asset by id: {}", id);
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -174,8 +180,6 @@ public class AssetService implements AssetsApiDelegate {
     log.debug("addAsset.enter; got asset of length: {}", body.length());
 
     try {
-     // TODO: 27.07.2022 Need to change the description and the order of actions in the documentation.
-     //  The FH scheme is different from the real process.
       ContentAccessorDirect contentAccessor = new ContentAccessorDirect(body);
 
       CredentialVerificationResult verificationResult = verificationService.verifyCredential(contentAccessor);
@@ -189,8 +193,9 @@ public class AssetService implements AssetsApiDelegate {
         assetMetadata.setWarnings(verificationResult.getWarnings());
       }
 
-      log.debug("addAsset.exit; returning asset by hash: {}", assetMetadata.getAssetHash());
-      return ResponseEntity.created(URI.create("/assets/" + assetMetadata.getAssetHash())).body(assetMetadata);
+      log.debug("addAsset.exit; returning asset with id: {}", assetMetadata.getId());
+      String encodedId = UriUtils.encodePathSegment(assetMetadata.getId(), StandardCharsets.UTF_8);
+      return ResponseEntity.created(URI.create("/assets/" + encodedId)).body(assetMetadata);
     } catch (ValidationException exception) {
       log.debug("addAsset.error; Asset credential isn't parsed due to: " + exception.getMessage(), exception);
       throw new ClientException("Asset credential isn't parsed due to: " + exception.getMessage());
@@ -198,10 +203,10 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * Service method for POST /assets/{asset_id}/revoke :
+   * Service method for POST /assets/{id}/revoke :
    * Change the lifecycle state of an asset to revoked.
    *
-   * @param assetId Hash of the asset (required)
+   * @param id IRI of the asset (required)
    * @return Revoked (status code 200)
    *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
    *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
@@ -210,23 +215,21 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Asset> updateAsset(String assetId) {
-    log.debug("updateAsset.enter; got hash: {}", assetId);
-    // TODO: 27.07.2022 Need to change the description and the order of actions in the documentation
-    //  (The documentation specifies a search by credential object, not by hash.)
+  public ResponseEntity<Asset> updateAsset(String id) {
+    log.debug("updateAsset.enter; got id: {}", id);
 
-    AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetId);
+    AssetMetadata assetMetadata = assetStorePublisher.getById(id);
 
     checkParticipantAccess(assetMetadata.getIssuer());
 
     if (assetMetadata.getStatus().equals(AssetStatus.ACTIVE)) {
-      assetStorePublisher.changeLifeCycleStatus(assetMetadata.getAssetHash(), AssetStatus.REVOKED);
+      assetStorePublisher.changeLifeCycleStatusById(id, AssetStatus.REVOKED);
     } else {
       throw new ConflictException("The asset status cannot be changed because the asset metadata status is "
           + assetMetadata.getStatus());
     }
 
-    log.debug("updateAsset.exit; updated asset by hash: {}", assetId);
+    log.debug("updateAsset.exit; updated asset by id: {}", id);
     return new ResponseEntity<>(assetMetadata, HttpStatus.OK);
   }
 

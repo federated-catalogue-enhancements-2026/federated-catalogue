@@ -741,17 +741,17 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/ServerError'
-  /assets/{asset_hash}:
+  /assets/{id}:
     get:
       tags:
         - Assets
-      summary: Read an asset by its hash.
-      description: Returns the content of a single asset.
-      operationId: readAssetByHash
+      summary: Read an asset by its IRI.
+      description: Returns the content of a single asset identified by its IRI (DID, URN, or HTTP IRI).
+      operationId: readAssetById
       parameters:
-        - name: asset_hash
+        - name: id
           in: path
-          description: Hash identifier of the asset
+          description: IRI identifier of the asset (DID, URN, or HTTP IRI)
           required: true
           schema:
             type: string
@@ -780,9 +780,9 @@ paths:
       security:
         - jwt: []
       parameters:
-        - name: asset_hash
+        - name: id
           in: path
-          description: Hash identifier of the asset
+          description: IRI identifier of the asset (DID, URN, or HTTP IRI)
           required: true
           schema:
             type: string
@@ -799,7 +799,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
-  /assets/{asset_hash}/revoke:
+  /assets/{id}/revoke:
     post:
       tags:
         - Assets
@@ -808,9 +808,9 @@ paths:
       security:
         - jwt: []
       parameters:
-        - name: asset_hash
+        - name: id
           in: path
-          description: Hash identifier of the asset
+          description: IRI identifier of the asset (DID, URN, or HTTP IRI)
           required: true
           schema:
             type: string

@@ -45,18 +45,19 @@ public class AssetClient extends ServiceClient {
         return doPost("/assets", asset, Map.of(), Map.of(), Asset.class);
     }
 
-    public Asset getAsset(String hash) {
-        Map<String, Object> pathParams = Map.of("asset_hash", hash);
-        return doGet("/assets/{asset_hash}", pathParams, Map.of(), Asset.class);
-    }
-    public void deleteAsset(String hash) {
-        Map<String, Object> pathParams = Map.of("asset_hash", hash);
-        doDelete("/assets/{asset_hash}", pathParams, Map.of(), Void.class);
+    public Asset getAsset(String id) {
+        Map<String, Object> pathParams = Map.of("id", id);
+        return doGet("/assets/{id}", pathParams, Map.of(), Asset.class);
     }
 
-    public void updateAsset(String hash) {
-        Map<String, Object> pathParams = Map.of("asset_hash", hash);
-        doPost("/assets/{asset_hash}/revoke", null, pathParams, Map.of(), Void.class);
+    public void deleteAsset(String id) {
+        Map<String, Object> pathParams = Map.of("id", id);
+        doDelete("/assets/{id}", pathParams, Map.of(), Void.class);
+    }
+
+    public void updateAsset(String id) {
+        Map<String, Object> pathParams = Map.of("id", id);
+        doPost("/assets/{id}/revoke", null, pathParams, Map.of(), Void.class);
     }
 
     public AssetResult getAssetByHash(String hash, boolean withMeta, boolean withContent) {
