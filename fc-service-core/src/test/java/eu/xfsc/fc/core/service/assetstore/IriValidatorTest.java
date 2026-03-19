@@ -115,4 +115,9 @@ class IriValidatorTest {
     void rejectsHttpIriWithInvalidSyntax() {
         assertThrows(ClientException.class, () -> validator.validate("http:// spaces not allowed"));
     }
+
+    @Test
+    void rejectsDidWithUppercaseMethod() {
+        assertThrows(ClientException.class, () -> validator.validate("did:Web:example.com"));
+    }
 }

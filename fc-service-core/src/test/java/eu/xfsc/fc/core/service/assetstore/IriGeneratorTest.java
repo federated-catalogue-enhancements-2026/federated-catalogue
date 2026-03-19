@@ -171,6 +171,23 @@ class IriGeneratorTest {
         assertTrue(iri.startsWith("urn:uuid:"));
     }
 
+    // --- RDF edge cases: null/empty content ---
+
+    @Test
+    void resolveIri_rdfNullContent_fallsBackToUuidUrn() {
+        String iri = iriGenerator.resolveIri(null, true);
+        assertTrue(iri.startsWith("urn:uuid:"));
+        assertTrue(UUID_URN_PATTERN.matcher(iri).matches());
+    }
+
+    @Test
+    void resolveIri_rdfEmptyContent_fallsBackToUuidUrn() {
+        ContentAccessorDirect content = new ContentAccessorDirect("");
+        String iri = iriGenerator.resolveIri(content, true);
+        assertTrue(iri.startsWith("urn:uuid:"));
+        assertTrue(UUID_URN_PATTERN.matcher(iri).matches());
+    }
+
     // --- credentialSubject.id takes priority over @id ---
 
     @Test

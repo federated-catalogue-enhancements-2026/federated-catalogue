@@ -47,6 +47,9 @@ public class AssetStoreImpl implements AssetStore {
   @Qualifier("assetFileStore")
   private FileStore fileStore;
 
+  @Autowired
+  private IriGenerator iriGenerator;
+
   @Override
   public ContentAccessor getFileByHash(final String hash) {
     AssetRecord meta = (AssetRecord) getByHash(hash);
@@ -128,7 +131,9 @@ public class AssetStoreImpl implements AssetStore {
     log.debug("storeAsset.enter; got meta: {}", assetMetadata);
     String subjectId = assetMetadata.getId();
     if (subjectId == null) {
-      throw new IllegalStateException("Asset ID must be resolved before storing");
+      subjectId = iriGenerator.generateUuidUrn();
+      assetMetadata.setId(subjectId);
+      log.debug("storeAsset; generated IRI for non-RDF asset: {}", subjectId);
     }
     AssetRecord assetRecord = AssetRecord.builder()
         .assetHash(assetMetadata.getAssetHash())
@@ -147,6 +152,9 @@ public class AssetStoreImpl implements AssetStore {
     } catch (DuplicateKeyException ex) {
       if (ex.getMessage().contains("assets_pkey")) {
         throw new ConflictException(String.format("asset with id %s already exists (hash: %s)", subjectId, assetMetadata.getAssetHash()));
+      }
+      if (ex.getMessage().contains("idx_asset_active")) {
+        throw new ConflictException(String.format("active asset with id %s already exists", subjectId));
       }
       throw new ServerException(ex);
     }

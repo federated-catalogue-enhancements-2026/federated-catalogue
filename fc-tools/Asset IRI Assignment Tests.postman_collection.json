@@ -360,7 +360,7 @@
 	],
 	"variable": [
 		{ "key": "client_id", "value": "federated-catalogue" },
-		{ "key": "client_secret", "value": "EDH8hiaio5wfrlamv4gv2yZxq1LYFRpD" },
+		{ "key": "client_secret", "value": "{{keycloak_client_secret}}", "description": "Set via environment or use dev default from docker/dev.env" },
 		{ "key": "federated_catalogue_address", "value": "localhost:8081" },
 		{ "key": "federated_catalogue_protocol", "value": "http" },
 		{ "key": "keycloak_address", "value": "key-server:8080" },

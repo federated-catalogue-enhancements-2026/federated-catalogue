@@ -119,7 +119,7 @@
           "response": []
         },
         {
-          "name": "/schemas/{id} Copy",
+          "name": "/schemas/{id}",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {},
             "disableBodyPruning": true
@@ -172,7 +172,7 @@
           "response": []
         },
         {
-          "name": "/schemas/{id} Copy",
+          "name": "/schemas/{id}",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {}
           },
@@ -448,7 +448,7 @@
           "response": []
         },
         {
-          "name": "/assets/{id} Copy",
+          "name": "/assets/{id}",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {},
             "disableBodyPruning": true

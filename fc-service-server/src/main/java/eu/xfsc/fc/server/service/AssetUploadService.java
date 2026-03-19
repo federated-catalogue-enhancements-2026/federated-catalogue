@@ -14,7 +14,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.service.assetstore.IriGenerator;
 import eu.xfsc.fc.core.service.assetstore.RdfDetector;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
@@ -40,7 +39,6 @@ public class AssetUploadService {
     private final VerificationService verificationService;
     private final AssetStore assetStorePublisher;
     private final RdfDetector rdfDetector;
-    private final IriGenerator iriGenerator;
 
     public AssetMetadata processUpload(byte[] content, String contentType, String originalFilename) {
         if (content == null || content.length == 0) {
@@ -75,12 +73,11 @@ public class AssetUploadService {
     private AssetMetadata handleNonRdfAsset(byte[] content, String contentType, String originalFilename) {
         log.debug("handleNonRdfAsset; non-RDF asset, skipping verification");
         String assetHash = calculateSha256AsHex(content);
-        String iri = iriGenerator.generateUuidUrn();
         String participantId = getSessionParticipantId();
         Instant now = Instant.now();
 
         ContentAccessorBinary contentAccessor = new ContentAccessorBinary(content);
-        AssetMetadata assetMetadata = new AssetMetadata(assetHash, iri, AssetStatus.ACTIVE,
+        AssetMetadata assetMetadata = new AssetMetadata(assetHash, null, AssetStatus.ACTIVE,
                 participantId, null, now, now, contentAccessor);
         assetMetadata.setContentType(contentType);
         assetMetadata.setFileSize((long) content.length);

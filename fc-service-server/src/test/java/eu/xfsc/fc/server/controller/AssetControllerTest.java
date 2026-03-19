@@ -39,6 +39,7 @@ import eu.xfsc.fc.api.generated.model.Assets;
 import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
@@ -277,6 +278,26 @@ public class AssetControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", assetMeta.getId())
                 .with(csrf()))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = {ASSET_READ})
+    public void readNonRdfAssetById_returnBadRequestResponse() throws Exception {
+        byte[] pdfBytes = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
+        String hash = HashUtils.calculateSha256AsHex(pdfBytes);
+        Instant now = Instant.now();
+
+        AssetMetadata nonRdfMeta = new AssetMetadata(hash, null, AssetStatus.ACTIVE,
+                TEST_ISSUER, null, now, now, new ContentAccessorBinary(pdfBytes));
+        nonRdfMeta.setContentType("application/pdf");
+        nonRdfMeta.setFileSize((long) pdfBytes.length);
+        assetStorePublisher.storeUnverified(nonRdfMeta, "test.pdf");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", nonRdfMeta.getId())
+                .with(csrf()))
+            .andExpect(status().isBadRequest());
+
+        assetStorePublisher.deleteAsset(nonRdfMeta.getAssetHash());
     }
 
     @Test
