@@ -189,6 +189,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         log.debug("verifyCredential; credentials processed, time taken: {}", System.currentTimeMillis() - stamp2);
 
         // Gate on gaiaxTrustFrameworkEnabled: non-Gaia-X VC 2.0 credentials have no known TrustFrameworkBaseClass
+        // TODO(gaia-x-loire): when Loire ontology support lands, resolveBaseClass should return the correct
+        //   Loire type for Gaia-X credentials. Remove this gate and let hasClasses() enforce the check unconditionally.
         if (verifySemantics && gaiaxTrustFrameworkEnabled && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
@@ -468,14 +470,26 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (obj == null) {
             creds = Collections.emptyMap();
         } else if (obj instanceof List) {
-            List<Map<String, Object>> l = (List<Map<String, Object>>) obj;
+            List<?> l = (List<?>) obj;
             creds = new LinkedHashMap<>(l.size());
-            for (Map<String, Object> _vc : l) {
-                VerifiableCredential vc = VerifiableCredential.fromMap(_vc);
+            for (Object entry : l) {
+                if (entry instanceof String) {
+                    // Compact JWT VC — opaque for semantic processing; signatures handled by verifyInnerVcCredentials
+                    // TODO(gaia-x-loire): if Loire requires semantic validation of embedded JWT VCs, unwrap and
+                    //   resolve their base class here instead of skipping.
+                    continue;
+                }
+                @SuppressWarnings("unchecked")
+                VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) entry);
                 vc.setDocumentLoader(vp.getDocumentLoader());
                 creds.put(vc, resolveBaseClass(vc));
             }
+        } else if (obj instanceof String) {
+            // Single compact JWT VC — opaque for semantic processing
+            // TODO(gaia-x-loire): same as list case above — unwrap if Loire requires semantic validation.
+            creds = Collections.emptyMap();
         } else {
+            @SuppressWarnings("unchecked")
             VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) obj);
             vc.setDocumentLoader(vp.getDocumentLoader());
             creds = Map.of(vc, resolveBaseClass(vc));
