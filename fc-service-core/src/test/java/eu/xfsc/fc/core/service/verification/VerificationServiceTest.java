@@ -29,6 +29,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.util.ReflectionTestUtils;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
@@ -79,6 +80,9 @@ public class VerificationServiceTest {
 
   @Autowired
   private VerificationServiceImpl verificationService;
+
+  @Autowired
+  private CredentialVerificationStrategy credentialVerificationStrategy;
 
   @MockitoBean
   private JwtSignatureVerifier jwtVerifierMock;
@@ -159,25 +163,55 @@ public class VerificationServiceTest {
 
   @Test
   void validVCUnknownType() {
+    // With gaiax disabled (default in tests), non-Gaia-X credentials pass the semantics check.
+    // verifyVCSignatures=false because input.vc.jsonld has a dummy proof that would fail verification.
     String path = "VerificationService/jsonld/input.vc.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    Exception ex = assertThrowsExactly(VerificationException.class, () -> verificationService.verifyCredential(getAccessor(path)));
-    assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
-
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), false, true, false, false);
+    boolean verifySemantics = true;
+    boolean verifyVcSigs = false;
+    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path),
+        verifySemantics, false, false, verifyVcSigs);
     assertNotNull(vr);
     assertEquals("did:example:ebfeb1f712ebc6f1c276e12ec21", vr.getId());
     assertEquals("https://example.edu/issuers/565049", vr.getIssuer());
   }
 
   @Test
+  void validVCUnknownType_defaultConfig_throwsSignatureError() {
+    // Documents that input.vc.jsonld carries a dummy proof: default config (verifyVCSignatures=true) rejects it.
+    String path = "VerificationService/jsonld/input.vc.jsonld";
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    Exception ex = assertThrowsExactly(VerificationException.class,
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, true));
+    assertTrue(ex.getMessage().contains("Signatures error"),
+        "Expected signature error but got: " + ex.getMessage());
+  }
+
+  @Test
+  void validVCUnknownType_gaiaxEnabled_throwsNoProperSubjectError() {
+    // With gaiax enabled, non-Gaia-X credentials are rejected by the semantics check.
+    ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", true);
+    try {
+      String path = "VerificationService/jsonld/input.vc.jsonld";
+      schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+      Exception ex = assertThrowsExactly(VerificationException.class,
+          () -> verificationService.verifyCredential(getAccessor(path), true, false, false, false));
+      assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
+    } finally {
+      ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", false);
+    }
+  }
+
+  @Test
   void validVPUnknownType() {
+    // With gaiax disabled (default in tests), non-Gaia-X VP credentials pass the semantics check.
+    // verifyVPSignatures=false because input.vp.jsonld uses Ed25519Signature2018 which is unsupported.
     String path = "VerificationService/jsonld/input.vp.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    Exception ex = assertThrowsExactly(VerificationException.class, () -> verificationService.verifyCredential(getAccessor(path)));
-    assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
-
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), false, true, false, false);
+    boolean verifySemantics = true;
+    boolean verifyVpSigs = false;
+    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path),
+        verifySemantics, false, verifyVpSigs, false);
     assertNotNull(vr);
     assertEquals("did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd", vr.getId());
     assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vr.getIssuer());
@@ -321,9 +355,15 @@ public class VerificationServiceTest {
     assertEquals(3, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
     schemaStore.deleteSchema("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#");
     assertEquals(2, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
-    Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(content, true, true, false, false));
-    assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
+    // With gaiax enabled, removing the required ontology schema causes hasClasses() to fail.
+    ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", true);
+    try {
+      Exception ex = assertThrowsExactly(VerificationException.class, ()
+          -> verificationService.verifyCredential(content, true, true, false, false));
+      assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
+    } finally {
+      ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", false);
+    }
     verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
   }
 
@@ -1008,6 +1048,43 @@ public class VerificationServiceTest {
     assertThrowsExactly(ClientException.class,
         () -> verificationService.verifyCredential(content, false, false, false, false),
         "Invalid JWT-like content must throw ClientException, not a server error");
+  }
+
+  // --- VC 2.0 non-Gaia-X RDF asset tests ---
+
+  /**
+   * VC 2.0 credential without any Gaia-X type must pass semantic verification
+   * when gaiaxTrustFrameworkEnabled=false (default). Gating hasClasses() on the
+   * Gaia-X flag allows generic VC 2.0 assets to be accepted as RDF claims.
+   */
+  @Test
+  void verifyCredential_vc2NonGaiaxRdfAsset_passesWithSemanticsEnabled() {
+    ContentAccessor content = getAccessor("Claims-Tests/vc2NonGaiax.jsonld");
+
+    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
+
+    assertNotNull(vr, "VC 2.0 without Gaia-X type must pass when gaiax is disabled");
+    assertEquals("did:web:subject.example.com", vr.getId());
+    assertEquals("did:web:issuer.example.com", vr.getIssuer());
+  }
+
+  /**
+   * VC 2.0 credential without Gaia-X type must be rejected when
+   * gaiaxTrustFrameworkEnabled=true — Gaia-X deployments require a recognized class.
+   */
+  @Test
+  void verifyCredential_vc2NonGaiaxRdfAsset_gaiaxEnabled_throwsNoProperSubjectError() {
+    ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", true);
+    try {
+      schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+      ContentAccessor content = getAccessor("Claims-Tests/vc2NonGaiax.jsonld");
+
+      Exception ex = assertThrowsExactly(VerificationException.class,
+          () -> verificationService.verifyCredential(content, true, false, false, false));
+      assertEquals("Semantic Error: no proper CredentialSubject found", ex.getMessage());
+    } finally {
+      ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", false);
+    }
   }
 
 }

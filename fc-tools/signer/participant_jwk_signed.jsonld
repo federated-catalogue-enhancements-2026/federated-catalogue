@@ -44,18 +44,20 @@
       }
     },
     "proof" : {
+      "@context" : [ "https://www.w3.org/2018/credentials/v1", "https://w3id.org/security/suites/jws-2020/v1" ],
       "type" : "JsonWebSignature2020",
-      "created" : "2026-03-18T12:41:06Z",
+      "created" : "2026-03-19T11:04:34Z",
       "verificationMethod" : "did:jwk:eyJlIjoiQVFBQiIsImtpZCI6InNpZ25SU0EyMDQ4Iiwia3R5IjoiUlNBIiwibiI6IjhDUl8ySUJuSGlDcjVIY0kxcWh1dXpiRmdMRjFlSVI3dGM1NTF2WlN2ek1rTEtIVEpxeHVZR1BlVXp2U29ndWctTDJRQ2tpVWdmSjFZUzRFUmhrRFM2cVBJbFdMM1BGbkc4VjZQVWxoODZjTjgxWkhZdkhoUFYwUDdKT25UeGVKcTV1a1dFT0ctMUxrTmk5eGVnelRoMEVwV0w4NU5aUmJOYWJ0R0VqTUhqY04yak9NUldSYkE4OVdENVhOTExwdWUyNVlxbHcxOGZsbXNNRmh5dXk2YlVmanR2aXJ5SThwb0RLOVpXcGtPUjN6ejlNN0hpQXVyZ2NLSks5ODlEX0UzZ3d3S1FhQ21CbEJ4X3hESlJoVFB1bnJZUFBySHlpMExmaG5CeWgzcEJRMWhyelFLblZyX18zYkVwcE5abmRFLVhlWTY0VzNNaGUwa1RrREp2VXJndyJ9#0",
       "proofPurpose" : "assertionMethod",
-      "jws" : "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJQUzI1NiJ9..05fgk_X1diNjhYEdj44-J7MO35SmUdImcvHbje84R5Zzph0pz0x8QJ_Evdn5qgetJI69Xy2VuaLPa2TrhfURK1GHr4EAMc2DwYpeYTggR5iQGOtO8pEiqh94LAD9-G1xgrVq5xXA3bx-4CTzJFoWS8f4XYbdAy5BXF297uP-wESQDjGB0ilDkDCOLn6rZff9PnevzsK13DO9sN15Wg8ohFEUg4T2mE_LgpbYr3aT6UKFU_rNxNg6ExlW0gD4PL-41OGRXfd_g5S1eR0JarffmeNYit1cwtyzPza8WSG5_RUvxIF9FedPqyCfaQ4GcM5ztNZHjzM-ijAn6eO5S3K4OA"
+      "jws" : "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJQUzI1NiJ9..y3NGcQN28Wyrw09oBUzptAPupMWF2WrL6ysvb1IgUCq-V3trcNgJ6bnV6xYgo1zZQaq9u_xJly9Lv7Xwec2Pq0AeBbVpy2n34DwGd5aXZYqJ8jxtWAfqr48jkTLa-qEZuve7SdB7X1yq1zKzq7550Wv7YL-jQvl_BJ3D6xYPN1LxCL6yyclVELNfM-k3FgZOhvTdVJEeD3vmqscniB6xeihnFKUxqOswxbpnLvG9yFJtolWTDmX5QH29sHy9LKxK84bQo_vPeU1rfuMFJ8Ioulhs6Y3hJb9Xyund1GiBtAJSI5iFXUV_H62Hc-4zvT4_CTtrFjf2GsoRmATwEbbbpQ"
     }
   } ],
   "proof" : {
+    "@context" : [ "https://www.w3.org/2018/credentials/v1", "https://w3id.org/security/suites/jws-2020/v1" ],
     "type" : "JsonWebSignature2020",
-    "created" : "2026-03-18T12:41:06Z",
+    "created" : "2026-03-19T11:04:34Z",
     "verificationMethod" : "did:jwk:eyJlIjoiQVFBQiIsImtpZCI6InNpZ25SU0EyMDQ4Iiwia3R5IjoiUlNBIiwibiI6IjhDUl8ySUJuSGlDcjVIY0kxcWh1dXpiRmdMRjFlSVI3dGM1NTF2WlN2ek1rTEtIVEpxeHVZR1BlVXp2U29ndWctTDJRQ2tpVWdmSjFZUzRFUmhrRFM2cVBJbFdMM1BGbkc4VjZQVWxoODZjTjgxWkhZdkhoUFYwUDdKT25UeGVKcTV1a1dFT0ctMUxrTmk5eGVnelRoMEVwV0w4NU5aUmJOYWJ0R0VqTUhqY04yak9NUldSYkE4OVdENVhOTExwdWUyNVlxbHcxOGZsbXNNRmh5dXk2YlVmanR2aXJ5SThwb0RLOVpXcGtPUjN6ejlNN0hpQXVyZ2NLSks5ODlEX0UzZ3d3S1FhQ21CbEJ4X3hESlJoVFB1bnJZUFBySHlpMExmaG5CeWgzcEJRMWhyelFLblZyX18zYkVwcE5abmRFLVhlWTY0VzNNaGUwa1RrREp2VXJndyJ9#0",
     "proofPurpose" : "assertionMethod",
-    "jws" : "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJQUzI1NiJ9..3KogQVVQw0jinV2OoZx0H-tF8p5ZDTq-mHS_yrDIXBQTF12LiQnWSGEiuiMwpTealw3zRC4pty3yztnkv4usfz0KaWcSdarVO1c_dCGHO8DLrXpPIX3K-B4RV-UOi37t0-2C-doThdG3RJF2t-lV2jTpjMRasy0x6bVcOqFjkRrvh0y_4Xz3r3nIU2hVIurlMHfrhlNFpZ_9Kl8P_i0Zq-ZcC4pZy6OXdn9nUeqaHAMsHfEIxgeRFNiqmTFcI9AQSBEoanHWVwW2q4sHUfKgDFnbStJpT49da8r8RO_IyqXYXX-xbuZliZDTOcPy2iOi0xM_eZgnfRs79uEqyaJTQw"
+    "jws" : "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJQUzI1NiJ9..Jx7MxvxLrIkzgZkWRK9P-7hk0qe5TenUDVbGndS0sJ4GUG0jW9_CEZbyBhFu-8dHXRVgwXI8nuSbKGw-ZFUcZL_b7_HdApthJeTtsnu9q_9XoVWYi1yGYAKBaSCTlB-uDM4LUp_QGdE7wBdF_btQf1LhRTvVet0RSglqWUPyH6hB0rvuEpFjdcY5jfzYpnFEgS-P1oXqz-9PGFGgKWiJ8fZ5a3n4B9RdnKFhpJBAq_lYlJVQCUmZOHi9sW9XLNrs6xM0E_XG61A02XEuco5vJMvQx_650RCHgqNFGocHKjsdj9i80wNjEu1bwlbPAkBbvCuuXoO-7g3_Nb-rjoQkEA"
   }
 }

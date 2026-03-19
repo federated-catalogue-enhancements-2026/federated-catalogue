@@ -188,7 +188,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         TypedCredentials typedCredentials = parseCredentials(ld, strict && requireVP, verifySemantics);
         log.debug("verifyCredential; credentials processed, time taken: {}", System.currentTimeMillis() - stamp2);
 
-        if (verifySemantics && !typedCredentials.hasClasses()) {
+        // Gate on gaiaxTrustFrameworkEnabled: non-Gaia-X VC 2.0 credentials have no known TrustFrameworkBaseClass
+        if (verifySemantics && gaiaxTrustFrameworkEnabled && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
