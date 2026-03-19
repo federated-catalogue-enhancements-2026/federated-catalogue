@@ -124,23 +124,6 @@ public interface AssetStore {
   ContentAccessor getFileById(String id);
 
   /**
-   * Change the life cycle status of the active asset with the given IRI.
-   *
-   * @param id           The IRI of the asset.
-   * @param targetStatus The new status.
-   * @throws eu.xfsc.fc.core.exception.NotFoundException if no asset with the given IRI exists.
-   */
-  void changeLifeCycleStatusById(String id, AssetStatus targetStatus);
-
-  /**
-   * Remove the asset with the given IRI from the store.
-   *
-   * @param id The IRI of the asset.
-   * @throws eu.xfsc.fc.core.exception.NotFoundException if no asset with the given IRI exists.
-   */
-  void deleteAssetById(String id);
-
-  /**
    * Remove all assets from the AssetStore.
    */
   void clear();

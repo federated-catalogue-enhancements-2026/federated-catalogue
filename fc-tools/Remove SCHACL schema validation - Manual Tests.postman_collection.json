@@ -501,7 +501,7 @@
           "response": []
         },
         {
-          "name": "/assets/{id} Copy",
+          "name": "/assets/{asset_hash}",
           "protocolProfileBehavior": {
             "disabledSystemHeaders": {}
           },
@@ -533,18 +533,18 @@
               }
             },
             "url": {
-              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
+              "raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash",
               "protocol": "{{federated_catalogue_protocol}}",
               "host": [
                 "{{federated_catalogue_address}}"
               ],
               "path": [
                 "assets",
-                ":id"
+                ":asset_hash"
               ],
               "variable": [
                 {
-                  "key": "id",
+                  "key": "asset_hash",
                   "value": ""
                 }
               ]

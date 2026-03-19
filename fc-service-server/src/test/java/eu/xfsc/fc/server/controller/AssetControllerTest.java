@@ -281,7 +281,7 @@ public class AssetControllerTest {
 
     @Test
     public void deleteAssetShouldReturnUnauthorizedResponse() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -291,7 +291,7 @@ public class AssetControllerTest {
     @Test
     @WithMockUser
     public void deleteAssetReturnForbiddenResponse() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -303,7 +303,7 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = "")})))
     public void deleteAssetWithoutIssuerReturnForbiddenResponse() throws Exception {
       assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
-      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
+      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -314,7 +314,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_DELETE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteAssetReturnNotFoundResponse() throws Exception {
-      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
+      mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -327,7 +327,7 @@ public class AssetControllerTest {
     public void deleteAssetReturnSuccessResponse() throws Exception {
         assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{id}", assetMeta.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -532,7 +532,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeAssetReturnNotFound() throws Exception {
-      mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
+      mockMvc.perform(MockMvcRequestBuilders.post("/assets/{asset_hash}/revoke", assetMeta.getAssetHash())
               .with(csrf())
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
@@ -546,7 +546,7 @@ public class AssetControllerTest {
         final CredentialVerificationResult vr = new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer",
                 Instant.now(), "vhash", List.of(), List.of());
         assetStorePublisher.storeCredential(assetMeta, vr);
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{asset_hash}/revoke", assetMeta.getAssetHash())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -583,8 +583,7 @@ public class AssetControllerTest {
 
         assertEquals(2, nodes.size());
 
-        mockMvc.perform(MockMvcRequestBuilders.post(
-                    URI.create("/assets/" + UriUtils.encodePathSegment(asset.getId(), StandardCharsets.UTF_8) + "/revoke"))
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{asset_hash}/revoke", asset.getAssetHash())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
             	.with(csrf()))
@@ -613,24 +612,32 @@ public class AssetControllerTest {
         assetStorePublisher.deleteAsset(hash);
     }
     
+    /**
+     * Revoking a non-active asset returns 409 Conflict because only ACTIVE assets
+     * can be revoked. Hash-based lookup finds the asset regardless of status,
+     * then the business logic rejects the transition.
+     *
+     * <p>When versioning is introduced (CAT-FR-LM-01), DEPRECATED → REVOKED transitions
+     * will be supported via version-specific endpoints.</p>
+     */
     @Test
     @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void revokeAssetWithNotActiveStatusReturnConflictResponse() throws Exception {
+    public void revokeAsset_withNotActiveStatus_returnConflictResponse() throws Exception {
         final CredentialVerificationResult vr = new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer",
                 Instant.now(), "vhash", List.of(), List.of());
-        AssetMetadata metadata = assetMeta;
-        metadata.setStatus(AssetStatus.DEPRECATED);
-        assetStorePublisher.storeCredential(metadata, vr);
+        AssetMetadata deprecatedMeta = createAssetMetadata();
+        deprecatedMeta.setStatus(AssetStatus.DEPRECATED);
+        assetStorePublisher.storeCredential(deprecatedMeta, vr);
         MvcResult result = mockMvc
-            .perform(MockMvcRequestBuilders.post("/assets/{id}/revoke", assetMeta.getId())
+            .perform(MockMvcRequestBuilders.post("/assets/{asset_hash}/revoke", deprecatedMeta.getAssetHash())
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isConflict()).andReturn();
         Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
         assertEquals("The asset status cannot be changed because the asset metadata status is deprecated", error.getMessage());
-        assetStorePublisher.deleteAsset(metadata.getAssetHash());
+        assetStorePublisher.deleteAsset(deprecatedMeta.getAssetHash());
     }
 
     @Test

@@ -37,13 +37,13 @@ public class CredentialSimulation extends CommonSimulation {
       .check(jsonPath("$..id").saveAs(ASSET_ID_PARAM)));
 
   ChainBuilder revoke = exec(http("Revoke credential")
-      .post(session -> "/assets/" + session.get(ASSET_ID_PARAM).toString() + "/revoke")
+      .post(session -> "/assets/" + session.get(ASSET_HASH_PARAM).toString() + "/revoke")
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().is(200)));
 
   ChainBuilder delete = exec(http("Delete credential")
-      .delete(session -> "/assets/" + session.get(ASSET_ID_PARAM).toString())
+      .delete(session -> "/assets/" + session.get(ASSET_HASH_PARAM).toString())
       .header("Content-Type", "application/json")
       .header("Authorization", session -> "Bearer " + session.get("access_token"))
       .check(status().is(200)));

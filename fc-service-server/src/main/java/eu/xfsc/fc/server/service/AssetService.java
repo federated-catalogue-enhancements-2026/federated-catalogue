@@ -140,9 +140,13 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * Service method for DELETE /assets/{id} : Completely delete an asset.
+   * Service method for DELETE /assets/{asset_hash} : Completely delete an asset.
    *
-   * @param id IRI of the asset (required)
+   * <p>Unlike other asset endpoints which use IRI-based identification, the delete operation
+   * uses the content hash (PRIMARY KEY) to guarantee unambiguous single-row targeting.
+   * See ADR 7 — Delete Operation Exception.</p>
+   *
+   * @param assetHash SHA-256 content hash of the asset (required)
    * @return OK (status code 200)
    *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
    *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
@@ -151,15 +155,15 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Void> deleteAsset(String id) {
-    log.debug("deleteAsset.enter; got id: {}", id);
+  public ResponseEntity<Void> deleteAsset(String assetHash) {
+    log.debug("deleteAsset.enter; got hash: {}", assetHash);
 
-    AssetMetadata assetMetadata = assetStorePublisher.getById(id);
+    AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
 
     checkParticipantAccess(assetMetadata.getIssuer());
 
-    assetStorePublisher.deleteAssetById(id);
-    log.debug("deleteAsset.exit; deleted asset by id: {}", id);
+    assetStorePublisher.deleteAsset(assetHash);
+    log.debug("deleteAsset.exit; deleted asset by hash: {}", assetHash);
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -203,10 +207,15 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * Service method for POST /assets/{id}/revoke :
+   * Service method for POST /assets/{asset_hash}/revoke :
    * Change the lifecycle state of an asset to revoked.
    *
-   * @param id IRI of the asset (required)
+   * <p>Like the delete operation, the revoke endpoint uses the content hash to guarantee
+   * unambiguous single-row targeting. When versioning is introduced (CAT-FR-LM-01),
+   * this will be replaced by version-specific revocation. See ADR 7 — Delete Operation
+   * Exception.</p>
+   *
+   * @param assetHash SHA-256 content hash of the asset (required)
    * @return Revoked (status code 200)
    *         or May contain hints how to solve the error or indicate what was wrong in the request. (status code 400)
    *         or Forbidden. The user does not have the permission to execute this request. (status code 403)
@@ -215,21 +224,21 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Asset> updateAsset(String id) {
-    log.debug("updateAsset.enter; got id: {}", id);
+  public ResponseEntity<Asset> updateAsset(String assetHash) {
+    log.debug("updateAsset.enter; got hash: {}", assetHash);
 
-    AssetMetadata assetMetadata = assetStorePublisher.getById(id);
+    AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
 
     checkParticipantAccess(assetMetadata.getIssuer());
 
     if (assetMetadata.getStatus().equals(AssetStatus.ACTIVE)) {
-      assetStorePublisher.changeLifeCycleStatusById(id, AssetStatus.REVOKED);
+      assetStorePublisher.changeLifeCycleStatus(assetHash, AssetStatus.REVOKED);
     } else {
       throw new ConflictException("The asset status cannot be changed because the asset metadata status is "
           + assetMetadata.getStatus());
     }
 
-    log.debug("updateAsset.exit; updated asset by id: {}", id);
+    log.debug("updateAsset.exit; revoked asset by hash: {}", assetHash);
     return new ResponseEntity<>(assetMetadata, HttpStatus.OK);
   }
 

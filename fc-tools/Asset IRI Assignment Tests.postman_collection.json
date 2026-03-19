@@ -261,7 +261,7 @@
 			"response": []
 		},
 		{
-			"name": "Revoke JSON asset by IRI",
+			"name": "Revoke JSON asset by hash",
 			"event": [
 				{
 					"listen": "test",
@@ -284,17 +284,17 @@
 				"header": [{ "key": "accept", "value": "application/json" }],
 				"body": { "mode": "raw", "raw": "", "options": { "raw": { "language": "json" } } },
 				"url": {
-					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id/revoke",
+					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash/revoke",
 					"protocol": "{{federated_catalogue_protocol}}",
 					"host": ["{{federated_catalogue_address}}"],
-					"path": ["assets", ":id", "revoke"],
-					"variable": [{ "key": "id", "value": "{{json_asset_id}}" }]
+					"path": ["assets", ":asset_hash", "revoke"],
+					"variable": [{ "key": "asset_hash", "value": "{{json_asset_hash}}" }]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Delete text asset by IRI",
+			"name": "Delete text asset by hash",
 			"event": [
 				{
 					"listen": "test",
@@ -316,11 +316,11 @@
 				"method": "DELETE",
 				"header": [{ "key": "accept", "value": "application/json" }],
 				"url": {
-					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
+					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash",
 					"protocol": "{{federated_catalogue_protocol}}",
 					"host": ["{{federated_catalogue_address}}"],
-					"path": ["assets", ":id"],
-					"variable": [{ "key": "id", "value": "{{text_asset_id}}" }]
+					"path": ["assets", ":asset_hash"],
+					"variable": [{ "key": "asset_hash", "value": "{{text_asset_hash}}" }]
 				}
 			},
 			"response": []
@@ -348,11 +348,11 @@
 				"method": "DELETE",
 				"header": [{ "key": "accept", "value": "application/json" }],
 				"url": {
-					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
+					"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash",
 					"protocol": "{{federated_catalogue_protocol}}",
 					"host": ["{{federated_catalogue_address}}"],
-					"path": ["assets", ":id"],
-					"variable": [{ "key": "id", "value": "{{json_asset_id}}" }]
+					"path": ["assets", ":asset_hash"],
+					"variable": [{ "key": "asset_hash", "value": "{{json_asset_hash}}" }]
 				}
 			},
 			"response": []

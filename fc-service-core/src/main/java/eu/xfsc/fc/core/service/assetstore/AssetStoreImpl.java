@@ -231,18 +231,6 @@ public class AssetStoreImpl implements AssetStore {
   }
 
   @Override
-  public void changeLifeCycleStatusById(final String id, final AssetStatus targetStatus) {
-    AssetRecord record = (AssetRecord) getById(id);
-    changeLifeCycleStatus(record.getAssetHash(), targetStatus);
-  }
-
-  @Override
-  public void deleteAssetById(final String id) {
-    AssetRecord record = (AssetRecord) getById(id);
-    deleteAsset(record.getAssetHash());
-  }
-
-  @Override
   public void clear() {
 	int cnt = dao.deleteAll();
     log.debug("clear; deleted {} assets", cnt);

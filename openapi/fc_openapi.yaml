@@ -772,17 +772,22 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
+  /assets/{asset_hash}:
     delete:
       tags:
         - Assets
-      summary: Completely delete an asset
+      summary: Completely delete an asset by its content hash
+      description: >
+        Unlike other asset endpoints which use IRI-based identification (/assets/{id}),
+        the delete operation uses the SHA-256 content hash to guarantee unambiguous
+        single-row targeting. See ADR 7 — Delete Operation Exception.
       operationId: deleteAsset
       security:
         - jwt: []
       parameters:
-        - name: id
+        - name: asset_hash
           in: path
-          description: IRI identifier of the asset (DID, URN, or HTTP IRI)
+          description: Hash identifier of the asset
           required: true
           schema:
             type: string
@@ -799,18 +804,24 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
-  /assets/{id}/revoke:
+  /assets/{asset_hash}/revoke:
     post:
       tags:
         - Assets
-      summary: Change the lifecycle state of an asset to revoked.
+      summary: Change the lifecycle state of an asset to revoked
+      description: >
+        Like the delete operation, the revoke endpoint uses the SHA-256 content hash
+        to guarantee unambiguous single-row targeting. Only ACTIVE assets can be revoked.
+        When versioning is introduced (CAT-FR-LM-01), this endpoint will be replaced by
+        version-specific revocation (POST /assets/{id}/versions/{v}/revoke).
+        See ADR 7 — Delete Operation Exception.
       operationId: updateAsset
       security:
         - jwt: []
       parameters:
-        - name: id
+        - name: asset_hash
           in: path
-          description: IRI identifier of the asset (DID, URN, or HTTP IRI)
+          description: Hash identifier of the asset
           required: true
           schema:
             type: string

@@ -811,7 +811,7 @@
 					"response": []
 				},
 				{
-					"name": "/assets/{id}/revoke",
+					"name": "/assets/{asset_hash}/revoke",
 					"protocolProfileBehavior": {
 						"disabledSystemHeaders": {}
 					},
@@ -843,19 +843,19 @@
 							}
 						},
 						"url": {
-							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id/revoke",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash/revoke",
 							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
 								"{{federated_catalogue_address}}"
 							],
 							"path": [
 								"assets",
-								":id",
+								":asset_hash",
 								"revoke"
 							],
 							"variable": [
 								{
-									"key": "id",
+									"key": "asset_hash",
 									"value": ""
 								}
 							]
@@ -949,7 +949,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:hash",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:id",
 							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
 								"{{federated_catalogue_address}}"
@@ -969,7 +969,7 @@
 					"response": []
 				},
 				{
-					"name": "/assets/{id}",
+					"name": "/assets/{asset_hash}",
 					"protocolProfileBehavior": {
 						"disabledSystemHeaders": {}
 					},
@@ -1001,18 +1001,18 @@
 							}
 						},
 						"url": {
-							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:hash",
+							"raw": "{{federated_catalogue_protocol}}://{{federated_catalogue_address}}/assets/:asset_hash",
 							"protocol": "{{federated_catalogue_protocol}}",
 							"host": [
 								"{{federated_catalogue_address}}"
 							],
 							"path": [
 								"assets",
-								":id"
+								":asset_hash"
 							],
 							"variable": [
 								{
-									"key": "id",
+									"key": "asset_hash",
 									"value": ""
 								}
 							]
