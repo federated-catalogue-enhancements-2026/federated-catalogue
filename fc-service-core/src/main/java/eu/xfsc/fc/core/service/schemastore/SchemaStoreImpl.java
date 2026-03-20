@@ -269,39 +269,37 @@ public class SchemaStoreImpl implements SchemaStore {
   }
 
   private SchemaAnalysisResult analyzeNonRdfSchema(ContentAccessor schema, SchemaType type) {
-    SchemaAnalysisResult result = new SchemaAnalysisResult();
+    SchemaAnalysisResult result = switch (type) {
+      case JSON -> analyzeJsonSchema(schema);
+      case XML -> analyzeXmlSchema(schema);
+      default -> new SchemaAnalysisResult()
+              .setValid(false)
+              .setErrorMessage("Not a non-RDF schema type: " + type);
+    };
     result.setSchemaType(type);
     result.setExtractedUrls(Collections.emptySet());
-
-    switch (type) {
-      case JSON -> analyzeJsonSchema(schema, result);
-      case XML -> analyzeXmlSchema(schema, result);
-      default -> {
-        result.setValid(false);
-        result.setErrorMessage("Not a non-RDF schema type: " + type);
-      }
-    }
     return result;
   }
 
-  private void analyzeJsonSchema(ContentAccessor schema, SchemaAnalysisResult result) {
+  private SchemaAnalysisResult analyzeJsonSchema(ContentAccessor schema) {
     try {
       JsonNode schemaNode = JSON_MAPPER.readTree(schema.getContentAsString());
       JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
       factory.getSchema(schemaNode);
-      result.setValid(true);
-      if (schemaNode.has("$id")) {
-        result.setExtractedId(schemaNode.get("$id").asText());
-      } else {
-        result.setExtractedId("urn:uuid:" + UUID.randomUUID());
-      }
+      String extractedId = schemaNode.has("$id")
+          ? schemaNode.get("$id").asText()
+          : "urn:uuid:" + UUID.randomUUID();
+      return new SchemaAnalysisResult()
+              .setValid(true)
+              .setExtractedId(extractedId);
     } catch (Exception e) {
-      result.setValid(false);
-      result.setErrorMessage("Invalid JSON Schema: " + e.getMessage());
+      return new SchemaAnalysisResult()
+              .setValid(false)
+              .setErrorMessage("Invalid JSON Schema: " + e.getMessage());
     }
   }
 
-  private void analyzeXmlSchema(ContentAccessor schema, SchemaAnalysisResult result) {
+  private SchemaAnalysisResult analyzeXmlSchema(ContentAccessor schema) {
     try {
       byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
       DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -314,13 +312,16 @@ public class SchemaStoreImpl implements SchemaStore {
       factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
       factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       factory.newSchema(new DOMSource(doc));
-      result.setValid(true);
 
       String targetNs = doc.getDocumentElement().getAttribute("targetNamespace");
-      result.setExtractedId(!targetNs.isEmpty() ? targetNs : "urn:uuid:" + UUID.randomUUID());
+      String extractedId = !targetNs.isEmpty() ? targetNs : "urn:uuid:" + UUID.randomUUID();
+      return new SchemaAnalysisResult()
+              .setValid(true)
+              .setExtractedId(extractedId);
     } catch (Exception e) {
-      result.setValid(false);
-      result.setErrorMessage("Invalid XML Schema: " + e.getMessage());
+      return new SchemaAnalysisResult()
+              .setValid(false)
+              .setErrorMessage("Invalid XML Schema: " + e.getMessage());
     }
   }
 
