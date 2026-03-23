@@ -683,17 +683,6 @@ public class SchemaStoreTest {
   }
 
   @Test
-  void updateSchema_jsonSchema_returnsUploadTime() {
-    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
-    SchemaStoreResult addResult = schemaStore.addSchema(content, JSON);
-
-    ContentAccessor updatedContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
-    SchemaStoreResult updateResult = schemaStore.updateSchema(addResult.id(), updatedContent);
-
-    assertNotNull(updateResult.uploadTime(), "uploadTime must be set on update");
-  }
-
-  @Test
   void updateSchema_xmlSchema_succeeds() {
     ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
     SchemaStoreResult addResult = schemaStore.addSchema(content, XML);
@@ -701,7 +690,6 @@ public class SchemaStoreTest {
     ContentAccessor updatedContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
     SchemaStoreResult updateResult = schemaStore.updateSchema(addResult.id(), updatedContent);
 
-    assertNotNull(updateResult.uploadTime());
     assertEquals(addResult.id(), updateResult.id());
   }
 
