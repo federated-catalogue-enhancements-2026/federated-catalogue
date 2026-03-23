@@ -68,7 +68,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AssetStoreTest {
 
   @SpringBootApplication
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao.repository")
+  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   public static class TestApplication {
 
     public static void main(final String[] args) {

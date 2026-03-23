@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -81,6 +82,7 @@ public class GaiaxTrustFrameworkTest {
     private static final boolean SKIP_VC_SIGNATURES = false;
 
     @SpringBootApplication
+    @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
     public static class TestApplication {
         public static void main(final String[] args) {
             SpringApplication.run(TestApplication.class, args);

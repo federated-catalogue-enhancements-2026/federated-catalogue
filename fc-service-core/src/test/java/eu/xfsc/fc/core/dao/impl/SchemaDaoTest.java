@@ -41,7 +41,7 @@ class SchemaDaoTest {
 
   @Configuration
   @EnableAutoConfiguration
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao.repository")
+  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   static class TestConfig {
   }
 

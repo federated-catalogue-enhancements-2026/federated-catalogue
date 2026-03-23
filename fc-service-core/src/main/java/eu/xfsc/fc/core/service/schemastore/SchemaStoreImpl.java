@@ -364,10 +364,11 @@ public class SchemaStoreImpl implements SchemaStore {
         throw new ServerException("DB error, schema not inserted");
       }
     } catch (DuplicateKeyException ex) {
-      if (ex.getMessage().contains("schematerms_pkey")) {
+      String msg = ex.getMessage();
+      if (msg.contains("schematerms_pkey") || msg.contains("SchemaTermEntity")) {
         throw new ConflictException("Schema redefines existing terms");
       }
-      if (ex.getMessage().contains("schemafiles_pkey")) {
+      if (msg.contains("schemafiles_pkey") || msg.contains("SchemaFileEntity")) {
         throw new ConflictException("A schema with id " + newRecord.getId() + " already exists.");
       }
       log.info("addSchema; conflict: {}", ex.getMessage());

@@ -24,7 +24,7 @@ public class DatabaseConfig {
   public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
     LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
     emf.setDataSource(dataSource);
-    emf.setPackagesToScan("eu.xfsc.fc.core.dao.entity");
+    emf.setPackagesToScan("eu.xfsc.fc.core.dao");
     HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
     vendorAdapter.setGenerateDdl(false);
     emf.setJpaVendorAdapter(vendorAdapter);

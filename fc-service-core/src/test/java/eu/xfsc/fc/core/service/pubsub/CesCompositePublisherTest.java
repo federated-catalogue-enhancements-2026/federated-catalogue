@@ -73,7 +73,7 @@ import okhttp3.mockwebserver.MockWebServer;
 public class CesCompositePublisherTest {
 
 	@SpringBootApplication
-	@EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao.repository")
+	@EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
 	public static class TestApplication {
 
 	    public static void main(final String[] args) {

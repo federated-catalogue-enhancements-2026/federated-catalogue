@@ -46,7 +46,7 @@ public class SchemaJpaDao implements SchemaDao {
 
   @Override
   public boolean insert(SchemaRecord sr) {
-    repository.save(SchemaFileEntityMapper.toEntity(sr));
+    repository.saveAndFlush(SchemaFileEntityMapper.toEntity(sr));
     return true;
   }
 
@@ -65,7 +65,7 @@ public class SchemaJpaDao implements SchemaDao {
           entity.getTerms().add(te);
         }
       }
-      repository.save(entity);
+      repository.saveAndFlush(entity);
       return 1;
     }).orElse(0);
   }
