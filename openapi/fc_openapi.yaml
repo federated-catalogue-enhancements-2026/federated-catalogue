@@ -1183,7 +1183,17 @@ paths:
     get: 
       tags:
         - Schemas
-      summary: 'Get the latest schema for a given type. If no term is specified, then the composite schema is returned.'
+      summary: 'Get the latest schema for a given type.'
+      description: >-
+        Behavior depends on schema type:
+
+        **RDF types** (ontology, shape, vocabulary): Returns the **composite schema** — a merged union
+        of all stored schemas of that type. This is meaningful because RDF schemas are additive
+        (shapes and ontologies can be combined into a single graph).
+
+        **Non-RDF types** (json, xml): Returns the **most recently uploaded** schema of that type.
+        Compositing does not apply because JSON and XML schemas are self-contained and cannot be
+        meaningfully merged.
       operationId: getLatestSchema
       parameters:
         - name: type
