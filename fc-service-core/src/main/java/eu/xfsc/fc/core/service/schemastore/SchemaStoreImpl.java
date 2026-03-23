@@ -399,7 +399,7 @@ public class SchemaStoreImpl implements SchemaStore {
     }
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    return new SchemaStoreResult(identifier, analysis.getWarning(), Instant.now());
+    return new SchemaStoreResult(identifier, analysis.getWarning());
   }
 
   @Override
