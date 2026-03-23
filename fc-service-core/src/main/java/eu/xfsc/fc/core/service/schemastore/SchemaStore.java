@@ -19,7 +19,6 @@ public interface SchemaStore {
   /**
    * The different types of schema.
    *
-   * TODO: Remove once available as generated from the OpenAPI document.
    */
   @Getter
   enum SchemaType {
