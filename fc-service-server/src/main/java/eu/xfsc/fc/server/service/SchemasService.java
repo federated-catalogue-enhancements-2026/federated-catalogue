@@ -21,8 +21,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -129,18 +127,15 @@ public class SchemasService implements SchemasApiDelegate {
   public ResponseEntity<SchemaResult> addSchema(String schema) {
     ContentAccessor content = new ContentAccessorDirect(schema);
     String contentType = httpServletRequest.getContentType();
-    Optional<SchemaType> nonRdfType = SchemaType.fromContentType(contentType);
     SchemaStoreResult storeResult;
-    if (nonRdfType.isPresent()) {
-      storeResult = schemaStore.addSchema(content, nonRdfType.get());
-    } else if (SchemaType.isRdfContentType(contentType)) {
+    if (SchemaType.isRdfContentType(contentType)) {
       storeResult = schemaStore.addSchema(content);
     } else {
-      String supported = Arrays.stream(SchemaType.values())
-          .flatMap(t -> t.getCompatibleAssetContentTypes().stream())
-          .distinct()
-          .collect(Collectors.joining(", "));
-      throw new ClientException("Unsupported Content-Type: %s. Supported types: %s".formatted(contentType, supported));
+      SchemaType nonRdfType = SchemaType.fromContentType(contentType)
+          .orElseThrow(() -> new ClientException(
+              "Unsupported Content-Type: %s. Supported: %s"
+                  .formatted(contentType, SchemaType.getSupportedContentTypes())));
+      storeResult = schemaStore.addSchema(content, nonRdfType);
     }
     SchemaResult result = toSchemaResult(storeResult);
     return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);

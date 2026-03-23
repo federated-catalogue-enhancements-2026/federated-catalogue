@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import lombok.Getter;
@@ -54,12 +56,20 @@ public interface SchemaStore {
     private static final Set<String> RDF_CONTENT_TYPES = Set.of(
             MEDIA_TYPE_TEXT_TURTLE, MEDIA_TYPE_RDF_XML, MEDIA_TYPE_LD_JSON);
 
+    private static final Set<String> NON_RDF_CONTENT_TYPES = Set.of(
+            MEDIA_TYPE_JSON_SCHEMA, MediaType.APPLICATION_XML_VALUE);
+
     public static boolean isRdfContentType(String contentType) {
       if (contentType == null) {
         return false;
       }
       return RDF_CONTENT_TYPES.stream().anyMatch(contentType::contains);
     }
+
+    public static String getSupportedContentTypes() {
+      return "%s, %s".formatted(String.join(", ", RDF_CONTENT_TYPES), String.join(", ", NON_RDF_CONTENT_TYPES));
+    }
+
   }
 
   /**
