@@ -1,5 +1,8 @@
 package eu.xfsc.fc.core.service.schemastore;
 
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.MEDIA_TYPE_LD_JSON;
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.MEDIA_TYPE_RDF_XML;
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.MEDIA_TYPE_TEXT_TURTLE;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.JSON;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.ONTOLOGY;
 import static eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType.SHAPE;
@@ -639,9 +642,9 @@ public class SchemaStoreTest {
     List<String> types = SchemaType.ONTOLOGY.getCompatibleAssetContentTypes();
 
     assertEquals(3, types.size());
-    assertTrue(types.contains("text/turtle"));
-    assertTrue(types.contains("application/rdf+xml"));
-    assertTrue(types.contains("application/ld+json"));
+    assertTrue(types.contains(MEDIA_TYPE_TEXT_TURTLE));
+    assertTrue(types.contains(MEDIA_TYPE_RDF_XML));
+    assertTrue(types.contains(MEDIA_TYPE_LD_JSON));
   }
 
   @Test
@@ -663,6 +666,43 @@ public class SchemaStoreTest {
   @Test
   void getLatestSchemaByType_emptyXmlStore_throwsNotFoundException() {
     assertThrowsExactly(NotFoundException.class, () -> schemaStore.getLatestSchemaByType(XML));
+  }
+
+  @Test
+  void addSchema_xmlSchemaWithDoctype_throwsVerificationException() {
+    String xxeSchema = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        + "<!DOCTYPE foo [\n"
+        + "  <!ENTITY xxe SYSTEM \"file:///etc/passwd\">\n"
+        + "]>\n"
+        + "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n"
+        + "  <xs:element name=\"test\" type=\"xs:string\"/>\n"
+        + "</xs:schema>";
+
+    assertThrowsExactly(VerificationException.class,
+        () -> schemaStore.addSchema(new ContentAccessorDirect(xxeSchema), XML));
+  }
+
+  @Test
+  void updateSchema_jsonSchema_returnsUploadTime() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    SchemaStoreResult addResult = schemaStore.addSchema(content, JSON);
+
+    ContentAccessor updatedContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-json-schema.json");
+    SchemaStoreResult updateResult = schemaStore.updateSchema(addResult.id(), updatedContent);
+
+    assertNotNull(updateResult.uploadTime(), "uploadTime must be set on update");
+  }
+
+  @Test
+  void updateSchema_xmlSchema_succeeds() {
+    ContentAccessor content = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+    SchemaStoreResult addResult = schemaStore.addSchema(content, XML);
+
+    ContentAccessor updatedContent = TestUtil.getAccessor(getClass(), "Schema-Tests/valid-xml-schema.xsd");
+    SchemaStoreResult updateResult = schemaStore.updateSchema(addResult.id(), updatedContent);
+
+    assertNotNull(updateResult.uploadTime());
+    assertEquals(addResult.id(), updateResult.id());
   }
 
   private static boolean isExistTriple(Model model, String sub, String pre, String obj) {

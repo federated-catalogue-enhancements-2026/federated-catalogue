@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +59,7 @@ public class SchemasService implements SchemasApiDelegate {
     SchemaRecord record = schemaStore.getSchemaRecord(schemaId);
     var responseBuilder = ResponseEntity.ok();
     switch (record.type()) {
-      case JSON -> responseBuilder.contentType(MediaType.parseMediaType("application/schema+json"));
+      case JSON -> responseBuilder.contentType(MediaType.parseMediaType(SchemaStore.MEDIA_TYPE_JSON_SCHEMA));
       case XML -> responseBuilder.contentType(MediaType.APPLICATION_XML);
       default -> {} // RDF types: preserve original content negotiation behavior
     }
@@ -135,7 +136,11 @@ public class SchemasService implements SchemasApiDelegate {
     } else if (SchemaType.isRdfContentType(contentType)) {
       storeResult = schemaStore.addSchema(content);
     } else {
-      throw new ClientException("Unsupported Content-Type: %s. Supported types: application/schema+json, application/xml, text/turtle, application/rdf+xml, application/ld+json".formatted(contentType));
+      String supported = Arrays.stream(SchemaType.values())
+          .flatMap(t -> t.getCompatibleAssetContentTypes().stream())
+          .distinct()
+          .collect(Collectors.joining(", "));
+      throw new ClientException("Unsupported Content-Type: %s. Supported types: %s".formatted(contentType, supported));
     }
     SchemaResult result = toSchemaResult(storeResult);
     return ResponseEntity.created(URI.create("/schemas/" + result.getId())).body(result);

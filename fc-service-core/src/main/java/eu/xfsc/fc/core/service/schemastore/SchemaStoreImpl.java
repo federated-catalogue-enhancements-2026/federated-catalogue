@@ -3,8 +3,8 @@ package eu.xfsc.fc.core.service.schemastore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
 import eu.xfsc.fc.core.dao.SchemaDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -284,8 +285,8 @@ public class SchemaStoreImpl implements SchemaStore {
   private SchemaAnalysisResult analyzeJsonSchema(ContentAccessor schema) {
     try {
       JsonNode schemaNode = JSON_MAPPER.readTree(schema.getContentAsString());
-      JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-      factory.getSchema(schemaNode);
+      SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
+      registry.getSchema(schemaNode);
       String extractedId = schemaNode.has("$id")
           ? schemaNode.get("$id").asText()
           : "urn:uuid:" + UUID.randomUUID();
@@ -377,22 +378,19 @@ public class SchemaStoreImpl implements SchemaStore {
 
   @Override
   public SchemaStoreResult updateSchema(String identifier, ContentAccessor schema) {
-    SchemaAnalysisResult analysis = analyzeAndValidate(schema);
+    SchemaRecord existing = dao.select(identifier)
+        .orElseThrow(() -> new NotFoundException("Schema with id " + identifier + " was not found"));
+    SchemaAnalysisResult analysis = existing.type() == SchemaType.JSON || existing.type() == SchemaType.XML
+        ? analyzeAndValidateNonRdf(schema, existing.type())
+        : analyzeAndValidate(schema);
     SchemaRecord newRecord = buildSchemaRecord(analysis, schema);
     if (newRecord.schemaId() != null && !identifier.equals(newRecord.schemaId())) {
       throw new ClientException("Given schema does not have the same Identifier as the old schema: " + identifier + " <> " + newRecord.schemaId());
     }
 
     try {
-      if (dao.update(identifier, newRecord.content(), newRecord.terms()) == 0) {
-        throw new NotFoundException("Schema with id " + identifier + " was not found");
-      }
+      dao.update(identifier, newRecord.content(), newRecord.terms());
     } catch (DuplicateKeyException ex) {
-      //try {
-      //  ((SchemaDaoImpl) dao).getDataSource().getConnection().rollback();
-      //} catch (SQLException se) {
-      //  log.debug("updateSchema; error at rollback", se);
-      //}
       if (ex.getMessage().contains("schematerms_pkey")) {
         throw new ConflictException("Schema redefines existing terms");
       }
@@ -401,8 +399,7 @@ public class SchemaStoreImpl implements SchemaStore {
     }
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    //Assets  will be revalidated in a separate thread.
-    return new SchemaStoreResult(identifier, analysis.getWarning());
+    return new SchemaStoreResult(identifier, analysis.getWarning(), Instant.now());
   }
 
   @Override
