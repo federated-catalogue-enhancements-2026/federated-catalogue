@@ -91,14 +91,15 @@ public interface AssetStore {
   /**
    * Store a non-RDF asset. The content is stored in the FileStore and metadata
    * (with content=NULL) is inserted into the database. No verification or graph
-   * interaction is performed. The asset ID must be set on the metadata before calling.
+   * interaction is performed. If the asset ID is not set on the metadata, a UUID
+   * URN will be generated automatically via {@link IriGenerator#generateUuidUrn()}.
    *
-   * @param assetMetadata The asset metadata to store (ID must not be null).
+   * @param assetMetadata The asset metadata to store (ID may be null — a UUID URN
+   *                      will be generated).
    * @param originalFilename The original filename from the upload, or null.
    * @return the stored metadata.
    * @throws eu.xfsc.fc.core.exception.ServerException if the file store write fails.
    * @throws eu.xfsc.fc.core.exception.ConflictException if an asset with the same hash already exists.
-   * @throws IllegalStateException if the asset ID is null.
    */
   AssetMetadata storeUnverified(AssetMetadata assetMetadata, String originalFilename);
 

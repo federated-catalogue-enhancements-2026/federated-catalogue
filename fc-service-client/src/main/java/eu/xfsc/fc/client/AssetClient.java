@@ -53,10 +53,9 @@ public class AssetClient extends ServiceClient {
     /**
      * Delete an asset by its content hash.
      *
-     * <p>Unlike {@link #getAsset(String)} and {@link #updateAsset(String)} which use the asset's
-     * IRI, this method requires the SHA-256 content hash. The delete endpoint uses hash-based
-     * targeting to guarantee unambiguous single-row deletion — see ADR 7, Delete Operation
-     * Exception.</p>
+     * <p>Unlike {@link #getAsset(String)} which uses the asset's IRI, this method and
+     * {@link #revokeAsset(String)} require the SHA-256 content hash. Hash-based targeting
+     * guarantees unambiguous single-row deletion — see ADR 7, Delete Operation Exception.</p>
      *
      * @param assetHash the SHA-256 content hash of the asset to delete
      */
@@ -73,7 +72,7 @@ public class AssetClient extends ServiceClient {
      *
      * @param assetHash the SHA-256 content hash of the asset to revoke
      */
-    public void updateAsset(String assetHash) {
+    public void revokeAsset(String assetHash) {
         Map<String, Object> pathParams = Map.of("asset_hash", assetHash);
         doPost("/assets/{asset_hash}/revoke", null, pathParams, Map.of(), Void.class);
     }

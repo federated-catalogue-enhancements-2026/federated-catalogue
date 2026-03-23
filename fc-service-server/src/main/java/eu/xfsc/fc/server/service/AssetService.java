@@ -122,11 +122,10 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   public ResponseEntity<String> readAssetById(String id) {
-    log.debug("readAssetById.enter; got id: {}", id);
     AssetMetadata assetMetadata = assetStorePublisher.getById(id);
 
     // Only RDF assets have content in DB. Non-RDF assets (PDF, binary) are in FileStore
-    // and require a dedicated download endpoint 
+    // and require a dedicated download endpoint
     ContentAccessor content = assetMetadata.getContentAccessor();
     if (content == null) {
       throw new ClientException("Asset " + id + " (hash: " + assetMetadata.getAssetHash()
@@ -134,7 +133,6 @@ public class AssetService implements AssetsApiDelegate {
           + "). Raw content download is not supported via this endpoint.");
     }
 
-    log.debug("readAssetById.exit; returning asset by id: {}", id);
     return ResponseEntity.ok()
         .body(content.getContentAsString());
   }
@@ -156,14 +154,11 @@ public class AssetService implements AssetsApiDelegate {
   @Override
   @Transactional
   public ResponseEntity<Void> deleteAsset(String assetHash) {
-    log.debug("deleteAsset.enter; got hash: {}", assetHash);
-
     AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
 
     checkParticipantAccess(assetMetadata.getIssuer());
 
     assetStorePublisher.deleteAsset(assetHash);
-    log.debug("deleteAsset.exit; deleted asset by hash: {}", assetHash);
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -224,9 +219,7 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Asset> updateAsset(String assetHash) {
-    log.debug("updateAsset.enter; got hash: {}", assetHash);
-
+  public ResponseEntity<Asset> revokeAsset(String assetHash) {
     AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
 
     checkParticipantAccess(assetMetadata.getIssuer());
@@ -238,7 +231,6 @@ public class AssetService implements AssetsApiDelegate {
           + assetMetadata.getStatus());
     }
 
-    log.debug("updateAsset.exit; revoked asset by hash: {}", assetHash);
     return new ResponseEntity<>(assetMetadata, HttpStatus.OK);
   }
 

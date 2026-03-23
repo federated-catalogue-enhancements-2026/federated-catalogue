@@ -6,10 +6,11 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
-import eu.xfsc.fc.core.exception.ClientException;
-
 /**
  * Validates IRI formats accepted as asset identifiers.
+ *
+ * <p>Returns {@code true}/{@code false} — invalid input is a normal outcome,
+ * not an exception.
  *
  * <p>Supported formats:
  * <ul>
@@ -22,76 +23,62 @@ import eu.xfsc.fc.core.exception.ClientException;
 @Component
 public class IriValidator {
 
-    // DID syntax: did:method-name:method-specific-id
-    // method-name = 1*methodchar, methodchar = %x61-7A / DIGIT (lowercase + digits)
-    // method-specific-id allows alphanumeric, dots, dashes, underscores, percent-encoded, colons
-    private static final Pattern DID_PATTERN =
-        Pattern.compile("^did:[a-z0-9]+:[a-zA-Z0-9._:%-]+$");
+  // DID syntax: did:method-name:method-specific-id
+  // method-name = 1*methodchar, methodchar = %x61-7A / DIGIT (lowercase + digits)
+  // method-specific-id allows alphanumeric, dots, dashes, underscores, percent-encoded, colons
+  private static final Pattern DID_PATTERN =
+      Pattern.compile("^did:[a-z0-9]+:[a-zA-Z0-9._:%-]+$");
 
-    // UUID v4 URN: urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    private static final Pattern UUID_URN_PATTERN =
-        Pattern.compile("^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                        Pattern.CASE_INSENSITIVE);
+  // UUID v4 URN: urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  private static final Pattern UUID_URN_PATTERN =
+      Pattern.compile("^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                      Pattern.CASE_INSENSITIVE);
 
-    // Generic URN: urn:nid:nss (nid = 2-32 alphanumeric/hyphens, nss = at least 1 char)
-    private static final Pattern URN_PATTERN =
-        Pattern.compile("^urn:[a-zA-Z0-9][a-zA-Z0-9-]{0,31}:.+$");
+  // Generic URN: urn:nid:nss (nid = 2-32 alphanumeric/hyphens, nss = at least 1 char)
+  private static final Pattern URN_PATTERN =
+      Pattern.compile("^urn:[a-zA-Z0-9][a-zA-Z0-9-]{0,31}:.+$");
 
-    /**
-     * Validate that the given string is an accepted IRI format.
-     *
-     * @param iri the IRI to validate
-     * @throws ClientException if the IRI format is not recognized
-     */
-    public void validate(String iri) {
-        if (iri == null || iri.isBlank()) {
-            throw new ClientException("Asset IRI must not be null or blank");
-        }
-
-        if (iri.startsWith("did:")) {
-            validateDid(iri);
-        } else if (iri.startsWith("urn:uuid:")) {
-            validateUuidUrn(iri);
-        } else if (iri.startsWith("urn:")) {
-            validateUrn(iri);
-        } else if (iri.startsWith("http://") || iri.startsWith("https://")) {
-            validateHttpIri(iri);
-            return;
-        } else {
-            throw new ClientException("Unrecognized IRI format: " + iri
-                + ". Expected DID (did:...), URN (urn:...), or HTTP IRI (http(s)://...)");
-        }
+  /**
+   * Check whether the given string is an accepted IRI format.
+   *
+   * @param iri the IRI to check
+   * @return {@code true} if valid, {@code false} otherwise
+   */
+  public boolean isValid(String iri) {
+    if (iri == null || iri.isBlank()) {
+      return false;
     }
 
-    private void validateDid(String did) {
-        if (!DID_PATTERN.matcher(did).matches()) {
-            throw new ClientException("Invalid DID format: " + did
-                + ". Expected: did:{method}:{method-specific-id}");
-        }
+    if (iri.startsWith("did:")) {
+      return isValidDid(iri);
+    } else if (iri.startsWith("urn:uuid:")) {
+      return isValidUuidUrn(iri);
+    } else if (iri.startsWith("urn:")) {
+      return isValidUrn(iri);
+    } else if (iri.startsWith("http://") || iri.startsWith("https://")) {
+      return isValidHttpIri(iri);
     }
+    return false;
+  }
 
-    private void validateUuidUrn(String urn) {
-        if (!UUID_URN_PATTERN.matcher(urn).matches()) {
-            throw new ClientException("Invalid UUID URN format: " + urn
-                + ". Expected: urn:uuid:{8-4-4-4-12 hex}");
-        }
-    }
+  private boolean isValidDid(String did) {
+    return DID_PATTERN.matcher(did).matches();
+  }
 
-    private void validateUrn(String urn) {
-        if (!URN_PATTERN.matcher(urn).matches()) {
-            throw new ClientException("Invalid URN format: " + urn
-                + ". Expected: urn:{namespace-id}:{namespace-specific-string}");
-        }
-    }
+  private boolean isValidUuidUrn(String urn) {
+    return UUID_URN_PATTERN.matcher(urn).matches();
+  }
 
-    private void validateHttpIri(String iri) {
-        try {
-            URI uri = new URI(iri);
-            if (uri.getHost() == null || uri.getHost().isBlank()) {
-                throw new ClientException("Invalid HTTP IRI: " + iri + ". Missing host.");
-            }
-        } catch (URISyntaxException e) {
-            throw new ClientException("Invalid HTTP IRI: " + iri + ". " + e.getMessage());
-        }
+  private boolean isValidUrn(String urn) {
+    return URN_PATTERN.matcher(urn).matches();
+  }
+
+  private boolean isValidHttpIri(String iri) {
+    try {
+      URI uri = new URI(iri);
+      return uri.getHost() != null && !uri.getHost().isBlank();
+    } catch (URISyntaxException e) {
+      return false;
     }
+  }
 }

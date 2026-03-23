@@ -225,11 +225,9 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public AssetMetadata getById(final String id) {
-    AssetRecord assetRecord = dao.selectBySubjectId(id);
-    if (assetRecord == null) {
-      throw new NotFoundException(String.format("no active asset found for id %s", id));
-    }
-    return assetRecord;
+    return dao.selectBySubjectId(id)
+        .orElseThrow(() -> new NotFoundException(
+            String.format("no active asset found for id %s", id)));
   }
 
   @Override

@@ -832,7 +832,7 @@ paths:
         When versioning is introduced (CAT-FR-LM-01), this endpoint will be replaced by
         version-specific revocation (POST /assets/{id}/versions/{v}/revoke).
         See ADR 7 — Delete Operation Exception.
-      operationId: updateAsset
+      operationId: revokeAsset
       security:
         - jwt: []
       parameters:
