@@ -534,8 +534,9 @@ tags:
     description: Send graph queries to this Catalogue.
   - name: Schemas
     description: >-
-      The format of RDF assets is defined by schemas in the catalogue.
-      Here you get information about the latest schema.
+      Schemas define the format of assets in the catalogue. Supported types include
+      RDF schemas (ontologies, shapes, vocabularies) as well as non-RDF schemas
+      (JSON Schema, XML Schema).
   - name: Verification
     description: The Catalogue provides a verification service for e.g. checking the syntax
   - name: Participants
@@ -979,8 +980,8 @@ paths:
     get:
       tags:
         - Schemas
-      summary: 'Get the full list of ontologies, shapes and vocabularies.'
-      description: 'The schema identifiers, returned by this endpoint can be used to download the schema files. Required permission: SCHEMA_READ or ADMIN_ALL'
+      summary: 'Get the full list of schemas (ontologies, shapes, vocabularies, JSON schemas, XML schemas).'
+      description: 'The schema identifiers, returned by this endpoint can be used to download the schema files. Includes both RDF and non-RDF schema types. Required permission: SCHEMA_READ or ADMIN_ALL'
       operationId: getSchemas
       security:
         - jwt: []
@@ -1001,12 +1002,12 @@ paths:
       tags:
         - Schemas
       summary: 'Add a new Schema to the catalogue.'
-      description: 'This endpoint accepts either an ontology (OWL file), shape (SHACL file) or controlled vocabulary (SKOS file), which is added to the schemas of the catalogue. Required permission: SCHEMA_CREATE or ADMIN_ALL'
+      description: 'This endpoint accepts an ontology (OWL), shape (SHACL), controlled vocabulary (SKOS), JSON Schema, or XML Schema (XSD), which is added to the schemas of the catalogue. Required permission: SCHEMA_CREATE or ADMIN_ALL'
       operationId: addSchema
       security:
         - jwt: []
       requestBody:
-        description: 'The file of the new schema. either an ontology (OWL file), shape (SHACL file) or controlled vocabulary (SKOS file).'
+        description: 'The file of the new schema: an ontology (OWL), shape (SHACL), controlled vocabulary (SKOS), JSON Schema, or XML Schema (XSD).'
         content:
           application/rdf+xml:
             schema:

@@ -275,7 +275,7 @@ public class SchemaStoreImpl implements SchemaStore {
       case XML -> analyzeXmlSchema(schema);
       default -> new SchemaAnalysisResult()
               .setValid(false)
-              .setErrorMessage("Not a non-RDF schema type: " + type);
+              .setErrorMessage("Unsupported non-RDF schema type: " + type + ". Supported types: JSON, XML");
     };
     result.setSchemaType(type);
     result.setExtractedUrls(Collections.emptySet());
@@ -305,6 +305,8 @@ public class SchemaStoreImpl implements SchemaStore {
       byte[] content = schema.getContentAsString().getBytes(StandardCharsets.UTF_8);
       DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
       dbf.setNamespaceAware(true);
+      // Disable DTDs entirely to prevent XXE attacks;
+      // uses a Xerces-specific feature URI as it's not part of standard XMLConstants.
       dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
       dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
       Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(content));
