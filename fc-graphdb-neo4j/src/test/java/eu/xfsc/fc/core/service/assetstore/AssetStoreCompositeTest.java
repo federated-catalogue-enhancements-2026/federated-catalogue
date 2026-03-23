@@ -20,7 +20,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -30,8 +29,8 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
-import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
+import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
+import eu.xfsc.fc.core.dao.impl.AssetDaoImpl;
 import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -40,13 +39,18 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
+import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
+import eu.xfsc.fc.core.service.verification.Vc11Processor;
+import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
@@ -59,17 +63,18 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {AssetStoreCompositeTest.TestApplication.class, FileStoreConfig.class, VerificationServiceImpl.class, ValidatorCacheDaoImpl.class,
-  AssetStoreImpl.class, AssetJpaDao.class, AssetStoreCompositeTest.class, SchemaStoreImpl.class, SchemaJpaDao.class, DatabaseConfig.class,
+  AssetStoreImpl.class, AssetDaoImpl.class, IriGenerator.class, IriValidator.class, AssetStoreCompositeTest.class,
+  SchemaStoreImpl.class, SchemaDaoImpl.class, DatabaseConfig.class,
   Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
   CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
-  RdfContentTypeProperties.class})
+  RdfContentTypeProperties.class, JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
+  JwtSignatureVerifier.class, DidDocumentResolver.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class AssetStoreCompositeTest {
 
   @SpringBootApplication
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   public static class TestApplication {
 
     public static void main(final String[] args) {
@@ -187,7 +192,7 @@ public class AssetStoreCompositeTest {
   }
 
   @Test
-  void test03RebuildGraphDb_filtersProtectedNamespaceClaims() throws Exception {
+  void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
     log.info("test03RebuildGraphDb_filtersProtectedNamespaceClaims");
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
