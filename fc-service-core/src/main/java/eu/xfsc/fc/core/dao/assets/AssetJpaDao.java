@@ -8,6 +8,7 @@ import eu.xfsc.fc.core.service.assetstore.SubjectHashRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
 
@@ -57,9 +58,16 @@ public class AssetJpaDao implements AssetDao {
         return repository.findExpiredHashes(AssetStatus.ACTIVE.ordinal());
     }
 
+    // Explicit duplicate check needed because JPA's save() uses merge() for entities
+    // with non-null @Id, which silently upserts instead of throwing on conflicts.
+    // AssetStoreImpl relies on DuplicateKeyException("assets_pkey") to detect duplicates.
     @Override
     @Transactional
     public SubjectHashRecord insert(AssetRecord assetRecord) {
+        if (repository.existsById(assetRecord.getAssetHash())) {
+            throw new DuplicateKeyException("assets_pkey: " + assetRecord.getAssetHash());
+        }
+
         Optional<AssetEntity> existing = repository.findBySubjectIdAndStatus(
                 assetRecord.getId(), ACTIVE_STATUS);
 

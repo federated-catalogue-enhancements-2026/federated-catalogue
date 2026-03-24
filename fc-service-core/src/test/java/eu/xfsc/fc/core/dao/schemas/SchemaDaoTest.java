@@ -204,15 +204,11 @@ class SchemaDaoTest {
   }
 
   @Test
-  void insert_duplicateSchemaId_updatesExistingEntry() {
+  void insert_duplicateSchemaId_throwsDuplicateKeyException() {
     schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.ONTOLOGY, "c1", null));
 
-    schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.SHAPE, "c2", null));
-
-    Optional<SchemaRecord> result = schemaDao.select("schema-1");
-    assertTrue(result.isPresent());
-    assertEquals("c2", result.get().content());
-    assertEquals(SchemaType.SHAPE, result.get().type());
+    assertThrows(Exception.class,
+        () -> schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.SHAPE, "c2", null)));
   }
 
   @Test
