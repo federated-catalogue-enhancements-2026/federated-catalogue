@@ -944,6 +944,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         validator = signVerifier.checkSignature(payload, proof);
         Instant expiration = null;
+        JsonNode jwkNode = OBJECT_MAPPER.readTree(validator.getPublicKey());
+        if (jwkNode.has("x5c") && !jwkNode.get("x5c").isEmpty()) {
+            rejectX5cChain(jwkNode.get("x5c"), proof.getVerificationMethod().toString());
+        }
         JWK jwk = JWK.fromJson(validator.getPublicKey());
         String url = jwk.getX5u();
         if (url == null) {
@@ -1059,12 +1063,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                         + "(ICAM 24.07 mandatory trust anchor). kid: " + jwtValidator.getDidURI());
             }
             if (hasX5c) {
-                validateX5cChain(jwkNode.get("x5c"), jwtValidator.getDidURI());
+                rejectX5cChain(jwkNode.get("x5c"), jwtValidator.getDidURI());
             }
-            if (hasX5u) {
-                String x5uUrl = jwkNode.get("x5u").asText();
-                hasPEMTrustAnchorAndIsNotExpired(x5uUrl);
-            }
+            String x5uUrl = jwkNode.get("x5u").asText();
+            hasPEMTrustAnchorAndIsNotExpired(x5uUrl);
+
             log.debug("enforceLoireTrustChain; trust chain validated for kid: {}",
                 jwtValidator.getDidURI());
         } catch (VerificationException ex) {
@@ -1076,7 +1079,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Rejects inline {@code x5c} certificate chains.
+     * Rejects inline {@code x5c} certificate chains for all credential formats (Loire and Tagus).
      *
      * <p>Full x5c trust chain verification (chain building, Trust Anchor Registry lookup,
      * and revocation checking) is not implemented. Accepting x5c with expiry-only checks
@@ -1084,9 +1087,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * appear valid. Callers must use {@code x5u} instead, which goes through the Trust
      * Anchor Registry validation path ({@link #hasPEMTrustAnchorAndIsNotExpired}).
      */
-    private void validateX5cChain(JsonNode x5cArray, String kid) {
-        throw new VerificationException(
-            "Loire trust chain: x5c certificate chain validation is not supported. "
+    private void rejectX5cChain(JsonNode _x5cArray, String kid) {
+        throw new ClientException(
+            "x5c certificate chain validation is not supported. "
                 + "Use x5u (Trust Anchor Registry URL) instead. kid: " + kid);
     }
 
@@ -1114,8 +1117,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     "Loire DID method restriction: no issuer found in JWT iss or payload issuer "
                         + "(ICAM 24.07 requires did:web)");
             }
-        } catch (VerificationException ex) {
-            throw ex;
         } catch (ParseException ex) {
             throw new VerificationException(
                 "Loire DID method restriction: JWT claims parse error: " + ex.getMessage(), ex);
