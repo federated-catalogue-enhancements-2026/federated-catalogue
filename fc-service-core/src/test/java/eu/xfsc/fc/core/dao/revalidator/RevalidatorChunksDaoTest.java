@@ -1,4 +1,4 @@
-package eu.xfsc.fc.core.dao.impl;
+package eu.xfsc.fc.core.dao.revalidator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,8 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.dao.revalidator.RevalidatorChunksDao;
-import eu.xfsc.fc.core.dao.revalidator.RevalidatorChunksJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaFileEntity;
 import eu.xfsc.fc.core.dao.schemas.SchemaFileRepository;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
