@@ -148,6 +148,42 @@ class LoireJwtParserTest {
     assertTrue(ex.getMessage().contains("must not contain 'vp' wrapper claim"));
   }
 
+  // --- W3C VC-JOSE-COSE header variants ---
+
+  @Test
+  void unwrap_validW3cLoireVc_returnsJsonLd() throws Exception {
+    String jwt = buildJwtWithHeaders("vc+jwt", "vc");
+
+    ContentAccessor result = parser.unwrap(new ContentAccessorDirect(jwt));
+
+    String json = result.getContentAsString();
+    JsonNode root = MAPPER.readTree(json);
+    assertNotNull(root.get("@context"), "unwrapped payload must have @context");
+    assertNotNull(root.get("credentialSubject"), "unwrapped payload must have credentialSubject");
+  }
+
+  @Test
+  void unwrap_validW3cLoireVp_returnsJsonLd() throws Exception {
+    String jwt = buildVpJwtWithHeaders("vp+jwt", "vp");
+
+    ContentAccessor result = parser.unwrap(new ContentAccessorDirect(jwt));
+
+    String json = result.getContentAsString();
+    JsonNode root = MAPPER.readTree(json);
+    assertNotNull(root.get("@context"));
+    assertNotNull(root.get("verifiableCredential"));
+  }
+
+  @Test
+  void unwrap_w3cTypWithIcamCty_succeeds() throws Exception {
+    // Cross-family: W3C typ + ICAM cty — no pairing enforcement
+    String jwt = buildJwtWithHeaders("vc+jwt", "vc+ld+json");
+
+    ContentAccessor result = parser.unwrap(new ContentAccessorDirect(jwt));
+
+    assertNotNull(result.getContentAsString());
+  }
+
   // --- isVpJwt ---
 
   @Test
@@ -162,6 +198,13 @@ class LoireJwtParserTest {
     String jwt = buildLoireVcJwt();
 
     assertFalse(parser.isVpJwt(new ContentAccessorDirect(jwt)));
+  }
+
+  @Test
+  void isVpJwt_w3cVpJwt_returnsTrue() throws Exception {
+    String jwt = buildVpJwtWithHeaders("vp+jwt", "vp");
+
+    assertTrue(parser.isVpJwt(new ContentAccessorDirect(jwt)));
   }
 
   // --- helpers ---

@@ -109,6 +109,24 @@ class FormatDetectorTest {
   }
 
   @Test
+  void detect_loireVcJwtW3cTyp_returnsLoire() throws Exception {
+    String jwt = buildW3cLoireVcJwt();
+
+    CredentialFormat result = detector.detect(new ContentAccessorDirect(jwt));
+
+    assertEquals(CredentialFormat.GAIAX_V2_LOIRE, result);
+  }
+
+  @Test
+  void detect_loireVpJwtW3cTyp_returnsLoire() throws Exception {
+    String jwt = buildW3cLoireVpJwt();
+
+    CredentialFormat result = detector.detect(new ContentAccessorDirect(jwt));
+
+    assertEquals(CredentialFormat.GAIAX_V2_LOIRE, result);
+  }
+
+  @Test
   void detect_jwtWithTopLevelContextButNoTypHeader_returnsUnknown() throws Exception {
     // Missing typ header → UNKNOWN (no lenient fallback)
     JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)
@@ -295,6 +313,42 @@ class FormatDetectorTest {
         .keyID("did:web:example.com#test-key")
         .type(new JOSEObjectType("vp+ld+jwt"))
         .contentType("vp+ld+json")
+        .build();
+    JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        .issuer("did:web:example.com")
+        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("type", List.of("VerifiablePresentation"))
+        .claim("holder", "did:web:example.com")
+        .claim("verifiableCredential", List.of())
+        .build();
+    SignedJWT signedJwt = new SignedJWT(header, claims);
+    signedJwt.sign(signer);
+    return signedJwt.serialize();
+  }
+
+  private String buildW3cLoireVcJwt() throws Exception {
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)
+        .keyID("did:web:example.com#test-key")
+        .type(new JOSEObjectType("vc+jwt"))
+        .contentType("vc")
+        .build();
+    JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        .issuer("did:web:example.com")
+        .claim("@context", List.of(VC2_CONTEXT, GAIAX_2511_CONTEXT))
+        .claim("type", List.of("VerifiableCredential", "gx:LegalPerson"))
+        .claim("credentialSubject", Map.of("id", "did:web:example.com"))
+        .claim("validFrom", "2026-01-01T00:00:00Z")
+        .build();
+    SignedJWT signedJwt = new SignedJWT(header, claims);
+    signedJwt.sign(signer);
+    return signedJwt.serialize();
+  }
+
+  private String buildW3cLoireVpJwt() throws Exception {
+    JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)
+        .keyID("did:web:example.com#test-key")
+        .type(new JOSEObjectType("vp+jwt"))
+        .contentType("vp")
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")

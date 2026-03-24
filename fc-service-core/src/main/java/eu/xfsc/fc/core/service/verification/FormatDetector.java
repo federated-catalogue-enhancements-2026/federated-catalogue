@@ -22,11 +22,18 @@ import org.springframework.stereotype.Component;
  * <p>Decision tree:
  * <ol>
  *   <li>Not a JWT ({@code eyJ} prefix absent) and has VC 1.1 {@code @context} → Path 1 (Tagus)</li>
- *   <li>JWT with {@code typ: vc+ld+json+jwt} or {@code vp+ld+jwt} and top-level {@code @context}
+ *   <li>JWT with Loire {@code typ} header and top-level {@code @context}
  *       (no {@code vc}/{@code vp} wrapper claim) → Path 2 (Loire)</li>
  *   <li>JWT with {@code vc} or {@code vp} wrapper claim → Path 3 (danubetech)</li>
  *   <li>Otherwise → UNKNOWN</li>
  * </ol>
+ *
+ * <p>Loire {@code typ} values (W3C VC-JOSE-COSE values are canonical and IANA-registered;
+ * ICAM 24.07 values are accepted for backward compatibility):
+ * <ul>
+ *   <li>VC: {@code vc+jwt} (W3C VC-JOSE-COSE) or {@code vc+ld+json+jwt} (ICAM 24.07)</li>
+ *   <li>VP: {@code vp+jwt} (W3C VC-JOSE-COSE) or {@code vp+ld+jwt} (ICAM 24.07)</li>
+ * </ul>
  */
 @Slf4j
 @Component
@@ -39,10 +46,12 @@ public class FormatDetector {
   private static final String VC_20_CONTEXT = "https://www.w3.org/ns/credentials/v2";
 
   private static final Set<String> LOIRE_VC_TYP_VALUES = Set.of(
-      "vc+ld+json+jwt"
+      "vc+jwt",         // W3C VC-JOSE-COSE (IANA-registered, canonical)
+      "vc+ld+json+jwt"  // Gaia-X ICAM 24.07 (accepted for compatibility)
   );
   private static final Set<String> LOIRE_VP_TYP_VALUES = Set.of(
-      "vp+ld+jwt"
+      "vp+jwt",    // W3C VC-JOSE-COSE (IANA-registered, canonical)
+      "vp+ld+jwt"  // Gaia-X ICAM 24.07 (accepted for compatibility)
   );
 
   /**
