@@ -656,7 +656,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             String jwtStr = idStr.substring(commaIdx + 1);
             return tryUnwrapJwtVc(jwtStr, docLoader);
         } catch (Exception ex) {
-            log.debug("tryUnwrapEnvelopedVc; failed to unwrap: {}", ex.getMessage());
+            log.warn("tryUnwrapEnvelopedVc; failed to unwrap: {}", ex.getMessage());
             return null;
         }
     }
@@ -681,7 +681,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             vc.setDocumentLoader(docLoader);
             return vc;
         } catch (Exception ex) {
-            log.debug("tryUnwrapJwtVc; failed to unwrap JWT VC: {}", ex.getMessage());
+            log.warn("tryUnwrapJwtVc; failed to unwrap JWT VC: {}", ex.getMessage());
             return null;
         }
     }
