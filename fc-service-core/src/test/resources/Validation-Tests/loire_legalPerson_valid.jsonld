@@ -1,18 +1,18 @@
 {
   "@context": [
-    "https://www.w3.org/2018/credentials/v1"
+    "https://www.w3.org/ns/credentials/v2"
   ],
   "@id": "https://example.com/vp/loire-lp-valid-1",
   "type": ["VerifiablePresentation"],
   "verifiableCredential": [
     {
       "@context": [
-        "https://www.w3.org/2018/credentials/v1"
+        "https://www.w3.org/ns/credentials/v2"
       ],
       "@id": "https://example.com/vc/loire-lp-valid-1",
       "type": ["VerifiableCredential"],
       "issuer": "did:web:issuer.example.com",
-      "issuanceDate": "2026-01-01T00:00:00Z",
+      "validFrom": "2026-01-01T00:00:00Z",
       "credentialSubject": {
         "@id": "did:web:participant.example.com",
         "@type": ["https://w3id.org/gaia-x/2511#LegalPerson"],
