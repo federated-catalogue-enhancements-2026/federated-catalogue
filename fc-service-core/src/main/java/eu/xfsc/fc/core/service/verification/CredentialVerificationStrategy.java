@@ -126,6 +126,23 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     @Value("${federated-catalogue.verification.resource.type}")
     private String resourceType;
 
+    // Legacy Tagus (gax-core) type URIs — used for GAIAX_V1_TAGUS credentials.
+    // Default to the 2511 URI so that legacy-type is optional in config (e.g. test profiles).
+    @Value("${federated-catalogue.verification.participant.legacy-type:${federated-catalogue.verification.participant.type}}")
+    private String legacyParticipantType;
+    @Value("${federated-catalogue.verification.service-offering.legacy-type:${federated-catalogue.verification.service-offering.type}}")
+    private String legacyServiceOfferingType;
+    @Value("${federated-catalogue.verification.resource.legacy-type:${federated-catalogue.verification.resource.type}}")
+    private String legacyResourceType;
+
+    /** Loire (Gaia-X 2511) type URIs — used for GAIAX_V2_LOIRE credentials. */
+    private Map<TrustFrameworkBaseClass, String> loireBaseClassUris;
+    /** Legacy Tagus (gax-core) type URIs — used for GAIAX_V1_TAGUS credentials. */
+    private Map<TrustFrameworkBaseClass, String> legacyBaseClassUris;
+    /**
+     * Alias to {@link #legacyBaseClassUris} kept for backward compatibility with
+     * {@link #setBaseClassUri(TrustFrameworkBaseClass, String)} used in tests.
+     */
     private Map<TrustFrameworkBaseClass, String> trustFrameworkBaseClassUris;
 
     private final JwtContentPreprocessor jwtPreprocessor;
@@ -168,10 +185,19 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     @PostConstruct
     private void initializeTrustFrameworkBaseClasses() {
-        trustFrameworkBaseClassUris = new HashMap<>();
-        trustFrameworkBaseClassUris.put(SERVICE_OFFERING, serviceOfferingType);
-        trustFrameworkBaseClassUris.put(RESOURCE, resourceType);
-        trustFrameworkBaseClassUris.put(PARTICIPANT, participantType);
+        loireBaseClassUris = new HashMap<>();
+        loireBaseClassUris.put(SERVICE_OFFERING, serviceOfferingType);
+        loireBaseClassUris.put(RESOURCE, resourceType);
+        loireBaseClassUris.put(PARTICIPANT, participantType);
+
+        legacyBaseClassUris = new HashMap<>();
+        legacyBaseClassUris.put(SERVICE_OFFERING, legacyServiceOfferingType);
+        legacyBaseClassUris.put(RESOURCE, legacyResourceType);
+        legacyBaseClassUris.put(PARTICIPANT, legacyParticipantType);
+
+        // trustFrameworkBaseClassUris is an alias to legacyBaseClassUris so that
+        // setBaseClassUri() (called by tests) continues to work as before.
+        trustFrameworkBaseClassUris = legacyBaseClassUris;
     }
 
     /**
@@ -199,9 +225,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         ld.setDocumentLoader(this.documentLoader);
         log.debug("verifyCredential; content parsed, time taken: {}", System.currentTimeMillis() - stamp);
 
-        TypedCredentials typedCredentials = parseCredentials(ld, strict && requireVP, verifySemantics);
+        TypedCredentials typedCredentials = parseCredentials(ld, strict && requireVP, verifySemantics, ctx.format());
 
-        // TODO(loire-compatibility): CAT-FR-GD-01 part 3 - Loire Ontology Migration will update resolveBaseClass to handle 2511 namespace types.
         if (verifySemantics && gaiaxTrustFrameworkEnabled && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
@@ -453,13 +478,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 id, claims, validators);
     }
 
-    private TypedCredentials parseCredentials(JsonLDObject ld, boolean vpRequired, boolean verifySemantics) {
+    private TypedCredentials parseCredentials(JsonLDObject ld, boolean vpRequired, boolean verifySemantics,
+        CredentialFormat format) {
         if (ld.isType(VerifiableCredentialKeywords.JSONLD_TERM_VERIFIABLE_PRESENTATION)) {
             VerifiablePresentation vp = VerifiablePresentation.fromJsonLDObject(ld);
             if (verifySemantics) {
-                return verifyPresentation(vp);
+                return verifyPresentation(vp, format);
             }
-            return getCredentials(vp);
+            return getCredentials(vp, format);
         }
         if (vpRequired) {
             throw new VerificationException("Semantic error: expected credential of type 'VerifiablePresentation', actual credential type: " + ld.getTypes());
@@ -472,7 +498,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     throw new VerificationException("Semantic error: " + err);
                 }
             }
-            return getCredentials(vc);
+            return getCredentials(vc, format);
         }
         throw new VerificationException("Semantic error: unexpected credential type: " + ld.getTypes());
     }
@@ -508,7 +534,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
     }
 
-    private TypedCredentials verifyPresentation(VerifiablePresentation presentation) {
+    private TypedCredentials verifyPresentation(VerifiablePresentation presentation, CredentialFormat format) {
         log.debug("verifyPresentation.enter; got presentation with id: {}", presentation.getId());
         StringBuilder sb = new StringBuilder();
         String sep = System.lineSeparator();
@@ -521,7 +547,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (checkAbsence(presentation, "verifiableCredential")) {
             sb.append(" - VerifiablePresentation must contain 'verifiableCredential' property").append(sep);
         }
-        TypedCredentials tcreds = getCredentials(presentation);
+        TypedCredentials tcreds = getCredentials(presentation, format);
         Collection<VerifiableCredential> credentials = tcreds.getCredentials();
         int i = 0;
         for (VerifiableCredential credential : credentials) {
@@ -576,7 +602,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return true;
     }
 
-    private TypedCredentials getCredentials(VerifiablePresentation vp) {
+    private TypedCredentials getCredentials(VerifiablePresentation vp, CredentialFormat format) {
         log.trace("getCredentials.enter; got VP: {}", vp);
         Object obj = vp.getJsonObject().get("verifiableCredential");
         Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
@@ -588,7 +614,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     if (entry instanceof String jwtStr) {
                         VerifiableCredential unwrapped = tryUnwrapJwtVc(jwtStr, vp.getDocumentLoader());
                         if (unwrapped != null) {
-                            creds.put(unwrapped, resolveBaseClass(unwrapped));
+                            creds.put(unwrapped, resolveBaseClass(unwrapped, format));
                         }
                         continue;
                     }
@@ -597,19 +623,19 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     if (isEnvelopedVerifiableCredential(resolveType(entryMap), entryMap.get(RDF_CONTEXT_KEY))) {
                         VerifiableCredential unwrapped = tryUnwrapEnvelopedVc(entryMap, vp.getDocumentLoader());
                         if (unwrapped != null) {
-                            creds.put(unwrapped, resolveBaseClass(unwrapped));
+                            creds.put(unwrapped, resolveBaseClass(unwrapped, format));
                         }
                         continue;
                     }
                     VerifiableCredential vc = VerifiableCredential.fromMap(entryMap);
                     vc.setDocumentLoader(vp.getDocumentLoader());
-                    creds.put(vc, resolveBaseClass(vc));
+                    creds.put(vc, resolveBaseClass(vc, format));
                 }
             }
             case String jwtStr -> {
                 VerifiableCredential unwrapped = tryUnwrapJwtVc(jwtStr, vp.getDocumentLoader());
                 if (unwrapped != null) {
-                    creds = Map.of(unwrapped, resolveBaseClass(unwrapped));
+                    creds = Map.of(unwrapped, resolveBaseClass(unwrapped, format));
                 } else {
                     creds = Collections.emptyMap();
                 }
@@ -618,7 +644,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 @SuppressWarnings("unchecked")
                 VerifiableCredential vc = VerifiableCredential.fromMap((Map<String, Object>) obj);
                 vc.setDocumentLoader(vp.getDocumentLoader());
-                creds = Map.of(vc, resolveBaseClass(vc));
+                creds = Map.of(vc, resolveBaseClass(vc, format));
             }
         }
         TypedCredentials tcs = new TypedCredentials(vp, creds);
@@ -678,9 +704,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
     }
 
-    private TypedCredentials getCredentials(VerifiableCredential vc) {
+    private TypedCredentials getCredentials(VerifiableCredential vc, CredentialFormat format) {
         log.trace("getCredentials.enter; got VC: {}", vc);
-        TypedCredentials tcs = new TypedCredentials(null, Map.of(vc, resolveBaseClass(vc)));
+        TypedCredentials tcs = new TypedCredentials(null, Map.of(vc, resolveBaseClass(vc, format)));
         log.trace("getCredentials.exit; returning: {}", tcs);
         return tcs;
     }
@@ -717,14 +743,24 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return streamManager;
     }
 
-    private TrustFrameworkBaseClass resolveBaseClass(VerifiableCredential credential) {
+    /**
+     * Resolves the Gaia-X base class of a credential using the appropriate type URI set for its format.
+     * <ul>
+     *   <li>GAIAX_V2_LOIRE: uses 2511 type URIs (loireBaseClassUris)</li>
+     *   <li>GAIAX_V1_TAGUS: uses legacy gax-core type URIs (legacyBaseClassUris / trustFrameworkBaseClassUris)</li>
+     *   <li>VC2_DANUBETECH: uses legacy gax-core type URIs (same as TAGUS) — 2511 types are JWT-only</li>
+     * </ul>
+     */
+    private TrustFrameworkBaseClass resolveBaseClass(VerifiableCredential credential, CredentialFormat format) {
+        Map<TrustFrameworkBaseClass, String> classUris =
+            format == CredentialFormat.GAIAX_V2_LOIRE ? loireBaseClassUris : trustFrameworkBaseClassUris;
         ContentAccessor ontology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
         TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(
-                ontology, getStreamManager(), credential.toJson(), trustFrameworkBaseClassUris);
+                ontology, getStreamManager(), credential.toJson(), classUris);
         if (result == null) {
             result = UNKNOWN;
         }
-        log.debug("resolveBaseClass; got type result: {}", result);
+        log.debug("resolveBaseClass; format: {}, got type result: {}", format, result);
         return result;
     }
 
@@ -1009,11 +1045,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Enforces mandatory x5c/x5u trust chain validation for Loire credentials
-     * when Gaia-X trust framework is enabled (ICAM 24.07).
+     * Enforces mandatory trust chain validation for Loire credentials when Gaia-X trust
+     * framework is enabled (ICAM 24.07). Only {@code x5u} (Trust Anchor Registry URL) is
+     * supported. {@code x5c} (inline chain) is rejected — full x5c chain building and Trust
+     * Anchor Registry lookup are not implemented.
      *
      * @param jwtValidator the validator from JWT signature verification
-     * @throws VerificationException if x5c or x5u is missing in the publicKeyJwk
+     * @throws VerificationException if x5c/x5u is missing, or if x5c is present (not supported),
+     *     or if the x5u trust anchor is expired or unreachable
      */
     private void enforceLoireTrustChain(Validator jwtValidator) {
         String publicKeyJson = jwtValidator.getPublicKey();
@@ -1048,39 +1087,18 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Validates certificates from the JWK {@code x5c} array: decodes base64 DER entries,
-     * checks each certificate is currently valid (not expired), and verifies that the chain
-     * is non-empty (ICAM 24.07).
+     * Rejects inline {@code x5c} certificate chains.
      *
-     * <p><strong>Known gap:</strong> validates certificate expiry only. Unlike the x5u path
-     * ({@link #hasPEMTrustAnchorAndIsNotExpired}), this does not call the Trust Anchor Registry
-     * because the registry API expects a URI, not inline certificates.
+     * <p>Full x5c trust chain verification (chain building, Trust Anchor Registry lookup,
+     * and revocation checking) is not implemented. Accepting x5c with expiry-only checks
+     * would silently mask broken trust chains — credentials with unverified issuers would
+     * appear valid. Callers must use {@code x5u} instead, which goes through the Trust
+     * Anchor Registry validation path ({@link #hasPEMTrustAnchorAndIsNotExpired}).
      */
     private void validateX5cChain(JsonNode x5cArray, String kid) {
-        if (!x5cArray.isArray() || x5cArray.isEmpty()) {
-            throw new VerificationException(
-                "Loire trust chain: x5c array is empty. kid: " + kid);
-        }
-        try {
-            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-            for (JsonNode entry : x5cArray) {
-                byte[] certBytes;
-                try {
-                    certBytes = java.util.Base64.getDecoder().decode(entry.asText());
-                } catch (IllegalArgumentException ex) {
-                    throw new VerificationException(
-                        "Loire trust chain: x5c entry is not valid base64. kid: " + kid, ex);
-                }
-                X509Certificate cert = (X509Certificate) certFactory.generateCertificate(
-                    new ByteArrayInputStream(certBytes));
-                cert.checkValidity();
-            }
-            log.debug("validateX5cChain; {} certificate(s) valid for kid: {}",
-                x5cArray.size(), kid);
-        } catch (CertificateException ex) {
-            throw new VerificationException(
-                "Loire trust chain: x5c certificate validation failed: " + ex.getMessage(), ex);
-        }
+        throw new VerificationException(
+            "Loire trust chain: x5c certificate chain validation is not supported. "
+                + "Use x5u (Trust Anchor Registry URL) instead. kid: " + kid);
     }
 
     /**

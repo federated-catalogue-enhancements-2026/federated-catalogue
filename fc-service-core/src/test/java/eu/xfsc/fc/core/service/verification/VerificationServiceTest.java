@@ -348,9 +348,9 @@ public class VerificationServiceTest {
     assertEquals(Instant.parse("2024-03-15T12:40:58.486Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
     assertEquals(14, vrr.getClaims().size());
-    assertEquals(3, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
+    assertEquals(4, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
     schemaStore.deleteSchema("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#");
-    assertEquals(2, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
+    assertEquals(3, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
     // With gaiax enabled, removing the required ontology schema causes hasClasses() to fail.
     ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", true);
     try {

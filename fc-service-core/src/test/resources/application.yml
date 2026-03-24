@@ -61,10 +61,11 @@ federated-catalogue:
         size: 100
         timeout: 1H
     doc-loader:
-      # when http enabled then contixt will be loaded on the fly..      
-      additional-context: 
+      # when http enabled then contixt will be loaded on the fly..
+      additional-context:
         '[https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#]': https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#
         '[https://registry.lab.gaia-x.eu/v1/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#]': https://registry.lab.gaia-x.eu/v1/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#
+        '[https://w3id.org/gaia-x/2511#]': https://registry.lab.gaia-x.eu/development/context/2511
       # plain content and file scheme are supported too   
       #  '[https://schema.org]': '{"@context": {}}'
       #  '[https://sample.net]': file:///opt/context-sample.jsonld 
