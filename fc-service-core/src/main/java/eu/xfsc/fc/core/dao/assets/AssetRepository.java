@@ -12,11 +12,12 @@ public interface AssetRepository
 
   Optional<AssetEntity> findBySubjectIdAndStatus(String subjectId, short status);
 
-  @Query(value = """
-    SELECT asset_hash 
-    FROM assets 
-    WHERE status = :status AND expirationtime < NOW()
-  """, nativeQuery = true)
+  @Query("""
+    SELECT a.assetHash
+    FROM AssetEntity a
+    WHERE a.status = :status
+        AND a.expirationTime < CURRENT_TIMESTAMP
+  """)
   List<String> findExpiredHashes(@Param("status") int activeStatus);
 
   @Query(value = """
@@ -26,9 +27,11 @@ public interface AssetRepository
         AND abs(hashtext(asset_hash) % :chunks) = :chunkid
     ORDER BY asset_hash ASC LIMIT :limit
   """, nativeQuery = true)
-  List<String> findHashesFirstPage(@Param("status") int status,
-      @Param("chunks") int chunks, @Param("chunkid") int chunkId,
-      @Param("limit") int limit);
+  List<String> findHashesFirstPage(
+          @Param("status") int status,
+          @Param("chunks") int chunks,
+          @Param("chunkid") int chunkId,
+          @Param("limit") int limit);
 
   @Query(value = """
     SELECT asset_hash 
@@ -38,7 +41,10 @@ public interface AssetRepository
         AND abs(hashtext(asset_hash) % :chunks) = :chunkid
     ORDER BY asset_hash ASC LIMIT :limit
   """, nativeQuery = true)
-  List<String> findHashesAfter(@Param("startHash") String startHash,
-      @Param("status") int status, @Param("chunks") int chunks,
-      @Param("chunkid") int chunkId, @Param("limit") int limit);
+  List<String> findHashesAfter(
+          @Param("startHash") String startHash,
+          @Param("status") int status,
+          @Param("chunks") int chunks,
+          @Param("chunkid") int chunkId,
+          @Param("limit") int limit);
 }

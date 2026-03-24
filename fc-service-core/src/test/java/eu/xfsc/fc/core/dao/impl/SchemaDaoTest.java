@@ -27,6 +27,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.dao.SchemaDao;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -207,11 +208,15 @@ class SchemaDaoTest {
   }
 
   @Test
-  void insert_duplicateSchemaId_throwsException() {
+  void insert_duplicateSchemaId_updatesExistingEntry() {
     schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.ONTOLOGY, "c1", null));
 
-    assertThrows(Exception.class,
-        () -> schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.SHAPE, "c2", null)));
+    schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.SHAPE, "c2", null));
+
+    Optional<SchemaRecord> result = schemaDao.select("schema-1");
+    assertTrue(result.isPresent());
+    assertEquals("c2", result.get().content());
+    assertEquals(SchemaType.SHAPE, result.get().type());
   }
 
   @Test
@@ -234,9 +239,8 @@ class SchemaDaoTest {
     schemaDao.insert(buildSimpleRecord("schema-1", SchemaType.ONTOLOGY, "old content",
         Set.of("oldTerm")));
 
-    int rows = schemaDao.update("schema-1", "new content", Set.of("newTerm"));
+    schemaDao.update("schema-1", "new content", Set.of("newTerm"));
 
-    assertEquals(1, rows);
     Optional<SchemaRecord> result = schemaDao.select("schema-1");
     assertTrue(result.isPresent());
     assertEquals("new content", result.get().content());
@@ -273,10 +277,9 @@ class SchemaDaoTest {
   }
 
   @Test
-  void update_nonExistentSchema_returnsZero() {
-    int rows = schemaDao.update("nonexistent", "content", null);
-
-    assertEquals(0, rows);
+  void update_nonExistentSchema_throwsNotFoundException() {
+    assertThrows(NotFoundException.class,
+        () -> schemaDao.update("nonexistent", "content", null));
   }
 
   // ===== delete =====

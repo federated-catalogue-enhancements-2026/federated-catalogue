@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.core.dao.SchemaDao;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import lombok.RequiredArgsConstructor;
@@ -52,22 +53,23 @@ public class SchemaJpaDao implements SchemaDao {
 
   @Override
   @Transactional
-  public int update(String id, String content, Collection<String> terms) {
-    return repository.findById(id).map(entity -> {
-      entity.setUpdateTime(Instant.now());
-      entity.setContent(content);
-      entity.getTerms().clear();
-      if (terms != null) {
-        for (String term : terms) {
-          SchemaTermEntity te = new SchemaTermEntity();
-          te.setTerm(term);
-          te.setSchemaFile(entity);
-          entity.getTerms().add(te);
-        }
+  public void update(String id, String content, Collection<String> terms) {
+    SchemaFileEntity entity = repository.findById(id)
+        .orElseThrow(() -> new NotFoundException("Schema with id " + id + " was not found"));
+    entity.setUpdateTime(Instant.now());
+    entity.setContent(content);
+    entity.getTerms().clear();
+    if (terms != null) {
+      for (String term : terms) {
+        SchemaTermEntity te = new SchemaTermEntity();
+        te.setTerm(term);
+        te.setSchemaFile(entity);
+        entity.getTerms().add(te);
       }
-      repository.saveAndFlush(entity);
-      return 1;
-    }).orElse(0);
+    }
+    // Explicit flush needed so DuplicateKeyException surfaces here
+    // rather than at transaction commit — the caller catches it.
+    repository.saveAndFlush(entity);
   }
 
   @Override

@@ -13,7 +13,7 @@ public interface SchemaDao {
 	Map<String, Collection<String>> selectSchemas();
 	Map<String, Collection<String>> selectSchemasByTerm(String term);
 	boolean insert(SchemaRecord schema);
-	int update(String id, String content, Collection<String> terms);
+	void update(String id, String content, Collection<String> terms);
 	String delete(String schemaId);
 	int deleteAll();
 	Optional<String> selectLatestContentByType(String typeName);

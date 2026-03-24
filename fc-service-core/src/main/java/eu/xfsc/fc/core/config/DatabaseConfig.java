@@ -1,8 +1,7 @@
 package eu.xfsc.fc.core.config;
 
-import javax.sql.DataSource;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityManagerFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -11,14 +10,14 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import jakarta.persistence.EntityManagerFactory;
+import javax.sql.DataSource;
 
 @Configuration
 @EnableTransactionManagement
+@RequiredArgsConstructor
 public class DatabaseConfig {
 
-  @Autowired
-  DataSource dataSource;
+  private final DataSource dataSource;
 
   @Bean
   public LocalContainerEntityManagerFactoryBean entityManagerFactory() {

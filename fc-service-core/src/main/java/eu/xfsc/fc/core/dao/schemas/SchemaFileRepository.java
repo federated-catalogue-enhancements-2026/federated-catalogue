@@ -15,11 +15,19 @@ public interface SchemaFileRepository
   @Query("SELECT e.type, e.schemaId FROM SchemaFileEntity e")
   List<Object[]> findAllTypeAndSchemaId();
 
-  @Query("SELECT e.type, e.schemaId FROM SchemaFileEntity e "
-      + "JOIN e.terms t WHERE t.term = :term")
+  @Query("""
+    SELECT e.type, e.schemaId
+    FROM SchemaFileEntity e
+    JOIN e.terms t
+    WHERE t.term = :term
+  """)
   List<Object[]> findTypeAndSchemaIdByTerm(@Param("term") String term);
 
-  @Query("SELECT e.content FROM SchemaFileEntity e "
-      + "WHERE e.type = :type ORDER BY e.uploadTime DESC LIMIT 1")
+  @Query("""
+    SELECT e.content
+    FROM SchemaFileEntity e
+    WHERE e.type = :type
+    ORDER BY e.uploadTime DESC LIMIT 1
+  """)
   Optional<String> findLatestContentByType(@Param("type") SchemaType type);
 }

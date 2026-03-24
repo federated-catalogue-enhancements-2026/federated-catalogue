@@ -135,7 +135,7 @@ public class AssetService implements AssetsApiDelegate {
           + "). Raw content download is not supported via this endpoint.");
     }
 
-    log.debug("readAssetById.exit; returning asset by hash: {}", assetId);
+    log.debug("readAssetById.exit; returning asset by hash: {}", id);
     return ResponseEntity.ok()
         .body(content.getContentAsString());
   }
@@ -237,7 +237,7 @@ public class AssetService implements AssetsApiDelegate {
           + assetMetadata.getStatus());
     }
 
-    log.debug("updateAsset.exit; updated asset by hash: {}", assetId);
+    log.debug("revokeAsset.exit; updated asset by hash: {}", assetHash);
     return new ResponseEntity<>(assetMetadata, HttpStatus.OK);
   }
 

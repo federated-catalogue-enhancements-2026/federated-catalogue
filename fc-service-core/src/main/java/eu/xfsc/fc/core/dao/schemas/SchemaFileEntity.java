@@ -11,12 +11,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.PostLoad;
-import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-
-import org.springframework.data.domain.Persistable;
 
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import lombok.Getter;
@@ -28,7 +23,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SchemaFileEntity implements Persistable<String> {
+public class SchemaFileEntity {
 
   @Id
   @Column(name = "schemaid", length = 200)
@@ -52,25 +47,4 @@ public class SchemaFileEntity implements Persistable<String> {
 
   @OneToMany(mappedBy = "schemaFile", cascade = CascadeType.ALL, orphanRemoval = true)
   private Set<SchemaTermEntity> terms = new HashSet<>();
-
-  @Transient
-  @Getter(lombok.AccessLevel.NONE)
-  @Setter(lombok.AccessLevel.NONE)
-  private boolean newEntity = true;
-
-  @Override
-  public String getId() {
-    return schemaId;
-  }
-
-  @Override
-  public boolean isNew() {
-    return newEntity;
-  }
-
-  @PostLoad
-  @PostPersist
-  void markNotNew() {
-    this.newEntity = false;
-  }
 }

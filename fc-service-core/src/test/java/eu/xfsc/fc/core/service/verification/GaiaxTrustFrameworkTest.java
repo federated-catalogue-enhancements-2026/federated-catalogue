@@ -32,7 +32,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
-import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
+import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
@@ -67,7 +67,7 @@ import lombok.extern.slf4j.Slf4j;
 @ContextConfiguration(classes = {GaiaxTrustFrameworkTest.TestApplication.class, FileStoreConfig.class,
     DocumentLoaderConfig.class, DocumentLoaderProperties.class, VerificationServiceImpl.class,
     SchemaStoreImpl.class, SchemaJpaDao.class, DatabaseConfig.class, DidResolverConfig.class,
-    DidDocumentResolver.class, ValidatorCacheDaoImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+    DidDocumentResolver.class, ValidatorCacheJpaDao.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class GaiaxTrustFrameworkTest {
 
