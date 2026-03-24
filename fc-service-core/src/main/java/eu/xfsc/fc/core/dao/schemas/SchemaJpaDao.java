@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,9 +45,25 @@ public class SchemaJpaDao implements SchemaDao {
     return aggregateToMap(repository.findTypeAndSchemaIdByTerm(term));
   }
 
+  // Explicit duplicate checks are needed because JPA's save() uses merge() for entities
+  // with non-null @Id, which silently upserts instead of throwing on conflicts.
+  // SchemaStoreImpl relies on DuplicateKeyException to detect and report conflicts.
+  // The message must contain the constraint name (e.g. "schemafiles_pkey", "schematerms_pkey")
+  // because SchemaStoreImpl inspects it to determine the conflict type.
   @Override
+  @Transactional
   public boolean insert(SchemaRecord sr) {
-    repository.saveAndFlush(SchemaFileEntityMapper.toEntity(sr));
+    SchemaFileEntity entity = SchemaFileEntityMapper.toEntity(sr);
+    if (repository.existsById(entity.getSchemaId())) {
+      throw new DuplicateKeyException("schemafiles_pkey: " + entity.getSchemaId());
+    }
+    if (sr.terms() != null && !sr.terms().isEmpty()) {
+      List<String> existing = repository.findExistingTerms(sr.terms());
+      if (!existing.isEmpty()) {
+        throw new DuplicateKeyException("schematerms_pkey: " + existing.getFirst());
+      }
+    }
+    repository.saveAndFlush(entity);
     return true;
   }
 

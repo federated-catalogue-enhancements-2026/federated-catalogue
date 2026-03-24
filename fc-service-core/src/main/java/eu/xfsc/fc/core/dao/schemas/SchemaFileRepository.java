@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.schemas;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +32,9 @@ public interface SchemaFileRepository
     ORDER BY e.uploadTime DESC LIMIT 1
   """)
   Optional<String> findLatestContentByType(@Param("type") SchemaType type);
+
+  @Query("SELECT t.term FROM SchemaTermEntity t WHERE t.term IN :terms")
+  List<String> findExistingTerms(@Param("terms") Collection<String> terms);
 
   @Modifying
   @Query("DELETE FROM SchemaFileEntity")

@@ -34,7 +34,7 @@ import org.apache.jena.vocabulary.SKOS;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
@@ -362,7 +362,7 @@ public class SchemaStoreImpl implements SchemaStore {
       if (!dao.insert(newRecord)) {
         throw new ServerException("DB error, schema not inserted");
       }
-    } catch (DuplicateKeyException ex) {
+    } catch (DataIntegrityViolationException ex) {
       String msg = ex.getMessage();
       if (msg.contains("schematerms_pkey") || msg.contains("SchemaTermEntity")) {
         throw new ConflictException("Schema redefines existing terms");
@@ -392,7 +392,7 @@ public class SchemaStoreImpl implements SchemaStore {
 
     try {
       dao.update(identifier, newRecord.content(), newRecord.terms());
-    } catch (DuplicateKeyException ex) {
+    } catch (DataIntegrityViolationException ex) {
       if (ex.getMessage().contains("schematerms_pkey")) {
         throw new ConflictException("Schema redefines existing terms");
       }
