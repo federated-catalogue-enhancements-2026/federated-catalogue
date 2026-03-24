@@ -22,8 +22,8 @@ public final class ValidatorCacheEntityMapper {
       return null;
     }
     return new Validator(
-        entity.getDiduri(),
-        entity.getPublickey(),
-        entity.getExpirationtime());
+        entity.getDidUri(),
+        entity.getPublicKey(),
+        entity.getExpirationTime());
   }
 }

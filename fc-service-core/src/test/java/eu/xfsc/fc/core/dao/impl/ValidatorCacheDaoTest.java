@@ -14,12 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.dao.ValidatorCacheDao;
+import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.pojo.Validator;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -34,7 +33,6 @@ class ValidatorCacheDaoTest {
 
   @Configuration
   @EnableAutoConfiguration
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   static class TestConfig {
   }
 

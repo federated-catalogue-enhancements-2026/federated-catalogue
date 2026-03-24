@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.dao.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
@@ -17,13 +18,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.dao.AssetDao;
+import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -42,7 +43,6 @@ class AssetDaoTest {
 
   @Configuration
   @EnableAutoConfiguration
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   static class TestConfig {
   }
 
@@ -551,8 +551,7 @@ class AssetDaoTest {
   @Test
   void update_nonExistentHash_throwsEmptyResult() {
     // CTE returns no rows when hash doesn't exist — queryForObject throws
-    org.junit.jupiter.api.Assertions.assertThrows(
-        org.springframework.dao.EmptyResultDataAccessException.class,
+    assertThrows(EmptyResultDataAccessException.class,
         () -> assetDao.update("nonexistent", AssetStatus.REVOKED.ordinal()));
   }
 

@@ -11,7 +11,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import eu.xfsc.fc.core.dao.SchemaDao;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -83,10 +82,9 @@ public class SchemaJpaDao implements SchemaDao {
   }
 
   @Override
+  @Transactional
   public int deleteAll() {
-    int count = (int) repository.count();
-    repository.deleteAllInBatch();
-    return count;
+    return repository.deleteAllReturningCount();
   }
 
   @Override

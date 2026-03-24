@@ -6,7 +6,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.ValidatorCacheDao;
+import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -25,11 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -48,7 +46,6 @@ import java.time.temporal.ChronoUnit;
 public class ValidatorCacheTest {
 
   @SpringBootApplication
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   public static class TestApplication {
 
     public static void main(final String[] args) {

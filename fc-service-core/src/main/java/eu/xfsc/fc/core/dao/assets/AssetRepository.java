@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -33,9 +34,13 @@ public interface AssetRepository
           @Param("chunkid") int chunkId,
           @Param("limit") int limit);
 
+  @Modifying
+  @Query("DELETE FROM AssetEntity")
+  int deleteAllReturningCount();
+
   @Query(value = """
-    SELECT asset_hash 
-    FROM assets 
+    SELECT asset_hash
+    FROM assets
     WHERE asset_hash > :startHash
         AND status = :status
         AND abs(hashtext(asset_hash) % :chunks) = :chunkid

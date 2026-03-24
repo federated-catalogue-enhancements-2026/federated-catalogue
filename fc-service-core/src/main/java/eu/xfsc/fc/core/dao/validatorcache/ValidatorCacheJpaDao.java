@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.dao.validatorcache;
 
-import eu.xfsc.fc.core.dao.ValidatorCacheDao;
 import eu.xfsc.fc.core.pojo.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

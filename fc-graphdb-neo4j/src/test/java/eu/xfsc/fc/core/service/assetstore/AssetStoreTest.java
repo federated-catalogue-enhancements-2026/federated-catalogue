@@ -23,7 +23,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -66,7 +65,6 @@ import lombok.extern.slf4j.Slf4j;
 public class AssetStoreTest {
 
   @SpringBootApplication
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   public static class TestApplication {
 
     public static void main(final String[] args) {

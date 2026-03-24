@@ -1,12 +1,12 @@
 package eu.xfsc.fc.core.dao.assets;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.dao.AssetDao;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectHashRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
@@ -58,6 +58,7 @@ public class AssetJpaDao implements AssetDao {
     }
 
     @Override
+    @Transactional
     public SubjectHashRecord insert(AssetRecord assetRecord) {
         Optional<AssetEntity> existing = repository.findBySubjectIdAndStatus(
                 assetRecord.getId(), ACTIVE_STATUS);
@@ -105,9 +106,8 @@ public class AssetJpaDao implements AssetDao {
     }
 
     @Override
+    @Transactional
     public int deleteAll() {
-        long count = repository.count();
-        repository.deleteAllInBatch();
-        return (int) count;
+        return repository.deleteAllReturningCount();
     }
 }

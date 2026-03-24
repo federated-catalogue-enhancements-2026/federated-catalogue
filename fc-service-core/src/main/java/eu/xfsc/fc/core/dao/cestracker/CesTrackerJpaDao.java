@@ -2,7 +2,6 @@ package eu.xfsc.fc.core.dao.cestracker;
 
 import org.springframework.stereotype.Component;
 
-import eu.xfsc.fc.core.dao.CesTrackerDao;
 import eu.xfsc.fc.core.service.pubsub.ces.CesTracking;
 import lombok.RequiredArgsConstructor;
 

@@ -21,12 +21,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.dao.SchemaDao;
+import eu.xfsc.fc.core.dao.schemas.SchemaDao;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -42,7 +41,6 @@ class SchemaDaoTest {
 
   @Configuration
   @EnableAutoConfiguration
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   static class TestConfig {
   }
 

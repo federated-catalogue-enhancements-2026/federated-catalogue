@@ -22,11 +22,11 @@ public class ValidatorCacheEntity {
 
   @Id
   @Column(name = "diduri", columnDefinition = "TEXT")
-  private String diduri;
+  private String didUri;
 
   @Column(name = "publickey", nullable = false, columnDefinition = "TEXT")
-  private String publickey;
+  private String publicKey;
 
   @Column(name = "expirationtime")
-  private Instant expirationtime;
+  private Instant expirationTime;
 }

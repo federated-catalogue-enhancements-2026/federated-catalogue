@@ -23,6 +23,9 @@ import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+// Uses NamedParameterJdbcTemplate (JDBC) instead of JPA/JPQL because selectByFilter
+// builds dynamic SQL with PostgreSQL-specific features (array operators, conditional column
+// projection) that are not expressible in JPQL.
 @Slf4j
 @RequiredArgsConstructor
 public class AssetRepositoryCustomImpl implements AssetRepositoryCustom {

@@ -8,7 +8,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
-import eu.xfsc.fc.core.dao.impl.RevalidatorChunksDaoImpl;
+import eu.xfsc.fc.core.dao.revalidator.RevalidatorChunksJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -39,7 +39,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -65,7 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@ContextConfiguration(classes = {RevalidationServiceTest.TestApplication.class, RevalidationServiceImpl.class, RevalidatorChunksDaoImpl.class, FileStoreConfig.class, DummyGraphStore.class,
+@ContextConfiguration(classes = {RevalidationServiceTest.TestApplication.class, RevalidationServiceImpl.class, RevalidatorChunksJpaDao.class, FileStoreConfig.class, DummyGraphStore.class,
   VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, DatabaseConfig.class, ValidatorCacheJpaDao.class, AssetStoreImpl.class, AssetJpaDao.class,
   DocumentLoaderConfig.class, DocumentLoaderProperties.class, DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
   JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
@@ -75,7 +74,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class RevalidationServiceTest {
 
   @SpringBootApplication
-  @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
   public static class TestApplication {
 
     public static void main(final String[] args) {

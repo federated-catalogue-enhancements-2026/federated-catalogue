@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.dao.AssetDao;
+import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;

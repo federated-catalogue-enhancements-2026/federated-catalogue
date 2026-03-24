@@ -1,4 +1,4 @@
-package eu.xfsc.fc.core.dao;
+package eu.xfsc.fc.core.dao.schemas;
 
 import java.util.Collection;
 import java.util.Map;
