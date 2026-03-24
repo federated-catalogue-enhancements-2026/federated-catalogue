@@ -129,6 +129,8 @@ federated-catalogue:
       - application/ld+json
       - application/vc+ld+json
       - application/vp+ld+json
+      - application/vc+jwt
+      - application/vp+jwt
       # Uncomment as VerificationService gains support for these formats:
       # - text/turtle
       # - application/n-triples
