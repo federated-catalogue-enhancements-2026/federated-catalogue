@@ -32,7 +32,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public AssetRecord select(String hash) {
-        return repository.findById(hash)
+        return repository.findByAssetHash(hash)
                 .map(AssetEntityMapper::toRecord)
                 .orElse(null);
     }
@@ -58,14 +58,11 @@ public class AssetJpaDao implements AssetDao {
         return repository.findExpiredHashes(AssetStatus.ACTIVE.ordinal());
     }
 
-    // Explicit duplicate check needed because JPA's save() uses merge() for entities
-    // with non-null @Id, which silently upserts instead of throwing on conflicts.
-    // AssetStoreImpl relies on DuplicateKeyException("assets_pkey") to detect duplicates.
     @Override
     @Transactional
     public SubjectHashRecord insert(AssetRecord assetRecord) {
-        if (repository.existsById(assetRecord.getAssetHash())) {
-            throw new DuplicateKeyException("assets_pkey: " + assetRecord.getAssetHash());
+        if (repository.existsByAssetHash(assetRecord.getAssetHash())) {
+            throw new DuplicateKeyException("uq_assets_asset_hash: " + assetRecord.getAssetHash());
         }
 
         Optional<AssetEntity> existing = repository.findBySubjectIdAndStatus(
