@@ -87,7 +87,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord update(String hash, int status) {
-        AssetEntity entity = repository.findById(hash)
+        AssetEntity entity = repository.findByAssetHash(hash)
                 .orElseThrow(() -> new EmptyResultDataAccessException(1));
 
         if (entity.getStatus() == ACTIVE_STATUS) {
@@ -101,7 +101,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord delete(String hash) {
-        Optional<AssetEntity> existing = repository.findById(hash);
+        Optional<AssetEntity> existing = repository.findByAssetHash(hash);
         if (existing.isEmpty()) {
             return null;
         }
