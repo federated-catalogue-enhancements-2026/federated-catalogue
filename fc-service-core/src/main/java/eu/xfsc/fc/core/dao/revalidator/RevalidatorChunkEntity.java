@@ -19,7 +19,7 @@ import lombok.Setter;
 public class RevalidatorChunkEntity {
 
   @Id
-  @Column(name = "chunkid")
+  @Column(name = "chunkid", nullable = false)
   private Integer chunkId;
 
   @Column(name = "lastcheck", nullable = false)

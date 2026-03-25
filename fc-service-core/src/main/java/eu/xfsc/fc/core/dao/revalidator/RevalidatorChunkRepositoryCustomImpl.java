@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-class RevalidatorChunkRepositoryCustomImpl implements RevalidatorChunkRepositoryCustom {
+public class RevalidatorChunkRepositoryCustomImpl implements RevalidatorChunkRepositoryCustom {
 
   private final EntityManager entityManager;
 
