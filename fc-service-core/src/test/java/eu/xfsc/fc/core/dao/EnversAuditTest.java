@@ -75,10 +75,9 @@ class EnversAuditTest {
 
   @BeforeEach
   void cleanUp() {
-    transactionTemplate.executeWithoutResult(status -> {
-      jdbcTemplate.execute("TRUNCATE schematerms_aud, schemafiles_aud, assets_aud,"
-          + " revinfo, schematerms, schemafiles, assets CASCADE");
-    });
+    transactionTemplate.executeWithoutResult(status ->
+            jdbcTemplate.execute("TRUNCATE schematerms_aud, schemafiles_aud, assets_aud,"
+                                 + " revinfo, schematerms, schemafiles, assets CASCADE"));
   }
 
   // --- Asset helpers ---
@@ -120,7 +119,7 @@ class EnversAuditTest {
 
     assertNotNull(revisions);
     assertEquals(1, revisions.size());
-    Object[] row = (Object[]) revisions.get(0);
+    Object[] row = (Object[]) revisions.getFirst();
     AssetEntity audited = (AssetEntity) row[0];
     RevisionType revType = (RevisionType) row[2];
     assertEquals(RevisionType.ADD, revType);
@@ -143,7 +142,7 @@ class EnversAuditTest {
           .forRevisionsOfEntity(AssetEntity.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-arr"))
           .getResultList();
-      return (AssetEntity) revisions.get(0);
+      return (AssetEntity) revisions.getFirst();
     });
 
     assertNotNull(audited);
@@ -260,7 +259,7 @@ class EnversAuditTest {
           .forRevisionsOfEntity(AssetEntity.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-chrono"))
           .getResultList();
-      Long entityId = ((AssetEntity) results.get(0)).getId();
+      Long entityId = ((AssetEntity) results.getFirst()).getId();
       return reader.getRevisions(AssetEntity.class, entityId);
     });
 
@@ -289,7 +288,7 @@ class EnversAuditTest {
 
     assertNotNull(schemaRevisions);
     assertEquals(1, schemaRevisions.size());
-    Object[] row = (Object[]) schemaRevisions.get(0);
+    Object[] row = (Object[]) schemaRevisions.getFirst();
     assertEquals(RevisionType.ADD, row[2]);
 
     // Verify schematerms_AUD also has entries
@@ -365,7 +364,7 @@ class EnversAuditTest {
 
     assertNotNull(termRevisions);
     assertFalse(termRevisions.isEmpty());
-    Object[] lastTermRev = (Object[]) termRevisions.get(termRevisions.size() - 1);
+    Object[] lastTermRev = (Object[]) termRevisions.getLast();
     assertEquals(RevisionType.DEL, lastTermRev[2]);
   }
 
@@ -387,9 +386,9 @@ class EnversAuditTest {
           .forRevisionsOfEntity(AssetEntity.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-rev"))
           .getResultList();
-      Long entityId = ((AssetEntity) results.get(0)).getId();
+      Long entityId = ((AssetEntity) results.getFirst()).getId();
       List<Number> revisions = reader.getRevisions(AssetEntity.class, entityId);
-      return reader.find(AssetEntity.class, entityId, revisions.get(0));
+      return reader.find(AssetEntity.class, entityId, revisions.getFirst());
     });
 
     assertNotNull(atFirstRevision);
@@ -409,7 +408,7 @@ class EnversAuditTest {
           .forRevisionsOfEntity(AssetEntity.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-ts"))
           .getResultList();
-      Object[] row = (Object[]) results.get(0);
+      Object[] row = (Object[]) results.getFirst();
       var revEntity = (org.hibernate.envers.DefaultRevisionEntity) row[1];
       return Instant.ofEpochMilli(revEntity.getTimestamp());
     });
