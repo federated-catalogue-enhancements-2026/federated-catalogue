@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CesTrackerRepository
-    extends JpaRepository<CesTrackerEntity, String> {
+    extends JpaRepository<CesTracker, String> {
 
-  Optional<CesTrackerEntity> findFirstByOrderByCreatedAtDesc();
+  Optional<CesTracker> findFirstByOrderByCreatedAtDesc();
 }

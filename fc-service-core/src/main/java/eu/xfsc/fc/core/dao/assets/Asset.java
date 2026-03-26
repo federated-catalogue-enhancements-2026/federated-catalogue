@@ -21,7 +21,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class AssetEntity {
+public class Asset {
 
   @Id
   @Column(name = "asset_hash", length = 64, nullable = false)

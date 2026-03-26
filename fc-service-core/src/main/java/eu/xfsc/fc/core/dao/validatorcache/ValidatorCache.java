@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ValidatorCacheEntity {
+public class ValidatorCache {
 
   @Id
   @Column(name = "diduri", columnDefinition = "TEXT")

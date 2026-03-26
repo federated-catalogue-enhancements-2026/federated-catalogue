@@ -23,7 +23,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SchemaFileEntity {
+public class SchemaFile {
 
   @Id
   @Column(name = "schemaid", length = 200)
@@ -46,5 +46,5 @@ public class SchemaFileEntity {
   private String content;
 
   @OneToMany(mappedBy = "schemaFile", cascade = CascadeType.ALL, orphanRemoval = true)
-  private Set<SchemaTermEntity> terms = new HashSet<>();
+  private Set<SchemaTerm> terms = new HashSet<>();
 }

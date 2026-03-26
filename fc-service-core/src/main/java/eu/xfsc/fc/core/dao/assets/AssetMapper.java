@@ -7,12 +7,12 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 
-public final class AssetEntityMapper {
+public final class AssetMapper {
 
-  private AssetEntityMapper() {
+  private AssetMapper() {
   }
 
-  public static AssetRecord toRecord(AssetEntity entity) {
+  public static AssetRecord toRecord(Asset entity) {
     if (entity == null) {
       return null;
     }
@@ -32,11 +32,11 @@ public final class AssetEntityMapper {
         .build();
   }
 
-  public static AssetEntity toEntity(AssetRecord record) {
+  public static Asset toEntity(AssetRecord record) {
     if (record == null) {
       return null;
     }
-    AssetEntity entity = new AssetEntity();
+    Asset entity = new Asset();
     entity.setAssetHash(record.getAssetHash());
     entity.setSubjectId(record.getId());
     entity.setIssuer(record.getIssuer());

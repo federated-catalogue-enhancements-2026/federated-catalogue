@@ -2,22 +2,22 @@ package eu.xfsc.fc.core.dao.validatorcache;
 
 import eu.xfsc.fc.core.pojo.Validator;
 
-public final class ValidatorCacheEntityMapper {
+public final class ValidatorCacheMapper {
 
-  private ValidatorCacheEntityMapper() {
+  private ValidatorCacheMapper() {
   }
 
-  public static ValidatorCacheEntity toEntity(Validator validator) {
+  public static ValidatorCache toEntity(Validator validator) {
     if (validator == null) {
       return null;
     }
-    return new ValidatorCacheEntity(
+    return new ValidatorCache(
         validator.getDidURI(),
         validator.getPublicKey(),
         validator.getExpirationDate());
   }
 
-  public static Validator toValidator(ValidatorCacheEntity entity) {
+  public static Validator toValidator(ValidatorCache entity) {
     if (entity == null) {
       return null;
     }

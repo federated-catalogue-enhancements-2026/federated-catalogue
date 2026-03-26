@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 
 public interface SchemaFileRepository
-    extends JpaRepository<SchemaFileEntity, String> {
+    extends JpaRepository<SchemaFile, String> {
 
   @Query("SELECT e.type, e.schemaId FROM SchemaFileEntity e")
   List<Object[]> findAllTypeAndSchemaId();

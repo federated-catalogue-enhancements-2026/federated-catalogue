@@ -18,7 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.dao.schemas.SchemaFileEntity;
+import eu.xfsc.fc.core.dao.schemas.SchemaFile;
 import eu.xfsc.fc.core.dao.schemas.SchemaFileRepository;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -61,8 +61,8 @@ class RevalidatorChunksDaoTest {
     jdbc.update("INSERT INTO revalidatorchunks(chunkid, lastcheck) VALUES (?, ?)", chunkId, java.sql.Timestamp.from(lastcheck));
   }
 
-  private SchemaFileEntity insertSchemaFile(String schemaId, SchemaType type, Instant updateTime) {
-    SchemaFileEntity entity = new SchemaFileEntity();
+  private SchemaFile insertSchemaFile(String schemaId, SchemaType type, Instant updateTime) {
+    SchemaFile entity = new SchemaFile();
     entity.setSchemaId(schemaId);
     entity.setNameHash("hash-" + schemaId);
     entity.setUploadTime(updateTime);

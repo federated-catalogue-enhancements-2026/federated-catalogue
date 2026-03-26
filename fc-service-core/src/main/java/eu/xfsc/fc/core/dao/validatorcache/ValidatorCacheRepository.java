@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ValidatorCacheRepository
-    extends JpaRepository<ValidatorCacheEntity, String> {
+    extends JpaRepository<ValidatorCache, String> {
 
   @Modifying
   @Query(value = "DELETE FROM validatorcache WHERE expirationtime < :now",

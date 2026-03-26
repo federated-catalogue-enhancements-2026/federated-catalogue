@@ -5,18 +5,18 @@ import java.util.stream.Collectors;
 
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 
-public final class SchemaFileEntityMapper {
+public final class SchemaFileMapper {
 
-  private SchemaFileEntityMapper() {
+  private SchemaFileMapper() {
   }
 
-  public static SchemaRecord toRecord(SchemaFileEntity entity) {
+  public static SchemaRecord toRecord(SchemaFile entity) {
     if (entity == null) {
       return null;
     }
     Set<String> terms = entity.getTerms() == null ? null
         : entity.getTerms().stream()
-            .map(SchemaTermEntity::getTerm)
+            .map(SchemaTerm::getTerm)
             .collect(Collectors.toSet());
     return new SchemaRecord(
         entity.getSchemaId(),
@@ -28,11 +28,11 @@ public final class SchemaFileEntityMapper {
         terms);
   }
 
-  public static SchemaFileEntity toEntity(SchemaRecord record) {
+  public static SchemaFile toEntity(SchemaRecord record) {
     if (record == null) {
       return null;
     }
-    SchemaFileEntity entity = new SchemaFileEntity();
+    SchemaFile entity = new SchemaFile();
     entity.setSchemaId(record.getId());
     entity.setNameHash(record.nameHash());
     entity.setType(record.type());
@@ -40,8 +40,8 @@ public final class SchemaFileEntityMapper {
     entity.setUpdateTime(record.updateTime());
     entity.setContent(record.content());
     if (record.terms() != null) {
-      Set<SchemaTermEntity> termEntities = record.terms().stream().map(term -> {
-        SchemaTermEntity te = new SchemaTermEntity();
+      Set<SchemaTerm> termEntities = record.terms().stream().map(term -> {
+        SchemaTerm te = new SchemaTerm();
         te.setTerm(term);
         te.setSchemaFile(entity);
         return te;

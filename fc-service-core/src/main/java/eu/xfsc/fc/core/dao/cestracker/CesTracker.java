@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CesTrackerEntity {
+public class CesTracker {
 
   @Id
   @Column(name = "ces_id", length = 36, nullable = false)

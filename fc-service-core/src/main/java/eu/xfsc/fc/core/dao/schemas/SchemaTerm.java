@@ -17,7 +17,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SchemaTermEntity {
+public class SchemaTerm {
 
   @Id
   @Column(name = "term", length = 256, nullable = false)
@@ -25,5 +25,5 @@ public class SchemaTermEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "schemaid", nullable = false)
-  private SchemaFileEntity schemaFile;
+  private SchemaFile schemaFile;
 }

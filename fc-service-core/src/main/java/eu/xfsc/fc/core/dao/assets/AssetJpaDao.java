@@ -27,13 +27,13 @@ public class AssetJpaDao implements AssetDao {
     @Override
     public Optional<AssetRecord> selectBySubjectId(String subjectId) {
         return repository.findBySubjectIdAndStatus(subjectId, ACTIVE_STATUS)
-                .map(AssetEntityMapper::toRecord);
+                .map(AssetMapper::toRecord);
     }
 
     @Override
     public AssetRecord select(String hash) {
         return repository.findById(hash)
-                .map(AssetEntityMapper::toRecord)
+                .map(AssetMapper::toRecord)
                 .orElse(null);
     }
 
@@ -68,13 +68,13 @@ public class AssetJpaDao implements AssetDao {
             throw new DuplicateKeyException("assets_pkey: " + assetRecord.getAssetHash());
         }
 
-        Optional<AssetEntity> existing = repository.findBySubjectIdAndStatus(
+        Optional<Asset> existing = repository.findBySubjectIdAndStatus(
                 assetRecord.getId(), ACTIVE_STATUS);
 
         String oldSubjectId = null;
         String oldHash = null;
         if (existing.isPresent()) {
-            AssetEntity old = existing.get();
+            Asset old = existing.get();
             oldSubjectId = old.getSubjectId();
             oldHash = old.getAssetHash();
             old.setStatus((short) AssetStatus.DEPRECATED.ordinal());
@@ -82,7 +82,7 @@ public class AssetJpaDao implements AssetDao {
             repository.saveAndFlush(old);
         }
 
-        AssetEntity newEntity = AssetEntityMapper.toEntity(assetRecord);
+        Asset newEntity = AssetMapper.toEntity(assetRecord);
         repository.save(newEntity);
 
         return new SubjectHashRecord(oldSubjectId, oldHash);
@@ -90,7 +90,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord update(String hash, int status) {
-        AssetEntity entity = repository.findById(hash)
+        Asset entity = repository.findById(hash)
                 .orElseThrow(() -> new EmptyResultDataAccessException(1));
 
         if (entity.getStatus() == ACTIVE_STATUS) {
@@ -104,11 +104,11 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord delete(String hash) {
-        Optional<AssetEntity> existing = repository.findById(hash);
+        Optional<Asset> existing = repository.findById(hash);
         if (existing.isEmpty()) {
             return null;
         }
-        AssetEntity entity = existing.get();
+        Asset entity = existing.get();
         repository.delete(entity);
         return new SubjectStatusRecord(entity.getSubjectId(), (int) entity.getStatus());
     }

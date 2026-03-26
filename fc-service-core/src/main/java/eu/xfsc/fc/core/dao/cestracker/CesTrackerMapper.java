@@ -5,12 +5,12 @@ import java.time.ZoneOffset;
 
 import eu.xfsc.fc.core.service.pubsub.ces.CesTracking;
 
-public final class CesTrackerEntityMapper {
+public final class CesTrackerMapper {
 
-  private CesTrackerEntityMapper() {
+  private CesTrackerMapper() {
   }
 
-  public static CesTracking toTracking(CesTrackerEntity entity) {
+  public static CesTracking toTracking(CesTracker entity) {
     if (entity == null) {
       return null;
     }
@@ -23,11 +23,11 @@ public final class CesTrackerEntityMapper {
         entity.getError());
   }
 
-  public static CesTrackerEntity toEntity(CesTracking tracking) {
+  public static CesTracker toEntity(CesTracking tracking) {
     if (tracking == null) {
       return null;
     }
-    CesTrackerEntity entity = new CesTrackerEntity();
+    CesTracker entity = new CesTracker();
     entity.setCesId(tracking.getCesId());
     entity.setEvent(tracking.getEvent());
     entity.setCreatedAt(LocalDateTime.ofInstant(tracking.getCreatedAt(), ZoneOffset.UTC));

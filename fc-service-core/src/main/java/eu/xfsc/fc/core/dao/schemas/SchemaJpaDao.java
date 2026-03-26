@@ -32,7 +32,7 @@ public class SchemaJpaDao implements SchemaDao {
   @Transactional(readOnly = true)
   public Optional<SchemaRecord> select(String schemaId) {
     return repository.findById(schemaId)
-        .map(SchemaFileEntityMapper::toRecord);
+        .map(SchemaFileMapper::toRecord);
   }
 
   @Override
@@ -53,7 +53,7 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional
   public boolean insert(SchemaRecord sr) {
-    SchemaFileEntity entity = SchemaFileEntityMapper.toEntity(sr);
+    SchemaFile entity = SchemaFileMapper.toEntity(sr);
     if (repository.existsById(entity.getSchemaId())) {
       throw new DuplicateKeyException("schemafiles_pkey: " + entity.getSchemaId());
     }
@@ -70,14 +70,14 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional
   public void update(String id, String content, Collection<String> terms) {
-    SchemaFileEntity entity = repository.findById(id)
+    SchemaFile entity = repository.findById(id)
         .orElseThrow(() -> new NotFoundException("Schema with id " + id + " was not found"));
     entity.setUpdateTime(Instant.now());
     entity.setContent(content);
     entity.getTerms().clear();
     if (terms != null) {
       for (String term : terms) {
-        SchemaTermEntity te = new SchemaTermEntity();
+        SchemaTerm te = new SchemaTerm();
         te.setTerm(term);
         te.setSchemaFile(entity);
         entity.getTerms().add(te);

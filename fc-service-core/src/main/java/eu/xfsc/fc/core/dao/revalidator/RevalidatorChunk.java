@@ -16,7 +16,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class RevalidatorChunkEntity {
+public class RevalidatorChunk {
 
   @Id
   @Column(name = "chunkid", nullable = false)
