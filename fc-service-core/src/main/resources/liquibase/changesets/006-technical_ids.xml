@@ -4,8 +4,6 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <!-- CR 12197: Introduce surrogate BIGINT PKs for assets, schemafiles, schematerms -->
-
     <changeSet id="2026-03-25-technical-ids-assets" author="saackef">
         <comment>Add technical ID to assets table</comment>
         <createSequence sequenceName="assets_id_seq" startValue="1" incrementBy="50"/>

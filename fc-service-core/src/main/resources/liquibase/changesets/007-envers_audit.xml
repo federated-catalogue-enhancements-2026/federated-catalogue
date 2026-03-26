@@ -4,8 +4,6 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <!-- CR 12196: Hibernate Envers audit tables for assets, schemafiles, schematerms -->
-
     <changeSet id="2026-03-25-envers-revinfo" author="saackef">
         <comment>Create revinfo table and sequence for Hibernate Envers</comment>
         <createSequence sequenceName="revinfo_seq" startValue="1" incrementBy="50"/>
