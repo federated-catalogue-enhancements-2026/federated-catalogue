@@ -32,6 +32,6 @@ public class SchemaTerm {
   private String term;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "schemaid", nullable = false)
+  @JoinColumn(name = "schema_file_id", nullable = false)
   private SchemaFile schemaFile;
 }
