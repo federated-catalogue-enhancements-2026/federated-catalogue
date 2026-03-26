@@ -32,7 +32,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public AssetRecord select(String hash) {
-        return repository.findById(hash)
+        return repository.findByAssetHash(hash)
                 .map(AssetMapper::toRecord)
                 .orElse(null);
     }
@@ -104,7 +104,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord delete(String hash) {
-        Optional<Asset> existing = repository.findById(hash);
+        Optional<Asset> existing = repository.findByAssetHash(hash);
         if (existing.isEmpty()) {
             return null;
         }
