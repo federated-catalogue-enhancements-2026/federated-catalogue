@@ -32,7 +32,7 @@ public class SchemaJpaDao implements SchemaDao {
   @Transactional(readOnly = true)
   public Optional<SchemaRecord> select(String schemaId) {
     return repository.findBySchemaId(schemaId)
-        .map(SchemaFileEntityMapper::toRecord);
+        .map(SchemaFileMapper::toRecord);
   }
 
   @Override
@@ -45,10 +45,15 @@ public class SchemaJpaDao implements SchemaDao {
     return aggregateToMap(repository.findTypeAndSchemaIdByTerm(term));
   }
 
+  // Explicit duplicate checks are needed because JPA's save() uses merge() for entities
+  // with non-null @Id, which silently upserts instead of throwing on conflicts.
+  // SchemaStoreImpl relies on DuplicateKeyException to detect and report conflicts.
+  // The message must contain the constraint name (e.g. "schemafiles_pkey", "schematerms_pkey")
+  // because SchemaStoreImpl inspects it to determine the conflict type.
   @Override
   @Transactional
   public boolean insert(SchemaRecord sr) {
-    SchemaFileEntity entity = SchemaFileEntityMapper.toEntity(sr);
+      SchemaFile entity = SchemaFileMapper.toEntity(sr);
     if (repository.existsBySchemaId(entity.getSchemaId())) {
       throw new DuplicateKeyException("uq_schemafiles_schemaid: " + entity.getSchemaId());
     }
@@ -65,14 +70,14 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional
   public void update(String id, String content, Collection<String> terms) {
-    SchemaFileEntity entity = repository.findBySchemaId(id)
+      SchemaFile entity = repository.findBySchemaId(id)
         .orElseThrow(() -> new NotFoundException("Schema with id " + id + " was not found"));
     entity.setUpdateTime(Instant.now());
     entity.setContent(content);
     entity.getTerms().clear();
     if (terms != null) {
       for (String term : terms) {
-        SchemaTermEntity te = new SchemaTermEntity();
+        SchemaTerm te = new SchemaTerm();
         te.setTerm(term);
         te.setSchemaFile(entity);
         entity.getTerms().add(te);

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 
 public interface SchemaDao {
@@ -13,7 +14,7 @@ public interface SchemaDao {
 	Map<String, Collection<String>> selectSchemas();
 	Map<String, Collection<String>> selectSchemasByTerm(String term);
 	boolean insert(SchemaRecord schema);
-	void update(String id, String content, Collection<String> terms);
+	void update(String id, String content, Collection<String> terms) throws NotFoundException;
 	String delete(String schemaId);
 	int deleteAll();
 	Optional<String> selectLatestContentByType(String typeName);

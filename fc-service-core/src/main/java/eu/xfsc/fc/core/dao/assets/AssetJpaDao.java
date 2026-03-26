@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -27,13 +28,13 @@ public class AssetJpaDao implements AssetDao {
     @Override
     public Optional<AssetRecord> selectBySubjectId(String subjectId) {
         return repository.findBySubjectIdAndStatus(subjectId, ACTIVE_STATUS)
-                .map(AssetEntityMapper::toRecord);
+                .map(AssetMapper::toRecord);
     }
 
     @Override
     public AssetRecord select(String hash) {
-        return repository.findByAssetHash(hash)
-                .map(AssetEntityMapper::toRecord)
+        return repository.findById(hash)
+                .map(AssetMapper::toRecord)
                 .orElse(null);
     }
 
@@ -58,6 +59,9 @@ public class AssetJpaDao implements AssetDao {
         return repository.findExpiredHashes(AssetStatus.ACTIVE.ordinal());
     }
 
+    // Explicit duplicate check needed because JPA's save() uses merge() for entities
+    // with non-null @Id, which silently upserts instead of throwing on conflicts.
+    // AssetStoreImpl relies on DuplicateKeyException("assets_pkey") to detect duplicates.
     @Override
     @Transactional
     public SubjectHashRecord insert(AssetRecord assetRecord) {
@@ -65,13 +69,13 @@ public class AssetJpaDao implements AssetDao {
             throw new DuplicateKeyException("uq_assets_asset_hash: " + assetRecord.getAssetHash());
         }
 
-        Optional<AssetEntity> existing = repository.findBySubjectIdAndStatus(
+        Optional<Asset> existing = repository.findBySubjectIdAndStatus(
                 assetRecord.getId(), ACTIVE_STATUS);
 
         String oldSubjectId = null;
         String oldHash = null;
         if (existing.isPresent()) {
-            AssetEntity old = existing.get();
+            Asset old = existing.get();
             oldSubjectId = old.getSubjectId();
             oldHash = old.getAssetHash();
             old.setStatus((short) AssetStatus.DEPRECATED.ordinal());
@@ -79,7 +83,7 @@ public class AssetJpaDao implements AssetDao {
             repository.saveAndFlush(old);
         }
 
-        AssetEntity newEntity = AssetEntityMapper.toEntity(assetRecord);
+        Asset newEntity = AssetMapper.toEntity(assetRecord);
         repository.save(newEntity);
 
         return new SubjectHashRecord(oldSubjectId, oldHash);
@@ -87,7 +91,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord update(String hash, int status) {
-        AssetEntity entity = repository.findByAssetHash(hash)
+        Asset entity = repository.findByAssetHash(hash)
                 .orElseThrow(() -> new EmptyResultDataAccessException(1));
 
         if (entity.getStatus() == ACTIVE_STATUS) {
@@ -101,11 +105,11 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public SubjectStatusRecord delete(String hash) {
-        Optional<AssetEntity> existing = repository.findByAssetHash(hash);
+        Optional<Asset> existing = repository.findById(hash);
         if (existing.isEmpty()) {
             return null;
         }
-        AssetEntity entity = existing.get();
+        Asset entity = existing.get();
         repository.delete(entity);
         return new SubjectStatusRecord(entity.getSubjectId(), (int) entity.getStatus());
     }

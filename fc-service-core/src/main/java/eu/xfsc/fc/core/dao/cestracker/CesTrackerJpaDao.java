@@ -13,20 +13,20 @@ public class CesTrackerJpaDao implements CesTrackerDao {
 
   @Override
   public void insert(CesTracking event) {
-    repository.save(CesTrackerEntityMapper.toEntity(event));
+    repository.save(CesTrackerMapper.toEntity(event));
   }
 
   @Override
   public CesTracking select(String cesId) {
     return repository.findById(cesId)
-        .map(CesTrackerEntityMapper::toTracking)
+        .map(CesTrackerMapper::toTracking)
         .orElse(null);
   }
 
   @Override
   public CesTracking selectLatest() {
     return repository.findFirstByOrderByCreatedAtDesc()
-        .map(CesTrackerEntityMapper::toTracking)
+        .map(CesTrackerMapper::toTracking)
         .orElse(null);
   }
 }

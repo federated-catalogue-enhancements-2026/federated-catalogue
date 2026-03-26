@@ -367,7 +367,7 @@ public class SchemaStoreImpl implements SchemaStore {
       if (msg.contains("schematerms_pkey") || msg.contains("SchemaTermEntity")) {
         throw new ConflictException("Schema redefines existing terms");
       }
-      if (msg.contains("uq_schemafiles_schemaid") || msg.contains("SchemaFileEntity")) {
+      if (msg.contains("uq_schemafiles_schemaid") || msg.contains("SchemaFileEntity") || msg.contains("SchemaFileEntity")) {
         throw new ConflictException("A schema with id " + newRecord.getId() + " already exists.");
       }
       log.info("addSchema; conflict: {}", ex.getMessage());

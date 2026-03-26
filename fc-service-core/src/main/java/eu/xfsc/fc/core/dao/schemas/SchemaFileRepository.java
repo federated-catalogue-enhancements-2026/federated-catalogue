@@ -12,9 +12,9 @@ import org.springframework.data.repository.query.Param;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 
 public interface SchemaFileRepository
-    extends JpaRepository<SchemaFileEntity, Long> {
+    extends JpaRepository<SchemaFile, Long> {
 
-  Optional<SchemaFileEntity> findBySchemaId(String schemaId);
+  Optional<SchemaFile> findBySchemaId(String schemaId);
 
   boolean existsBySchemaId(String schemaId);
 

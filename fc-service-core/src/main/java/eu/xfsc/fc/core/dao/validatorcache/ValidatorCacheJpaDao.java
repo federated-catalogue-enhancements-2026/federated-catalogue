@@ -15,13 +15,13 @@ public class ValidatorCacheJpaDao implements ValidatorCacheDao {
 
   @Override
   public void addToCache(Validator validator) {
-    repository.save(ValidatorCacheEntityMapper.toEntity(validator));
+    repository.save(ValidatorCacheMapper.toEntity(validator));
   }
 
   @Override
   public Validator getFromCache(String didURI) {
     return repository.findById(didURI)
-        .map(ValidatorCacheEntityMapper::toValidator)
+        .map(ValidatorCacheMapper::toValidator)
         .orElse(null);
   }
 
