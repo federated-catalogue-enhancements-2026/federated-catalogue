@@ -364,7 +364,7 @@ public class SchemaStoreImpl implements SchemaStore {
       }
     } catch (DataIntegrityViolationException ex) {
       String msg = ex.getMessage();
-      if (msg.contains("schematerms_pkey") || msg.contains("SchemaTermEntity")) {
+      if (msg.contains("schematerms_pkey") || msg.contains("SchemaTerm")) {
         throw new ConflictException("Schema redefines existing terms");
       }
       if (msg.contains("uq_schemafiles_schemaid") || msg.contains("SchemaFile")) {
