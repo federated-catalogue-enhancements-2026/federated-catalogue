@@ -19,7 +19,7 @@ public interface AssetRepository
 
   @Query("""
     SELECT a.assetHash
-    FROM AssetEntity a
+    FROM Asset a
     WHERE a.status = :status
         AND a.expirationTime < CURRENT_TIMESTAMP
   """)
@@ -39,7 +39,7 @@ public interface AssetRepository
           @Param("limit") int limit);
 
   @Modifying
-  @Query("DELETE FROM AssetEntity")
+  @Query("DELETE FROM Asset")
   int deleteAllReturningCount();
 
   @Query(value = """
