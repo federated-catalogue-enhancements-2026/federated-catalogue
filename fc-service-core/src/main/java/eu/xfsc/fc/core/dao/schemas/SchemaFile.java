@@ -20,9 +20,11 @@ import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "schemafiles")
+@Audited
 @Getter
 @Setter
 @NoArgsConstructor
