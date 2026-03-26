@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import eu.xfsc.fc.core.dao.assets.Asset;
+import eu.xfsc.fc.core.dao.schemas.SchemaFile;
+import eu.xfsc.fc.core.dao.schemas.SchemaTerm;
 import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.query.AuditEntity;
@@ -28,12 +31,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
-import eu.xfsc.fc.core.dao.assets.AssetEntity;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaDao;
-import eu.xfsc.fc.core.dao.schemas.SchemaFileEntity;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
-import eu.xfsc.fc.core.dao.schemas.SchemaTermEntity;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
@@ -112,7 +112,7 @@ class EnversAuditTest {
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-1"))
           .getResultList();
     });
@@ -120,7 +120,7 @@ class EnversAuditTest {
     assertNotNull(revisions);
     assertEquals(1, revisions.size());
     Object[] row = (Object[]) revisions.getFirst();
-    AssetEntity audited = (AssetEntity) row[0];
+    Asset audited = (Asset) row[0];
     RevisionType revType = (RevisionType) row[2];
     assertEquals(RevisionType.ADD, revType);
     assertEquals("hash-1", audited.getAssetHash());
@@ -136,13 +136,13 @@ class EnversAuditTest {
         assetDao.insert(buildAssetRecord("hash-arr", "sub/arr", "iss/arr", validators))
     );
 
-    AssetEntity audited = transactionTemplate.execute(status -> {
+    Asset audited = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       List<?> revisions = reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, true, true)
+          .forRevisionsOfEntity(Asset.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-arr"))
           .getResultList();
-      return (AssetEntity) revisions.getFirst();
+      return (Asset) revisions.getFirst();
     });
 
     assertNotNull(audited);
@@ -164,7 +164,7 @@ class EnversAuditTest {
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-upd"))
           .addOrder(AuditEntity.revisionNumber().asc())
           .getResultList();
@@ -178,7 +178,7 @@ class EnversAuditTest {
 
     Object[] updateRow = (Object[]) revisions.get(1);
     assertEquals(RevisionType.MOD, updateRow[2]);
-    AssetEntity updated = (AssetEntity) updateRow[0];
+    Asset updated = (Asset) updateRow[0];
     assertEquals((short) AssetStatus.REVOKED.ordinal(), updated.getStatus());
   }
 
@@ -196,7 +196,7 @@ class EnversAuditTest {
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-del"))
           .addOrder(AuditEntity.revisionNumber().asc())
           .getResultList();
@@ -208,7 +208,7 @@ class EnversAuditTest {
     Object[] deleteRow = (Object[]) revisions.get(1);
     assertEquals(RevisionType.DEL, deleteRow[2]);
     // store_data_at_delete=true: full state captured
-    AssetEntity deleted = (AssetEntity) deleteRow[0];
+    Asset deleted = (Asset) deleteRow[0];
     assertEquals("hash-del", deleted.getAssetHash());
     assertEquals("sub/del", deleted.getSubjectId());
   }
@@ -231,7 +231,7 @@ class EnversAuditTest {
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-multi-1"))
           .getResultList();
     });
@@ -256,11 +256,11 @@ class EnversAuditTest {
       var reader = AuditReaderFactory.get(entityManager);
       // Get the entity's technical ID first
       List<?> results = reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, true, true)
+          .forRevisionsOfEntity(Asset.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-chrono"))
           .getResultList();
-      Long entityId = ((AssetEntity) results.getFirst()).getId();
-      return reader.getRevisions(AssetEntity.class, entityId);
+      Long entityId = ((Asset) results.getFirst()).getId();
+      return reader.getRevisions(Asset.class, entityId);
     });
 
     assertNotNull(revNumbers);
@@ -281,7 +281,7 @@ class EnversAuditTest {
     List<?> schemaRevisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(SchemaFileEntity.class, false, true)
+          .forRevisionsOfEntity(SchemaFile.class, false, true)
           .add(AuditEntity.property("schemaId").eq("schema-1"))
           .getResultList();
     });
@@ -295,7 +295,7 @@ class EnversAuditTest {
     List<?> termRevisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(SchemaTermEntity.class, false, true)
+          .forRevisionsOfEntity(SchemaTerm.class, false, true)
           .getResultList();
     });
 
@@ -317,7 +317,7 @@ class EnversAuditTest {
     List<?> schemaRevisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(SchemaFileEntity.class, false, true)
+          .forRevisionsOfEntity(SchemaFile.class, false, true)
           .add(AuditEntity.property("schemaId").eq("schema-upd"))
           .addOrder(AuditEntity.revisionNumber().asc())
           .getResultList();
@@ -343,7 +343,7 @@ class EnversAuditTest {
     List<?> schemaRevisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(SchemaFileEntity.class, false, true)
+          .forRevisionsOfEntity(SchemaFile.class, false, true)
           .add(AuditEntity.property("schemaId").eq("schema-del"))
           .addOrder(AuditEntity.revisionNumber().asc())
           .getResultList();
@@ -357,7 +357,7 @@ class EnversAuditTest {
     List<?> termRevisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(SchemaTermEntity.class, false, true)
+          .forRevisionsOfEntity(SchemaTerm.class, false, true)
           .addOrder(AuditEntity.revisionNumber().asc())
           .getResultList();
     });
@@ -380,15 +380,15 @@ class EnversAuditTest {
         assetDao.update("hash-rev", AssetStatus.REVOKED.ordinal())
     );
 
-    AssetEntity atFirstRevision = transactionTemplate.execute(status -> {
+    Asset atFirstRevision = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       List<?> results = reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, true, true)
+          .forRevisionsOfEntity(Asset.class, true, true)
           .add(AuditEntity.property("assetHash").eq("hash-rev"))
           .getResultList();
-      Long entityId = ((AssetEntity) results.getFirst()).getId();
-      List<Number> revisions = reader.getRevisions(AssetEntity.class, entityId);
-      return reader.find(AssetEntity.class, entityId, revisions.getFirst());
+      Long entityId = ((Asset) results.getFirst()).getId();
+      List<Number> revisions = reader.getRevisions(Asset.class, entityId);
+      return reader.find(Asset.class, entityId, revisions.getFirst());
     });
 
     assertNotNull(atFirstRevision);
@@ -405,7 +405,7 @@ class EnversAuditTest {
     Instant revisionTimestamp = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       List<?> results = reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-ts"))
           .getResultList();
       Object[] row = (Object[]) results.getFirst();
@@ -431,7 +431,7 @@ class EnversAuditTest {
     Integer countBefore = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-bulk"))
           .getResultList().size();
     });
@@ -446,7 +446,7 @@ class EnversAuditTest {
     Integer countAfter = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
-          .forRevisionsOfEntity(AssetEntity.class, false, true)
+          .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-bulk"))
           .getResultList().size();
     });
