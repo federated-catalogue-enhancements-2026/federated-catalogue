@@ -18,7 +18,6 @@ import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.query.AuditEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,7 +41,6 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import jakarta.persistence.EntityManager;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {
