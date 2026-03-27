@@ -6,7 +6,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectHashRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -60,7 +60,7 @@ public class AssetJpaDao implements AssetDao {
 
     // Explicit duplicate check needed because JPA's save() uses merge() for entities
     // with non-null @Id, which silently upserts instead of throwing on conflicts.
-    // AssetStoreImpl relies on DuplicateKeyException("assets_pkey") to detect duplicates.
+    // AssetStoreImpl relies on DuplicateKeyException("uq_assets_asset_hash") to detect duplicates.
     @Override
     @Transactional
     public SubjectHashRecord insert(AssetRecord assetRecord) {
