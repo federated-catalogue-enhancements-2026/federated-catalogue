@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import eu.xfsc.fc.core.dao.schemas.SchemaAuditHelper;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Statement;
@@ -70,7 +71,7 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {SchemaStoreTest.TestApplication.class, FileStoreConfig.class,
-  SchemaStoreTest.class, SchemaStoreImpl.class, DatabaseConfig.class, SchemaJpaDao.class,
+  SchemaStoreTest.class, SchemaStoreImpl.class, DatabaseConfig.class, SchemaJpaDao.class, SchemaAuditHelper.class,
   ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
 @Transactional
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)

@@ -1,19 +1,13 @@
 package eu.xfsc.fc.core.dao.schemas;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-import org.hibernate.envers.AuditReader;
-import org.hibernate.envers.AuditReaderFactory;
-import org.hibernate.envers.DefaultRevisionEntity;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -29,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class SchemaJpaDao implements SchemaDao {
 
   private final SchemaFileRepository repository;
-  private final EntityManager entityManager;
+  private final SchemaAuditHelper auditHelper;
 
   @Override
   public int getSchemaCount() {
@@ -120,57 +113,24 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional(readOnly = true)
   public List<SchemaRecord> selectVersions(String schemaId) {
-    Optional<SchemaFile> current = repository.findBySchemaId(schemaId);
-    if (current.isEmpty()) {
-      return List.of();
-    }
-    Long entityId = current.get().getId();
-    var reader = AuditReaderFactory.get(entityManager);
-    List<Number> revisions = reader.getRevisions(SchemaFile.class, entityId);
-    List<SchemaRecord> result = new ArrayList<>();
-    for (int i = 0; i < revisions.size(); i++) {
-      result.add(snapshotToRecord(reader, entityId, revisions.get(i), i + 1));
-    }
-    return result;
+    return repository.findBySchemaId(schemaId)
+        .map(entity -> auditHelper.findAllVersions(entity.getId()))
+        .orElse(List.of());
   }
 
   @Override
   @Transactional(readOnly = true)
   public Optional<SchemaRecord> selectVersion(String schemaId, int version) {
-    if (version < 1) {
-      return Optional.empty();
-    }
-    Optional<SchemaFile> current = repository.findBySchemaId(schemaId);
-    if (current.isEmpty()) {
-      return Optional.empty();
-    }
-    Long entityId = current.get().getId();
-    var reader = AuditReaderFactory.get(entityManager);
-    List<Number> revisions = reader.getRevisions(SchemaFile.class, entityId);
-    if (version > revisions.size()) {
-      return Optional.empty();
-    }
-    return Optional.of(snapshotToRecord(reader, entityId, revisions.get(version - 1), version));
+    return repository.findBySchemaId(schemaId)
+        .flatMap(entity -> auditHelper.findVersion(entity.getId(), version));
   }
 
   @Override
   @Transactional(readOnly = true)
   public int getVersionCount(String schemaId) {
     return repository.findBySchemaId(schemaId)
-        .map(entity -> AuditReaderFactory.get(entityManager)
-            .getRevisions(SchemaFile.class, entity.getId()).size())
+        .map(entity -> auditHelper.countVersions(entity.getId()))
         .orElse(0);
-  }
-
-  private SchemaRecord snapshotToRecord(AuditReader reader, Long entityId, Number revNum, int version) {
-    SchemaFile snapshot = reader.find(SchemaFile.class, entityId, revNum);
-    DefaultRevisionEntity revEntity = reader.findRevision(DefaultRevisionEntity.class, revNum);
-    Instant revTimestamp = Instant.ofEpochMilli(revEntity.getTimestamp());
-    Set<String> terms = snapshot.getTerms() == null ? null
-        : snapshot.getTerms().stream().map(SchemaTerm::getTerm).collect(Collectors.toSet());
-    return new SchemaRecord(
-        snapshot.getSchemaId(), snapshot.getNameHash(), snapshot.getType(),
-        revTimestamp, snapshot.getModifiedAt(), snapshot.getContent(), terms, version);
   }
 
   private Map<String, Collection<String>> aggregateToMap(List<Object[]> rows) {

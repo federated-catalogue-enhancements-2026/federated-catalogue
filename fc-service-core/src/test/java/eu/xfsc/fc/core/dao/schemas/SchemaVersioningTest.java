@@ -35,7 +35,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest
 @ActiveProfiles("test")
-@ContextConfiguration(classes = {SchemaVersioningTest.TestConfig.class, SchemaJpaDao.class, DatabaseConfig.class})
+@ContextConfiguration(classes = {SchemaVersioningTest.TestConfig.class, SchemaJpaDao.class, SchemaAuditHelper.class, DatabaseConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 class SchemaVersioningTest {
 
@@ -145,8 +145,9 @@ class SchemaVersioningTest {
 
     List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
 
-    assertTrue(versions.get(0).createdAt().isBefore(versions.get(1).createdAt())
-            || versions.get(0).createdAt().equals(versions.get(1).createdAt()),
+    assertEquals(1, versions.get(0).version());
+    assertEquals(2, versions.get(1).version());
+    assertTrue(versions.get(0).version() < versions.get(1).version(),
         "Versions should be in ascending order");
   }
 

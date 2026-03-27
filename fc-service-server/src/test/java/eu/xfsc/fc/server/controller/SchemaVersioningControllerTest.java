@@ -71,12 +71,13 @@ class SchemaVersioningControllerTest {
     String contentV1 = getMockFileDataAsString("test-schema.ttl");
     String id = schemaStore.addSchema(new ContentAccessorDirect(contentV1)).id();
 
-    // Update the schema to create version 2
-    String contentV2 = getMockFileDataAsString("test-schema.ttl");
+    // Update the schema with different content to create version 2
+    String contentV2 = getMockFileDataAsString("gax-test-ontology.ttl");
     schemaStore.updateSchema(id, new ContentAccessorDirect(contentV2));
 
     String encodedId = URLEncoder.encode(id, Charset.defaultCharset());
 
+    // Requesting version 1 must return v1 content, not the current (v2) content
     mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}", encodedId)
             .param("version", "1")
             .with(csrf()))
@@ -129,6 +130,28 @@ class SchemaVersioningControllerTest {
         .andExpect(jsonPath("$.versions[0].isCurrent").value(false))
         .andExpect(jsonPath("$.versions[1].version").value(2))
         .andExpect(jsonPath("$.versions[1].isCurrent").value(true));
+  }
+
+  @Test
+  @WithMockUser(roles = {SCHEMA_CREATE, SCHEMA_UPDATE, SCHEMA_READ})
+  void getSchemaVersions_afterThreeUpdates_returnsThreeVersionsWithCurrentMarked() throws Exception {
+    String content = getMockFileDataAsString("test-schema.ttl");
+    String id = schemaStore.addSchema(new ContentAccessorDirect(content)).id();
+    schemaStore.updateSchema(id, new ContentAccessorDirect(getMockFileDataAsString("gax-test-ontology.ttl")));
+    schemaStore.updateSchema(id, new ContentAccessorDirect(getMockFileDataAsString("legal-personShape.ttl")));
+    String encodedId = URLEncoder.encode(id, Charset.defaultCharset());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/schemas/{schemaId}/versions", encodedId)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.versions.length()").value(3))
+        .andExpect(jsonPath("$.versions[0].version").value(1))
+        .andExpect(jsonPath("$.versions[0].isCurrent").value(false))
+        .andExpect(jsonPath("$.versions[1].version").value(2))
+        .andExpect(jsonPath("$.versions[1].isCurrent").value(false))
+        .andExpect(jsonPath("$.versions[2].version").value(3))
+        .andExpect(jsonPath("$.versions[2].isCurrent").value(true));
   }
 
   @Test

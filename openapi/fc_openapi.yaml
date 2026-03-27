@@ -385,13 +385,16 @@ components:
         createdAt:
           type: string
           format: date-time
-          description: 'Timestamp when the schema was first uploaded.'
+          nullable: true
+          description: 'Timestamp when the schema was first uploaded. Present on creation, null on updates.'
         version:
           type: integer
-          description: 'Current version number after this operation.'
+          nullable: true
+          description: 'Current version number after this operation. Present on updates, null on creation.'
         previousVersion:
           type: integer
-          description: 'Version number before this operation (null for first version).'
+          nullable: true
+          description: 'Version number before this operation. Null for first version or on creation.'
     SchemaVersion:
       type: object
       properties:
