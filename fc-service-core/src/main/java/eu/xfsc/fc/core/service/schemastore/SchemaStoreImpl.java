@@ -375,7 +375,7 @@ public class SchemaStoreImpl implements SchemaStore {
     }
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    return new SchemaStoreResult(newRecord.getId(), analysis.getWarning(), newRecord.uploadTime());
+    return new SchemaStoreResult(newRecord.getId(), analysis.getWarning(), newRecord.createdAt());
   }
 
   @Override
@@ -401,7 +401,12 @@ public class SchemaStoreImpl implements SchemaStore {
     }
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
-    return new SchemaStoreResult(identifier, analysis.getWarning());
+
+    // Envers writes audit entries on commit; getVersionCount sees committed revisions only.
+    int previousVersion = dao.getVersionCount(identifier);
+    int currentVersion = previousVersion + 1;
+    return new SchemaStoreResult(identifier, analysis.getWarning(), null,
+        currentVersion, previousVersion > 0 ? previousVersion : null);
   }
 
   @Override
@@ -453,6 +458,22 @@ public class SchemaStoreImpl implements SchemaStore {
     String content = dao.selectLatestContentByType(type.name())
         .orElseThrow(() -> new NotFoundException("No " + type + " schemas found"));
     return new ContentAccessorDirect(content);
+  }
+
+  @Override
+  public SchemaRecord getSchemaVersion(String identifier, int version) {
+    return dao.selectVersion(identifier, version)
+        .orElseThrow(() -> new NotFoundException(
+            "Schema with id " + identifier + " version " + version + " was not found"));
+  }
+
+  @Override
+  public List<SchemaRecord> getSchemaVersions(String identifier) {
+    List<SchemaRecord> versions = dao.selectVersions(identifier);
+    if (versions.isEmpty()) {
+      throw new NotFoundException("Schema with id " + identifier + " was not found");
+    }
+    return versions;
   }
 
   @Override

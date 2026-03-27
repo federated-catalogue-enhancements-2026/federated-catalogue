@@ -513,7 +513,7 @@ public class SchemaStoreTest {
     SchemaStoreResult result = schemaStore.addSchema(content, JSON);
 
     assertEquals("https://example.org/schemas/person", result.id());
-    assertNotNull(result.uploadTime());
+    assertNotNull(result.createdAt());
   }
 
   @Test
@@ -523,7 +523,7 @@ public class SchemaStoreTest {
     SchemaStoreResult result = schemaStore.addSchema(content, JSON);
 
     assertTrue(result.id().startsWith("urn:uuid:"));
-    assertNotNull(result.uploadTime());
+    assertNotNull(result.createdAt());
   }
 
   @Test
@@ -540,7 +540,7 @@ public class SchemaStoreTest {
     SchemaStoreResult result = schemaStore.addSchema(content, XML);
 
     assertEquals("http://example.org/config", result.id());
-    assertNotNull(result.uploadTime());
+    assertNotNull(result.createdAt());
   }
 
   @Test
@@ -550,7 +550,7 @@ public class SchemaStoreTest {
     SchemaStoreResult result = schemaStore.addSchema(content, XML);
 
     assertTrue(result.id().startsWith("urn:uuid:"));
-    assertNotNull(result.uploadTime());
+    assertNotNull(result.createdAt());
   }
 
   @Test
