@@ -54,7 +54,7 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional
   public boolean insert(SchemaRecord sr) {
-    SchemaFile entity = SchemaFileMapper.toEntity(sr);
+      SchemaFile entity = SchemaFileMapper.toEntity(sr);
     if (repository.existsBySchemaId(entity.getSchemaId())) {
       throw new DuplicateKeyException("uq_schemafiles_schemaid: " + entity.getSchemaId());
     }
@@ -71,7 +71,7 @@ public class SchemaJpaDao implements SchemaDao {
   @Override
   @Transactional
   public void update(String id, String content, Collection<String> terms) {
-    SchemaFile entity = repository.findBySchemaId(id)
+      SchemaFile entity = repository.findBySchemaId(id)
         .orElseThrow(() -> new NotFoundException("Schema with id " + id + " was not found"));
     entity.setModifiedAt(Instant.now());
     entity.setContent(content);
