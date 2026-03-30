@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.verification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -29,7 +30,7 @@ class FormatDetectorTest {
   private static final String VC11_CONTEXT = "https://www.w3.org/2018/credentials/v1";
   private static final String GAIAX_2511_CONTEXT = "https://w3id.org/gaia-x/2511#";
 
-  private final FormatDetector detector = new FormatDetector();
+  private final FormatDetector detector = new FormatDetector(new ObjectMapper());
     private static JWSSigner signer;
 
   @BeforeAll

@@ -17,6 +17,7 @@ import java.text.ParseException;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Component;
@@ -36,9 +37,10 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class FormatDetector {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private final ObjectMapper objectMapper;
 
   private static final Set<String> LOIRE_VC_TYP_VALUES = Set.of(
       "vc+ld+json+jwt"
@@ -64,7 +66,7 @@ public class FormatDetector {
 
   private CredentialFormat detectNonJwt(String body) {
     try {
-      JsonNode root = OBJECT_MAPPER.readTree(body);
+      JsonNode root = objectMapper.readTree(body);
       JsonNode ctx = root.get("@context");
       // VC 1.1 detection by context — proof block is per-VC, not always at VP level
       if (ctx != null && containsValue(ctx, VC_11_CONTEXT)) {
@@ -91,7 +93,7 @@ public class FormatDetector {
       SignedJWT signedJwt = SignedJWT.parse(body);
       header = signedJwt.getHeader();
       String payloadJson = signedJwt.getPayload().toString();
-      payload = OBJECT_MAPPER.readTree(payloadJson);
+      payload = objectMapper.readTree(payloadJson);
     } catch (ParseException | JsonProcessingException ex) {
       log.debug("detect; JWT parse failed: {} → UNKNOWN", ex.getMessage());
       return CredentialFormat.UNKNOWN;

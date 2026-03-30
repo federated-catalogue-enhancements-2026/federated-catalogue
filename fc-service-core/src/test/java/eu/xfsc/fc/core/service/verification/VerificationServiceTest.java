@@ -253,8 +253,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vro.getIssuer());
     assertNotNull(vro.getClaims());
     assertEquals(19, vro.getClaims().size()); //!!
-    assertNull(vro.getValidators());
-    assertNull(vro.getValidatorDids());
+    assertTrue(vro.getValidators().isEmpty());
+    assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
   }
 
@@ -272,8 +272,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vro.getIssuer());
     assertNotNull(vro.getClaims());
     assertEquals(21, vro.getClaims().size()); //!!
-    assertNull(vro.getValidators());
-    assertNull(vro.getValidatorDids());
+    assertTrue(vro.getValidators().isEmpty());
+    assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
   }
 
@@ -290,8 +290,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
     assertNotNull(vrp.getClaims());
     assertEquals(26, vrp.getClaims().size()); //!!
-    assertNull(vrp.getValidators());
-    assertNull(vrp.getValidatorDids());
+    assertTrue(vrp.getValidators().isEmpty());
+    assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
   }
 
@@ -310,8 +310,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
     assertNotNull(vrp.getClaims());
     assertEquals(26, vrp.getClaims().size()); //!!
-    assertNull(vrp.getValidators());
-    assertNull(vrp.getValidatorDids());
+    assertTrue(vrp.getValidators().isEmpty());
+    assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
   }
 
@@ -330,8 +330,8 @@ public class VerificationServiceTest {
     assertEquals(Instant.parse("2023-08-08T11:29:40Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
     assertEquals(4, vrr.getClaims().size());
-    assertNull(vrr.getValidators());
-    assertNull(vrr.getValidatorDids());
+    assertTrue(vrr.getValidators().isEmpty());
+    assertTrue(vrr.getValidatorDids().isEmpty());
   }
 
   @Test

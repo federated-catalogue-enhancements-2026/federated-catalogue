@@ -88,7 +88,8 @@ import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNO
 public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new TitaniumClaimExtractor(), new DanubeTechClaimExtractor()};
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final ObjectMapper objectMapper;
 
     /**
      * Resolves the {@code type} or {@code @type} value from a JSON-LD map.
@@ -1004,7 +1005,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 "Loire trust chain: publicKeyJwk is required but not available");
         }
         try {
-            JsonNode jwkNode = OBJECT_MAPPER.readTree(publicKeyJson);
+            JsonNode jwkNode = objectMapper.readTree(publicKeyJson);
             boolean hasX5c = jwkNode.has("x5c") && !jwkNode.get("x5c").isEmpty();
             boolean hasX5u = jwkNode.has("x5u") && !jwkNode.get("x5u").asText().isBlank();
             if (!hasX5c && !hasX5u) {
