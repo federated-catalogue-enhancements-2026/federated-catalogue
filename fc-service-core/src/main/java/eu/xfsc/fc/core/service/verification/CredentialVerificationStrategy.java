@@ -6,7 +6,6 @@ import com.danubetech.keyformats.jose.JWK;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
@@ -109,7 +108,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     @Value("${federated-catalogue.verification.require-vp:true}")
     private boolean requireVP;
-    @Value("${federated-catalogue.verification.drop-validarors:false}")
+    @Value("${federated-catalogue.verification.drop-validators:false}")
     private boolean dropValidators;
 
     /**
@@ -286,9 +285,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             payload = loireJwtParser.unwrap(payload);
         } else if (format == CredentialFormat.GAIAX_V1_TAGUS) {
             payload = vc11Processor.preProcess(payload);
+        } else if (format == CredentialFormat.VC2_DANUBETECH) {
+            payload = vc2Processor.preProcess(payload);
         } else {
-            boolean isVc2 = isVc2Context(body) || isJwt;
-            payload = (isVc2 ? vc2Processor : vc11Processor).preProcess(payload);
+            payload = vc11Processor.preProcess(payload);
         }
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);
@@ -405,7 +405,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         if (ctx.isJwt()) {
             List<Validator> validators = ctx.jwtValidator() != null
-                ? new ArrayList<>(List.of(ctx.jwtValidator())) : null;
+                ? new ArrayList<>(List.of(ctx.jwtValidator())) : new ArrayList<>();
             if (verifyVCSignatures && isVpJwt) {
                 List<Validator> inner = verifyInnerVcCredentials(ld);
                 if (!inner.isEmpty()) {
@@ -417,7 +417,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (verifyVPSignatures || verifyVCSignatures) {
             return checkCryptography(typedCredentials, verifyVPSignatures, verifyVCSignatures);
         }
-        return null;
+        return List.of();
     }
 
     /**
@@ -477,26 +477,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         throw new VerificationException("Semantic error: unexpected credential type: " + ld.getTypes());
     }
 
-    private boolean isVc2Context(String body) {
-        try {
-            JsonNode root = OBJECT_MAPPER.readTree(body);
-            JsonNode ctx = root.get(RDF_CONTEXT_KEY);
-            if (ctx == null) {
-                return false;
-            }
-            if (ctx.isArray()) {
-                for (JsonNode element : ctx) {
-                    if (VC2_CONTEXT.equals(element.asText())) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            return VC2_CONTEXT.equals(ctx.asText());
-        } catch (JsonProcessingException ex) {
-            return false;
-        }
-    }
 
     /* Credential parsing, semantic validation */
     private JsonLDObject parseContent(ContentAccessor content) {
