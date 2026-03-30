@@ -33,7 +33,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest
 @ActiveProfiles("test")
-@ContextConfiguration(classes = {SchemaDaoTest.TestConfig.class, SchemaJpaDao.class, SchemaAuditHelper.class, DatabaseConfig.class})
+@ContextConfiguration(classes = {SchemaDaoTest.TestConfig.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 class SchemaDaoTest {
 

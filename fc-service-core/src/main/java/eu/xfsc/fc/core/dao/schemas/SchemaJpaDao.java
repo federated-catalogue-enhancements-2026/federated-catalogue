@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class SchemaJpaDao implements SchemaDao {
 
   private final SchemaFileRepository repository;
-  private final SchemaAuditHelper auditHelper;
+  private final SchemaAuditRepository auditHelper;
 
   @Override
   public int getSchemaCount() {

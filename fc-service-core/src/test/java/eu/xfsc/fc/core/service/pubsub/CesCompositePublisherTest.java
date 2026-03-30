@@ -12,7 +12,7 @@ import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.config.PubSubConfig;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.cestracker.CesTrackerJpaDao;
-import eu.xfsc.fc.core.dao.schemas.SchemaAuditHelper;
+import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 @SpringBootTest(properties = {"publisher.impl=ces", "publisher.url=http://localhost:9091", "publisher.comp-url=http://localhost:9090"})
 @ActiveProfiles({"test"})
 @ContextConfiguration(classes = {CesCompositePublisherTest.TestApplication.class, PubSubConfig.class, JacksonConfig.class, DatabaseConfig.class, AssetStoreConfig.class, AssetJpaDao.class,
-		DummyGraphStore.class, VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditHelper.class, FileStoreConfig.class, DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
+		DummyGraphStore.class, VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, FileStoreConfig.class, DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
 		DocumentLoaderConfig.class, DocumentLoaderProperties.class, ValidatorCacheJpaDao.class, CesTrackerJpaDao.class, CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 		JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class, JwtSignatureVerifier.class,
 		IriGenerator.class, IriValidator.class})

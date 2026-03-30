@@ -7,6 +7,7 @@ import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.DefaultRevisionEntity;
 import org.hibernate.envers.query.AuditEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -20,9 +21,9 @@ import java.util.stream.Collectors;
  * Encapsulates Hibernate Envers audit queries for {@link SchemaFile}.
  * Keeps Envers-specific types out of {@link SchemaJpaDao}.
  */
-@Component
+@Repository
 @RequiredArgsConstructor
-public class SchemaAuditHelper {
+public class SchemaAuditRepository {
 
   private final EntityManager entityManager;
 
