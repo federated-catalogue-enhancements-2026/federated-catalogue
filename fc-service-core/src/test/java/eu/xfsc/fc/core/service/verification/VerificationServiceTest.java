@@ -118,11 +118,7 @@ public class VerificationServiceTest {
   @Test
   void verifyCredential_vc2JwtWrappedInput_vc2ProcessorPreProcessInvoked() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
-    String header = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
-    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
-    ContentAccessor content = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+    ContentAccessor content = new ContentAccessorDirect(fakeVcJwt(vcJson));
 
     verificationService.verifyCredential(content, false, false, false, false);
 
@@ -258,8 +254,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vro.getIssuer());
     assertNotNull(vro.getClaims());
     assertEquals(19, vro.getClaims().size()); //!!
-    assertNull(vro.getValidators());
-    assertNull(vro.getValidatorDids());
+    assertTrue(vro.getValidators().isEmpty());
+    assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
   }
 
@@ -277,8 +273,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vro.getIssuer());
     assertNotNull(vro.getClaims());
     assertEquals(21, vro.getClaims().size()); //!!
-    assertNull(vro.getValidators());
-    assertNull(vro.getValidatorDids());
+    assertTrue(vro.getValidators().isEmpty());
+    assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
   }
 
@@ -295,8 +291,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
     assertNotNull(vrp.getClaims());
     assertEquals(26, vrp.getClaims().size()); //!!
-    assertNull(vrp.getValidators());
-    assertNull(vrp.getValidatorDids());
+    assertTrue(vrp.getValidators().isEmpty());
+    assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
   }
 
@@ -315,8 +311,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
     assertNotNull(vrp.getClaims());
     assertEquals(26, vrp.getClaims().size()); //!!
-    assertNull(vrp.getValidators());
-    assertNull(vrp.getValidatorDids());
+    assertTrue(vrp.getValidators().isEmpty());
+    assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
   }
 
@@ -335,8 +331,8 @@ public class VerificationServiceTest {
     assertEquals(Instant.parse("2023-08-08T11:29:40Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
     assertEquals(4, vrr.getClaims().size());
-    assertNull(vrr.getValidators());
-    assertNull(vrr.getValidatorDids());
+    assertTrue(vrr.getValidators().isEmpty());
+    assertTrue(vrr.getValidatorDids().isEmpty());
   }
 
   @Test
@@ -759,11 +755,7 @@ public class VerificationServiceTest {
   @Test
   void verifyCredential_jwtVcWithVerifyVcSigsTrue_returnsValidators() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
-    String header = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
-    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
-    ContentAccessor jwtVc = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+    ContentAccessor jwtVc = new ContentAccessorDirect(fakeVcJwt(vcJson));
 
     Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
     when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
@@ -800,16 +792,8 @@ public class VerificationServiceTest {
    */
   @Test
   void verifyCredential_vpJwtIssNotEqualHolder_throwsVerificationException() {
-    String jwtHeader = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"EdDSA\"}".getBytes(StandardCharsets.UTF_8));
-    String jwtPayload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"iss\":\"did:web:issuer.example.com\","
-            + "\"holder\":\"did:web:other.example.com\","
-            + "\"type\":[\"VerifiablePresentation\"]}").getBytes(StandardCharsets.UTF_8));
-    String jwtSig = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("fakesig".getBytes(StandardCharsets.UTF_8));
     ContentAccessor vpJwt = new ContentAccessorDirect(
-        jwtHeader + "." + jwtPayload + "." + jwtSig);
+        fakeVpJwt("did:web:issuer.example.com", "did:web:other.example.com"));
 
     Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
     when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
@@ -829,16 +813,8 @@ public class VerificationServiceTest {
    */
   @Test
   void verifyCredential_vpJwtIssEqualsHolder_returnsValidators() {
-    String jwtHeader = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"EdDSA\"}".getBytes(StandardCharsets.UTF_8));
-    String jwtPayload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"iss\":\"did:web:issuer.example.com\","
-            + "\"holder\":\"did:web:issuer.example.com\","
-            + "\"type\":[\"VerifiablePresentation\"]}").getBytes(StandardCharsets.UTF_8));
-    String jwtSig = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("fakesig".getBytes(StandardCharsets.UTF_8));
     ContentAccessor vpJwt = new ContentAccessorDirect(
-        jwtHeader + "." + jwtPayload + "." + jwtSig);
+        fakeVpJwt("did:web:issuer.example.com", "did:web:issuer.example.com"));
 
     Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
     when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
@@ -860,11 +836,7 @@ public class VerificationServiceTest {
   @Test
   void verifyCredential_jwtWithBothSigFlagsFalse_jwtVerifierNotInvoked() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
-    String header = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
-    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
-    ContentAccessor jwtVc = new ContentAccessorDirect(header + "." + payload + ".AAAA");
+    ContentAccessor jwtVc = new ContentAccessorDirect(fakeVcJwt(vcJson));
 
     verificationService.verifyCredential(jwtVc, false, false, false, false);
 
@@ -1026,14 +998,7 @@ public class VerificationServiceTest {
   @Test
   void verifyCredential_vc2JwtWrapped_passesAfterUnwrap() {
     String vcJson = getAccessor("Claims-Tests/participantVC2.jsonld").getContentAsString();
-    String header = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
-    // The DanubeTech JwtVerifiableCredentialV2 parser expects the VC under a "vc" claim (same
-    // JWT envelope convention as VC 1.x). Verified: fromCompactSerialization() accepts this format.
-    String payload = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
-    String jwt = header + "." + payload + ".AAAA";
-    ContentAccessor content = new ContentAccessorDirect(jwt);
+    ContentAccessor content = new ContentAccessorDirect(fakeVcJwt(vcJson));
 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, false, false, false, false);
 
@@ -1086,6 +1051,34 @@ public class VerificationServiceTest {
     } finally {
       ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", false);
     }
+  }
+
+  // --- helpers ---
+
+  /** Builds a fake danubetech-style JWT wrapping the given VC JSON under a {@code vc} claim. */
+  private static String fakeVcJwt(String vcJson) {
+    var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+    String header = encoder.encodeToString(
+        "{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+    String payload = encoder.encodeToString(
+        ("{\"vc\":" + vcJson + "}").getBytes(StandardCharsets.UTF_8));
+    return header + "." + payload + ".AAAA";
+  }
+
+  /** Builds a fake danubetech-style VP JWT with the given iss and holder. */
+  private static String fakeVpJwt(String iss, String holder) {
+    var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+    String header = encoder.encodeToString(
+        "{\"alg\":\"EdDSA\"}".getBytes(StandardCharsets.UTF_8));
+    String payloadJson = """
+        {"iss":"%s","holder":"%s",\
+        "vp":{"@context":["https://www.w3.org/ns/credentials/v2"],\
+        "type":["VerifiablePresentation"]}}""".formatted(iss, holder);
+    String payload = encoder.encodeToString(
+        payloadJson.getBytes(StandardCharsets.UTF_8));
+    String sig = encoder.encodeToString(
+        "fakesig".getBytes(StandardCharsets.UTF_8));
+    return header + "." + payload + "." + sig;
   }
 
 }
