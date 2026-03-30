@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import eu.xfsc.fc.core.dao.schemas.SchemaAuditHelper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,7 +65,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {Neo4jGraphStoreAccuracyTest.TestApplication.class, DatabaseConfig.class, GraphDbConfig.class, FileStoreConfig.class, Neo4jGraphStoreAccuracyTest.class,
 	Neo4jGraphStore.class, AssetStoreImpl.class, AssetJpaDao.class, IriGenerator.class, IriValidator.class,
-	VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, ValidatorCacheJpaDao.class,
+	VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditHelper.class, ValidatorCacheJpaDao.class,
 	DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
 	CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 	JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
