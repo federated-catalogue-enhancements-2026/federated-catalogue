@@ -34,47 +34,47 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FormatDetector {
 
-  private final ObjectMapper objectMapper;
-  private final List<FormatMatcher> matchers;
+    private final ObjectMapper objectMapper;
+    private final List<FormatMatcher> matchers;
 
-  /**
-   * Detects the credential format of the given payload.
-   *
-   * @param content the incoming credential content
-   * @return the detected format; never null
-   */
-  public CredentialFormat detect(ContentAccessor content) {
-    String body = content.getContentAsString().strip();
-    DetectionContext ctx = buildContext(body);
-    CredentialFormat format = matchers.stream()
-        .map(m -> m.match(ctx))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .findFirst()
-        .orElse(CredentialFormat.UNKNOWN);
-    log.debug("detect; resolved format: {}", format);
-    return format;
-  }
+    /**
+     * Detects the credential format of the given payload.
+     *
+     * @param content the incoming credential content
+     * @return the detected format; never null
+     */
+    public CredentialFormat detect(ContentAccessor content) {
+        String body = content.getContentAsString().strip();
+        DetectionContext ctx = buildContext(body);
+        CredentialFormat format = matchers.stream()
+                .map(m -> m.match(ctx))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst()
+                .orElse(CredentialFormat.UNKNOWN);
+        log.debug("detect; resolved format: {}", format);
+        return format;
+    }
 
-  private DetectionContext buildContext(String body) {
-    if (!body.startsWith(JWT_PREFIX)) {
-      return new DetectionContext(body, Optional.empty(), parseJson(body));
+    private DetectionContext buildContext(String body) {
+        if (!body.startsWith(JWT_PREFIX)) {
+            return new DetectionContext(body, Optional.empty(), parseJson(body));
+        }
+        try {
+            SignedJWT jwt = SignedJWT.parse(body);
+            return new DetectionContext(body, Optional.of(jwt), parseJson(jwt.getPayload().toString()));
+        } catch (ParseException ex) {
+            log.debug("buildContext; JWT parse failed: {} → treating as non-JWT", ex.getMessage());
+            return new DetectionContext(body, Optional.empty(), Optional.empty());
+        }
     }
-    try {
-      SignedJWT jwt = SignedJWT.parse(body);
-      return new DetectionContext(body, Optional.of(jwt), parseJson(jwt.getPayload().toString()));
-    } catch (ParseException ex) {
-      log.debug("buildContext; JWT parse failed: {} → treating as non-JWT", ex.getMessage());
-      return new DetectionContext(body, Optional.empty(), Optional.empty());
-    }
-  }
 
-  private Optional<JsonNode> parseJson(String json) {
-    try {
-      return Optional.of(objectMapper.readTree(json));
-    } catch (JsonProcessingException ex) {
-      log.debug("buildContext; JSON parse failed → no parsed context available");
-      return Optional.empty();
+    private Optional<JsonNode> parseJson(String json) {
+        try {
+            return Optional.of(objectMapper.readTree(json));
+        } catch (JsonProcessingException ex) {
+            log.debug("buildContext; JSON parse failed → no parsed context available");
+            return Optional.empty();
+        }
     }
-  }
 }
