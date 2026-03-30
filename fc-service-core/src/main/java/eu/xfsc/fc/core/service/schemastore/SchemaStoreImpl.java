@@ -65,7 +65,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@Transactional
 public class SchemaStoreImpl implements SchemaStore {
 
   @Autowired
@@ -379,6 +378,7 @@ public class SchemaStoreImpl implements SchemaStore {
   }
 
   @Override
+  @Transactional
   public SchemaStoreResult updateSchema(String identifier, ContentAccessor schema) {
     SchemaRecord existing = dao.select(identifier)
         .orElseThrow(() -> new NotFoundException("Schema with id " + identifier + " was not found"));
@@ -402,7 +402,13 @@ public class SchemaStoreImpl implements SchemaStore {
 
     COMPOSITE_SCHEMAS.remove(newRecord.type());
 
-    // Envers writes audit entries on commit; getVersionCount sees committed revisions only.
+    // Envers writes audit entries in beforeTransactionCompletion — after all application code
+    // in this transaction — so getVersionCount returns N (committed prior revisions only).
+    // currentVersion = N+1 is the revision that will be written when this transaction commits.
+    // Thread-safety: saveAndFlush() acquires a DB row lock held for the duration of this
+    // @Transactional, so concurrent updates to the same schema are serialized. By the time a
+    // second thread reaches getVersionCount(), the first has committed and its Envers revision
+    // is visible.
     int previousVersion = dao.getVersionCount(identifier);
     int currentVersion = previousVersion + 1;
     return new SchemaStoreResult(identifier, analysis.getWarning(), null,

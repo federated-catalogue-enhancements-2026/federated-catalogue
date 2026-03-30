@@ -33,7 +33,7 @@ public class SchemaAuditRepository {
    * @param entityId the surrogate PK of the SchemaFile
    * @return list of schema records with version numbers (1-based)
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("unchecked") // Envers API returns raw List<Object[]>; cast is safe per forRevisionsOfEntity contract
   List<SchemaRecord> findAllVersions(Long entityId) {
     List<Object[]> revisions = AuditReaderFactory.get(entityManager).createQuery()
         .forRevisionsOfEntity(SchemaFile.class, false, true)
@@ -55,7 +55,7 @@ public class SchemaAuditRepository {
    * @param version  1-based version ordinal
    * @return the schema record at that version, or empty if out of range
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("unchecked") // Envers API returns raw List<Object[]>; cast is safe per forRevisionsOfEntity contract
   Optional<SchemaRecord> findVersion(Long entityId, int version) {
     if (version < 1) {
       return Optional.empty();
