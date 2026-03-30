@@ -26,11 +26,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FormatDetectorTest {
 
-  private static final String VC2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
-  private static final String VC11_CONTEXT = "https://www.w3.org/2018/credentials/v1";
+  private static final String VC2_CONTEXT = VerificationConstants.VC_20_CONTEXT;
+  private static final String VC11_CONTEXT = VerificationConstants.VC_11_CONTEXT;
   private static final String GAIAX_2511_CONTEXT = "https://w3id.org/gaia-x/2511#";
 
-  private final FormatDetector detector = new FormatDetector(new ObjectMapper());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private final FormatDetector detector = new FormatDetector(OBJECT_MAPPER, List.of(
+      new LoireMatcher(),
+      new TagusMatcher(),
+      new DanubeTechFormatMatcher()
+  ));
     private static JWSSigner signer;
 
   @BeforeAll

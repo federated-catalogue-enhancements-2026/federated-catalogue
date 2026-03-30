@@ -1,0 +1,29 @@
+package eu.xfsc.fc.core.service.verification;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.nimbusds.jwt.SignedJWT;
+
+import java.util.Optional;
+
+/**
+ * Pre-parsed credential payload, built once by {@link FormatDetector} and passed to each
+ * {@link FormatMatcher}. Avoids reparsing the JWT or body JSON per matcher.
+ *
+ * <p>{@code parsedJson} holds:
+ * <ul>
+ *   <li>For JWT credentials — the decoded JWT payload as {@link JsonNode}</li>
+ *   <li>For non-JWT credentials — the raw body as {@link JsonNode}</li>
+ *   <li>{@code Optional.empty()} if parsing failed</li>
+ * </ul>
+ */
+record DetectionContext(
+    String body,
+    Optional<SignedJWT> jwt,
+    Optional<JsonNode> parsedJson
+) {
+
+  /** Returns {@code true} if the credential was successfully parsed as a signed JWT. */
+  public boolean isJwt() {
+    return jwt.isPresent();
+  }
+}
