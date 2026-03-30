@@ -251,8 +251,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Phase 1: Detect credential format, verify JWT signature, enforce Loire policies, and
-     * unwrap to JSON-LD. After this method, the payload is always JSON-LD.
+     * Phase 1: Detect credential format, verify JWT signature, and unwrap to JSON-LD.
+     * After this method, the payload is always JSON-LD.
+     *
+     * <p>TODO: signature verification could move to a dedicated component when this class is split.
      */
     private VerificationContext detectAndUnwrap(ContentAccessor payload, boolean verifySigs) {
         String body = payload.getContentAsString().strip();
@@ -275,10 +277,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
         if (format == CredentialFormat.GAIAX_V2_LOIRE && gaiaxTrustFrameworkEnabled) {
-            enforceDidWebRestriction(body);
-            if (jwtValidator != null) {
-                enforceLoireTrustChain(jwtValidator);
-            }
+            enforceLoirePolicies(body, jwtValidator);
         }
 
         // Version dispatch — unwrap to JSON-LD
@@ -998,6 +997,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * @param jwtValidator the validator from JWT signature verification
      * @throws VerificationException if x5c or x5u is missing in the publicKeyJwk
      */
+    private void enforceLoirePolicies(String body, Validator jwtValidator) {
+        enforceDidWebRestriction(body);
+        if (jwtValidator != null) {
+            enforceLoireTrustChain(jwtValidator);
+        }
+    }
+
     private void enforceLoireTrustChain(Validator jwtValidator) {
         String publicKeyJson = jwtValidator.getPublicKey();
         if (publicKeyJson == null) {
