@@ -944,7 +944,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         validator = signVerifier.checkSignature(payload, proof);
         Instant expiration = null;
-        JsonNode jwkNode = OBJECT_MAPPER.readTree(validator.getPublicKey());
+        JsonNode jwkNode = objectMapper.readTree(validator.getPublicKey());
         if (jwkNode.has("x5c") && !jwkNode.get("x5c").isEmpty()) {
             rejectX5cChain(jwkNode.get("x5c"), proof.getVerificationMethod().toString());
         }

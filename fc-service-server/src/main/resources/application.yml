@@ -185,6 +185,10 @@ federated-catalogue:
         timeout: 1H
     doc-loader:
       additional-context:
+        # Maps JSON-LD context URLs to fetch URLs. Format: '[<context-url>]: <fetch-url>'
+        # The square brackets around the key are required YAML quoting for URLs containing '#' or special chars.
+        # Each entry redirects a context URL the document loader would normally fetch remotely
+        # to a different (e.g. local, cached, or versioned) URL instead.
         '[https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#]': https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#
         '[https://registry.lab.gaia-x.eu/v1/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#]': https://registry.lab.gaia-x.eu/v1/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#
         '[https://w3id.org/gaia-x/2511#]': https://registry.lab.gaia-x.eu/development/context/2511

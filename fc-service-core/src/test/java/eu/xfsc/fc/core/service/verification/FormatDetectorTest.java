@@ -22,13 +22,11 @@ import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static eu.xfsc.fc.core.service.verification.TestVerificationConstants.GAIAX_2511_CONTEXT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FormatDetectorTest {
-
-  private static final String VC2_CONTEXT = VerificationConstants.VC_20_CONTEXT;
-  private static final String VC11_CONTEXT = VerificationConstants.VC_11_CONTEXT;
-  private static final String GAIAX_2511_CONTEXT = "https://w3id.org/gaia-x/2511#";
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final FormatDetector detector = new FormatDetector(OBJECT_MAPPER, List.of(
@@ -140,7 +138,7 @@ class FormatDetectorTest {
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT, GAIAX_2511_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT, GAIAX_2511_CONTEXT))
         .claim("type", List.of("VerifiableCredential", "gx:LegalPerson"))
         .claim("credentialSubject", Map.of("id", "did:web:example.com"))
         .build();
@@ -160,7 +158,7 @@ class FormatDetectorTest {
         .keyID("did:web:example.com#test-key")
         .build();
     JSONObject vcObj = new JSONObject();
-    vcObj.put("@context", List.of(VC2_CONTEXT));
+    vcObj.put("@context", List.of(VC_20_CONTEXT));
     vcObj.put("type", List.of("VerifiableCredential"));
     vcObj.put("credentialSubject", Map.of("id", "did:web:example.com"));
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
@@ -182,7 +180,7 @@ class FormatDetectorTest {
         .keyID("did:web:example.com#test-key")
         .build();
     JSONObject vpObj = new JSONObject();
-    vpObj.put("@context", List.of(VC2_CONTEXT));
+    vpObj.put("@context", List.of(VC_20_CONTEXT));
     vpObj.put("type", List.of("VerifiablePresentation"));
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
@@ -205,10 +203,10 @@ class FormatDetectorTest {
         .type(new JOSEObjectType("vc+ld+json+jwt"))
         .build();
     JSONObject vcObj = new JSONObject();
-    vcObj.put("@context", List.of(VC2_CONTEXT));
+    vcObj.put("@context", List.of(VC_20_CONTEXT));
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT))
         .claim("vc", vcObj)
         .build();
     SignedJWT signedJwt = new SignedJWT(header, claims);
@@ -304,7 +302,7 @@ class FormatDetectorTest {
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT, GAIAX_2511_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT, GAIAX_2511_CONTEXT))
         .claim("type", List.of("VerifiableCredential", "gx:LegalPerson"))
         .claim("credentialSubject", Map.of("id", "did:web:example.com"))
         .claim("validFrom", "2026-01-01T00:00:00Z")
@@ -322,7 +320,7 @@ class FormatDetectorTest {
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT))
         .claim("type", List.of("VerifiablePresentation"))
         .claim("holder", "did:web:example.com")
         .claim("verifiableCredential", List.of())
@@ -340,7 +338,7 @@ class FormatDetectorTest {
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT, GAIAX_2511_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT, GAIAX_2511_CONTEXT))
         .claim("type", List.of("VerifiableCredential", "gx:LegalPerson"))
         .claim("credentialSubject", Map.of("id", "did:web:example.com"))
         .claim("validFrom", "2026-01-01T00:00:00Z")
@@ -358,7 +356,7 @@ class FormatDetectorTest {
         .build();
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT))
         .claim("type", List.of("VerifiablePresentation"))
         .claim("holder", "did:web:example.com")
         .claim("verifiableCredential", List.of())

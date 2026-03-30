@@ -25,6 +25,8 @@ import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static eu.xfsc.fc.core.service.verification.TestVerificationConstants.GAIAX_2511_CONTEXT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,9 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LoireJwtParserTest {
-
-  private static final String VC2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
-  private static final String GAIAX_2511_CONTEXT = "https://w3id.org/gaia-x/2511#";
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final LoireJwtParser parser = new LoireJwtParser();
@@ -228,7 +227,7 @@ class LoireJwtParserTest {
     }
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT, GAIAX_2511_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT, GAIAX_2511_CONTEXT))
         .claim("type", List.of("VerifiableCredential", "gx:LegalPerson"))
         .claim("credentialSubject", Map.of("id", "did:web:example.com"))
         .claim("validFrom", "2026-01-01T00:00:00Z")
@@ -249,7 +248,7 @@ class LoireJwtParserTest {
     }
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT))
         .claim("type", List.of("VerifiablePresentation"))
         .claim("holder", "did:web:example.com")
         .claim("verifiableCredential", List.of())
@@ -266,10 +265,10 @@ class LoireJwtParserTest {
         .contentType("vc+ld+json")
         .build();
     JSONObject wrapper = new JSONObject();
-    wrapper.put("@context", List.of(VC2_CONTEXT));
+    wrapper.put("@context", List.of(VC_20_CONTEXT));
     JWTClaimsSet claims = new JWTClaimsSet.Builder()
         .issuer("did:web:example.com")
-        .claim("@context", List.of(VC2_CONTEXT))
+        .claim("@context", List.of(VC_20_CONTEXT))
         .claim("type", List.of("VerifiableCredential"))
         .claim(wrapperKey, wrapper)
         .build();
