@@ -7,6 +7,7 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_C
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.SignedJWT;
 
@@ -14,6 +15,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 
 import java.text.ParseException;
 import java.util.Set;
+import java.util.stream.StreamSupport;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -123,14 +125,11 @@ public class FormatDetector {
   }
 
   private static boolean containsValue(JsonNode node, String value) {
-    if (node.isArray()) {
-      for (JsonNode element : node) {
-        if (value.equals(element.asText())) {
-          return true;
-        }
-      }
-      return false;
-    }
-    return value.equals(node.asText());
+      //noinspection SwitchStatementWithTooFewBranches
+      return switch (node) {
+      case ArrayNode array -> StreamSupport.stream(array.spliterator(), false)
+          .anyMatch(n -> value.equals(n.asText()));
+      default -> value.equals(node.asText());
+    };
   }
 }

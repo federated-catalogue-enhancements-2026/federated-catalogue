@@ -239,7 +239,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     break;
                 }
             } catch (Exception ex) {
-                log.error("extractClaims.error using {}: {}", extra.getClass().getName(), ex.getMessage());
+                log.error("extractClaims.error using {}", extra.getClass().getName(), ex);
             }
         }
         return claims;
