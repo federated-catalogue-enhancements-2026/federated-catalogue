@@ -1,5 +1,6 @@
 package eu.xfsc.fc.server.controller;
 
+import static eu.xfsc.fc.core.service.schemastore.SchemaStore.MEDIA_TYPE_RDF_XML;
 import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_CREATE;
 import static eu.xfsc.fc.server.util.CommonConstants.SCHEMA_READ;
@@ -58,7 +59,7 @@ class SchemaVersioningControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.put("/schemas/{schemaId}", encodedId)
             .content(content)
             .with(csrf())
-            .contentType("application/rdf+xml")
+            .contentType(MEDIA_TYPE_RDF_XML)
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.version").value(2))
@@ -169,7 +170,7 @@ class SchemaVersioningControllerTest {
     mockMvc.perform(MockMvcRequestBuilders.put("/schemas/{schemaId}", "some-id")
             .content("content")
             .with(csrf())
-            .contentType("application/rdf+xml"))
+            .contentType(MEDIA_TYPE_RDF_XML))
         .andExpect(status().isForbidden());
   }
 }

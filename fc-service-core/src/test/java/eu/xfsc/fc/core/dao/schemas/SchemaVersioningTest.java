@@ -44,6 +44,14 @@ class SchemaVersioningTest {
   static class TestConfig {
   }
 
+  private static final String SCHEMA_ID = "s-1";
+  private static final String SCHEMA_HASH = "h-1";
+  private static final String INITIAL_CONTENT = "original";
+  private static final String UPDATED_CONTENT = "updated";
+  private static final String TERM_A = "termA";
+  private static final String TERM_B = "termB";
+  private static final String TERM_C = "termC";
+
   @Autowired
   private SchemaDao schemaDao;
 
@@ -60,48 +68,48 @@ class SchemaVersioningTest {
   @Test
   void selectVersions_afterInsert_returnsVersion1() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "original content", Set.of("termA"))));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            INITIAL_CONTENT, Set.of(TERM_A))));
 
-    List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
+    List<SchemaRecord> versions = schemaDao.selectVersions(SCHEMA_ID);
 
     assertEquals(1, versions.size());
     SchemaRecord v1 = versions.getFirst();
     assertEquals(1, v1.version());
-    assertEquals("original content", v1.content());
+    assertEquals(INITIAL_CONTENT, v1.content());
     assertNotNull(v1.createdAt());
   }
 
   @Test
   void selectVersions_afterUpdate_returnsVersions1And2() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "original", Set.of("termA"))));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            INITIAL_CONTENT, Set.of(TERM_A))));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "updated", Set.of("termB")));
+        schemaDao.update(SCHEMA_ID, UPDATED_CONTENT, Set.of(TERM_B)));
 
-    List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
+    List<SchemaRecord> versions = schemaDao.selectVersions(SCHEMA_ID);
 
     assertEquals(2, versions.size());
     assertEquals(1, versions.get(0).version());
-    assertEquals("original", versions.get(0).content());
+    assertEquals(INITIAL_CONTENT, versions.get(0).content());
     assertEquals(2, versions.get(1).version());
-    assertEquals("updated", versions.get(1).content());
+    assertEquals(UPDATED_CONTENT, versions.get(1).content());
   }
 
   @Test
   void selectVersions_termsPreservedPerVersion() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "content-v1", Set.of("termA", "termB"))));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            "content-v1", Set.of(TERM_A, TERM_B))));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "content-v2", Set.of("termC")));
+        schemaDao.update(SCHEMA_ID, "content-v2", Set.of(TERM_C)));
 
-    List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
-    assertEquals(Set.of("termA", "termB"), versions.get(0).terms());
-    assertEquals(Set.of("termC"), versions.get(1).terms());
+    List<SchemaRecord> versions = schemaDao.selectVersions(SCHEMA_ID);
+    assertEquals(Set.of(TERM_A, TERM_B), versions.get(0).terms());
+    assertEquals(Set.of(TERM_C), versions.get(1).terms());
   }
 
   @Test
@@ -114,16 +122,16 @@ class SchemaVersioningTest {
   @Test
   void selectVersions_threeUpdates_producesVersions123() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
             "v1", null)));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "v2", null));
+        schemaDao.update(SCHEMA_ID, "v2", null));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "v3", null));
+        schemaDao.update(SCHEMA_ID, "v3", null));
 
-    List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
+    List<SchemaRecord> versions = schemaDao.selectVersions(SCHEMA_ID);
 
     assertEquals(3, versions.size());
     assertEquals(1, versions.get(0).version());
@@ -137,13 +145,13 @@ class SchemaVersioningTest {
   @Test
   void selectVersions_ascendingOrder() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
             "v1", null)));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "v2", null));
+        schemaDao.update(SCHEMA_ID, "v2", null));
 
-    List<SchemaRecord> versions = schemaDao.selectVersions("s-1");
+    List<SchemaRecord> versions = schemaDao.selectVersions(SCHEMA_ID);
 
     assertEquals(1, versions.get(0).version());
     assertEquals(2, versions.get(1).version());
@@ -156,44 +164,44 @@ class SchemaVersioningTest {
   @Test
   void selectVersion_version1_returnsOriginalContent() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "original", Set.of("termA"))));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            INITIAL_CONTENT, Set.of(TERM_A))));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "updated", Set.of("termB")));
+        schemaDao.update(SCHEMA_ID, UPDATED_CONTENT, Set.of(TERM_B)));
 
-    Optional<SchemaRecord> v1 = schemaDao.selectVersion("s-1", 1);
+    Optional<SchemaRecord> v1 = schemaDao.selectVersion(SCHEMA_ID, 1);
 
     assertTrue(v1.isPresent());
-    assertEquals("original", v1.get().content());
+    assertEquals(INITIAL_CONTENT, v1.get().content());
     assertEquals(1, v1.get().version());
-    assertEquals(Set.of("termA"), v1.get().terms());
+    assertEquals(Set.of(TERM_A), v1.get().terms());
   }
 
   @Test
   void selectVersion_version2_returnsUpdatedContent() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "original", Set.of("termA"))));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            INITIAL_CONTENT, Set.of(TERM_A))));
 
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.update("s-1", "updated", Set.of("termB")));
+        schemaDao.update(SCHEMA_ID, UPDATED_CONTENT, Set.of(TERM_B)));
 
-    Optional<SchemaRecord> v2 = schemaDao.selectVersion("s-1", 2);
+    Optional<SchemaRecord> v2 = schemaDao.selectVersion(SCHEMA_ID, 2);
 
     assertTrue(v2.isPresent());
-    assertEquals("updated", v2.get().content());
+    assertEquals(UPDATED_CONTENT, v2.get().content());
     assertEquals(2, v2.get().version());
-    assertEquals(Set.of("termB"), v2.get().terms());
+    assertEquals(Set.of(TERM_B), v2.get().terms());
   }
 
   @Test
   void selectVersion_nonExistentVersion_returnsEmpty() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "content", null)));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+                INITIAL_CONTENT, null)));
 
-    Optional<SchemaRecord> result = schemaDao.selectVersion("s-1", 999);
+    Optional<SchemaRecord> result = schemaDao.selectVersion(SCHEMA_ID, 999);
 
     assertTrue(result.isEmpty());
   }
@@ -201,10 +209,10 @@ class SchemaVersioningTest {
   @Test
   void selectVersion_versionZero_returnsEmpty() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "content", null)));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+            INITIAL_CONTENT, null)));
 
-    Optional<SchemaRecord> result = schemaDao.selectVersion("s-1", 0);
+    Optional<SchemaRecord> result = schemaDao.selectVersion(SCHEMA_ID, 0);
 
     assertTrue(result.isEmpty());
   }
@@ -212,10 +220,10 @@ class SchemaVersioningTest {
   @Test
   void selectVersion_negativeVersion_returnsEmpty() {
     transactionTemplate.executeWithoutResult(status ->
-        schemaDao.insert(new SchemaRecord("s-1", "h-1", SchemaType.ONTOLOGY,
-            "content", null)));
+        schemaDao.insert(new SchemaRecord(SCHEMA_ID, SCHEMA_HASH, SchemaType.ONTOLOGY,
+                INITIAL_CONTENT, null)));
 
-    Optional<SchemaRecord> result = schemaDao.selectVersion("s-1", -1);
+    Optional<SchemaRecord> result = schemaDao.selectVersion(SCHEMA_ID, -1);
 
     assertTrue(result.isEmpty());
   }
