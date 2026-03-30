@@ -1,5 +1,9 @@
 package eu.xfsc.fc.core.service.verification;
 
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PREFIX;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.RDF_CONTEXT_KEY;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
+
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
 import com.danubetech.keyformats.jose.JWK;
@@ -84,9 +88,7 @@ import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNO
 public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new TitaniumClaimExtractor(), new DanubeTechClaimExtractor()};
-    private static final String VC2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    public static final String RDF_CONTEXT_KEY = "@context";
 
     /**
      * Resolves the {@code type} or {@code @type} value from a JSON-LD map.
@@ -258,13 +260,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         CredentialFormat format = formatDetector.detect(payload);
         // Reject ambiguous/unrecognizable JWTs — non-JWT payloads fall through to
         // vc11Processor which provides more specific syntactic error messages.
-        if (format == CredentialFormat.UNKNOWN && body.startsWith("eyJ")) {
+        if (format == CredentialFormat.UNKNOWN && body.startsWith(JWT_PREFIX)) {
             throw new ClientException(
                 "Unrecognizable JWT credential format — JWT does not have recognized "
                     + "typ header or vc/vp wrapper claims");
         }
         boolean isJwt = format == CredentialFormat.GAIAX_V2_LOIRE
-            || (format == CredentialFormat.VC2_DANUBETECH && body.startsWith("eyJ"));
+            || (format == CredentialFormat.VC2_DANUBETECH && body.startsWith(JWT_PREFIX));
 
         Validator jwtValidator = null;
         if (isJwt && verifySigs) {
@@ -542,8 +544,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private VersionedCredentialProcessor getVersionProcessor(VerifiableCredential credential) {
         Object ctx = credential.getJsonObject().get(RDF_CONTEXT_KEY);
         boolean isVc2 = (ctx instanceof java.util.List<?>)
-                ? ((java.util.List<?>) ctx).contains(VC2_CONTEXT)
-                : VC2_CONTEXT.equals(ctx);
+                ? ((java.util.List<?>) ctx).contains(VC_20_CONTEXT)
+                : VC_20_CONTEXT.equals(ctx);
         return isVc2 ? vc2Processor : vc11Processor;
     }
 
@@ -637,7 +639,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * Attempts to unwrap a compact JWT VC string to a VerifiableCredential for semantic processing.
      */
     private VerifiableCredential tryUnwrapJwtVc(String jwtStr, DocumentLoader docLoader) {
-        if (!jwtStr.startsWith("eyJ")) {
+        if (!jwtStr.startsWith(JWT_PREFIX)) {
             return null;
         }
         try {
@@ -820,7 +822,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         List<Validator> validators = new ArrayList<>();
         for (Object entry : vcEntries) {
-            if (entry instanceof String jwtStr && jwtStr.startsWith("eyJ")) {
+            if (entry instanceof String jwtStr && jwtStr.startsWith(JWT_PREFIX)) {
                 // Plain compact JWT string
                 validators.add(jwtSignatureVerifier.verify(jwtStr));
             } else if (entry instanceof Map<?, ?> vcMap) {
@@ -857,10 +859,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
         // Also verify the VC 2.0 context to avoid false-positives from other vocabularies
         if (contextObj instanceof String ctx) {
-            return VC2_CONTEXT.equals(ctx);
+            return VC_20_CONTEXT.equals(ctx);
         }
         if (contextObj instanceof List<?> contexts) {
-            return contexts.contains(VC2_CONTEXT);
+            return contexts.contains(VC_20_CONTEXT);
         }
         return false;
     }

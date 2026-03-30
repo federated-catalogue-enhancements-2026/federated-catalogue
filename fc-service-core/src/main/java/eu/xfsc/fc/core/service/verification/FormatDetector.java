@@ -1,5 +1,9 @@
 package eu.xfsc.fc.core.service.verification;
 
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PREFIX;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_11_CONTEXT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,11 +36,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FormatDetector {
 
-  private static final String JWT_PREFIX = "eyJ";
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-  private static final String VC_11_CONTEXT = "https://www.w3.org/2018/credentials/v1";
-  private static final String VC_20_CONTEXT = "https://www.w3.org/ns/credentials/v2";
 
   private static final Set<String> LOIRE_VC_TYP_VALUES = Set.of(
       "vc+ld+json+jwt"
