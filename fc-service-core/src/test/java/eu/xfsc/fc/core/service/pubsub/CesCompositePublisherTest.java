@@ -10,10 +10,10 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.JacksonConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.config.PubSubConfig;
-import eu.xfsc.fc.core.dao.impl.AssetDaoImpl;
-import eu.xfsc.fc.core.dao.impl.CesTrackerDaoImpl;
-import eu.xfsc.fc.core.dao.impl.SchemaDaoImpl;
-import eu.xfsc.fc.core.dao.impl.ValidatorCacheDaoImpl;
+import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
+import eu.xfsc.fc.core.dao.cestracker.CesTrackerJpaDao;
+import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
+import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -72,36 +72,39 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 @SpringBootTest(properties = {"publisher.impl=ces", "publisher.url=http://localhost:9091", "publisher.comp-url=http://localhost:9090"})
 @ActiveProfiles({"test"})
 @ContextConfiguration(classes = {
-        AssetDaoImpl.class,
+        AssetJpaDao.class,
         AssetStoreConfig.class,
         CesCompositePublisherTest.TestApplication.class,
-        CesTrackerDaoImpl.class,
+        CesTrackerJpaDao.class,
         CredentialVerificationStrategy.class,
         DatabaseConfig.class,
         DidDocumentResolver.class,
         DidResolverConfig.class,
-        DocumentLoaderConfig.class,
         DocumentLoaderProperties.class,
-        DummyGraphStore.class,
+        DocumentLoaderConfig.class,
+		DummyGraphStore.class,
         FileStoreConfig.class,
         FormatDetector.class,
         HttpDocumentResolver.class,
         IriGenerator.class,
         IriValidator.class,
         JwtContentPreprocessor.class,
+        JacksonConfig.class,
+        JwtContentPreprocessor.class,
         JwtSignatureVerifier.class,
         LoireJwtParser.class,
         ProtectedNamespaceFilter.class,
         ProtectedNamespaceProperties.class,
-        PubSubConfig.class, JacksonConfig.class,
-        SchemaDaoImpl.class,
+        PubSubConfig.class,
+        SchemaJpaDao.class,
         SchemaStoreImpl.class,
         SchemaValidationServiceImpl.class,
-        ValidatorCacheDaoImpl.class,
+        ValidatorCacheJpaDao.class,
         Vc11Processor.class,
         Vc2Processor.class,
         VerificationServiceImpl.class,
 })
+//@Import(EmbeddedNeo4JConfig.class)
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class CesCompositePublisherTest {
 
