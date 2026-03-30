@@ -1,19 +1,20 @@
 package eu.xfsc.fc.core.dao.schemas;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.DefaultRevisionEntity;
 import org.hibernate.envers.query.AuditEntity;
 import org.springframework.stereotype.Component;
 
-import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
-import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Encapsulates Hibernate Envers audit queries for {@link SchemaFile}.
@@ -39,7 +40,7 @@ public class SchemaAuditHelper {
         .addOrder(AuditEntity.revisionNumber().asc())
         .getResultList();
 
-    List<SchemaRecord> result = new java.util.ArrayList<>(revisions.size());
+    List<SchemaRecord> result = new ArrayList<>(revisions.size());
     for (int i = 0; i < revisions.size(); i++) {
       result.add(toRecord(revisions.get(i), i + 1));
     }
@@ -91,7 +92,7 @@ public class SchemaAuditHelper {
     SchemaFile snapshot = (SchemaFile) revision[0];
     DefaultRevisionEntity revEntity = (DefaultRevisionEntity) revision[1];
     Instant revTimestamp = Instant.ofEpochMilli(revEntity.getTimestamp());
-    Set<String> terms = snapshot.getTerms() == null ? null
+    Set<String> terms = snapshot.getTerms() == null ? new HashSet<>()
         : snapshot.getTerms().stream().map(SchemaTerm::getTerm).collect(Collectors.toSet());
     return new SchemaRecord(
         snapshot.getSchemaId(), snapshot.getNameHash(), snapshot.getType(),
