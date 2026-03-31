@@ -16,7 +16,7 @@
               {
                 "@id": "http://w3id.org/gaia-x/participant#Provider1",
                 "@type": [
-                  "https://w3id.org/gaia-x/core#Participant"
+                  "http://w3id.org/gaia-x/participant#LegalPerson"
                 ],
                 "http://w3id.org/gaia-x/participant#headquarterAddress": [
                   {

@@ -427,9 +427,6 @@ public class VerificationServiceTest {
     assertNotNull(vr);
   }
 
-  // TODO: fixture @type updated to gaia-x/core#Participant but existing JWS was computed over pre-Tagus gax-participant:LegalPerson.
-  // Cannot re-sign — private key belongs to did:web:compliance.lab.gaia-x.eu (external GXDCH key). Re-enable once re-signed.
-  @Disabled("JWS invalidated by @type migration; needs re-signing with did:web:compliance.lab.gaia-x.eu")
   @Test
   void validCredential() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -438,8 +435,6 @@ public class VerificationServiceTest {
     assertEquals(1, result.getValidators().size(), "Incorrect number of validators found");
   }
 
-  // TODO: see validCredential() — same issue with pre-Tagus JWS in valid_complex_signature.json
-  @Disabled("JWS invalidated by @type migration; needs re-signing with did:web:compliance.lab.gaia-x.eu")
   @Test
   void validComplexCredential() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
@@ -510,7 +505,7 @@ public class VerificationServiceTest {
     List<CredentialClaim> actualClaims = result.getClaims();
 
     Set<CredentialClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/core#Participant>"));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#leiCode>", "\"391200FJBNU0YW987L26\""));
@@ -546,14 +541,14 @@ public class VerificationServiceTest {
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/core#Participant>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#street-address>", "\"Street Name\""));
-    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/core#Participant>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#legalAddress>", "_:b0"));
     assertEquals(expectedClaims.size(), actualClaims.size());
     assertEquals(expectedClaims, actualClaims);
@@ -594,7 +589,7 @@ public class VerificationServiceTest {
     List<CredentialClaim> actualClaims = result.getClaims();
 
     Set<CredentialClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/core#Participant>"));
+    expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<http://w3id.org/gaia-x/participant#Provider1>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#postal-code>", "\"1234\""));
@@ -703,7 +698,7 @@ public class VerificationServiceTest {
     }
 
     Set<CredentialClaim> expectedClaims = new HashSet<>();
-    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/core#Participant>"));
+    expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://w3id.org/gaia-x/participant#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#legalName>", "\"deltaDAO AG\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#registrationNumber>", "\"DEK1101R.HRB170364\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://w3id.org/gaia-x/participant#headquarterAddress>", "_:b0"));

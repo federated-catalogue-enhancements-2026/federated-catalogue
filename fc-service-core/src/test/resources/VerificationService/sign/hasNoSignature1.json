@@ -15,7 +15,7 @@
 			"issuanceDate": "2010-01-01T00:00:00Z",
 			"credentialSubject": [{
 				"@id": "did:example:particiant1",
-				"@type": "https://w3id.org/gaia-x/core#Participant",
+				"@type": "http://w3id.org/gaia-x/participant#LegalPerson",
 				"registrationNumber": {
 					"@value": "3234566",
 					"@type": "xsd:string"
