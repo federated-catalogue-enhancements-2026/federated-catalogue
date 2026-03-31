@@ -8,6 +8,8 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
@@ -69,9 +71,8 @@ import java.util.Map;
 	VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, ValidatorCacheJpaDao.class,
 	DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
 	CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
-	JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
-	JwtSignatureVerifier.class, DidDocumentResolver.class,
-	FormatDetector.class, LoireJwtParser.class})
+	JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class, JwtSignatureVerifier.class, DidDocumentResolver.class,
+        FormatDetector.class, LoireJwtParser.class, TrustFrameworkJpaDao.class, AdminConfigJpaDao.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class Neo4jGraphStoreAccuracyTest {

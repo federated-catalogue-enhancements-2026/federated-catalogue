@@ -104,6 +104,7 @@ public class AssetStoreImpl implements AssetStore {
         .content(assetMetadata.getContentAccessor())
         .expirationTime(expirationTime)
         .contentType("application/ld+json")
+        .credentialTypes(verificationResult.getCredentialTypes())
         .build();
 
     SubjectHashRecord subjectHash = null;

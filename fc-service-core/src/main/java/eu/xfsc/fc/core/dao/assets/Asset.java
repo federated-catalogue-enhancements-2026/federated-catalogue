@@ -66,4 +66,7 @@ public class Asset {
 
   @Column(name = "original_filename", length = 500)
   private String originalFilename;
+
+  @Column(name = "credential_types", length = 2048)
+  private String credentialTypes;
 }

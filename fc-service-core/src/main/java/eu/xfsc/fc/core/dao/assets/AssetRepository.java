@@ -56,4 +56,14 @@ public interface AssetRepository
           @Param("chunks") int chunks,
           @Param("chunkid") int chunkId,
           @Param("limit") int limit);
+
+  /** Returns distinct non-null credential_types values from active assets. */
+  @Query(value = """
+    SELECT DISTINCT credential_types
+    FROM assets
+    WHERE status = :status
+        AND credential_types IS NOT NULL
+        AND credential_types <> ''
+  """, nativeQuery = true)
+  List<String> findDistinctCredentialTypes(@Param("status") int activeStatus);
 }

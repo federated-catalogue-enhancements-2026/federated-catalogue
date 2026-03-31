@@ -8,6 +8,9 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
+import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -41,7 +44,8 @@ import java.time.temporal.ChronoUnit;
 @ContextConfiguration(classes = {ValidatorCacheTest.TestApplication.class, ValidatorCacheJpaDao.class, DatabaseConfig.class, FileStoreConfig.class,
         VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
         DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
-        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        TrustFrameworkJpaDao.class, AdminConfigJpaDao.class})
 //@DirtiesContext
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class ValidatorCacheTest {

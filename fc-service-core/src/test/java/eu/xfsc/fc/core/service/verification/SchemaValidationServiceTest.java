@@ -24,6 +24,8 @@ import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
@@ -48,7 +50,8 @@ import lombok.extern.slf4j.Slf4j;
         DocumentLoaderConfig.class, DocumentLoaderProperties.class, SchemaValidationServiceImpl.class,
         VerificationServiceImpl.class, CredentialVerificationStrategy.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class,
         DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheJpaDao.class, HttpDocumentResolver.class,
-        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        TrustFrameworkJpaDao.class, AdminConfigJpaDao.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class SchemaValidationServiceTest {
 

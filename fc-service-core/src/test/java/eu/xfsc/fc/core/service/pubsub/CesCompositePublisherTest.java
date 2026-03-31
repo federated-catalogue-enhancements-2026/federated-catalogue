@@ -10,6 +10,8 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.JacksonConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.config.PubSubConfig;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.cestracker.CesTrackerJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
@@ -83,14 +85,13 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
         DidResolverConfig.class,
         DocumentLoaderProperties.class,
         DocumentLoaderConfig.class,
-		DummyGraphStore.class, SchemaAuditRepository.class, FileStoreConfig.class,
+        DummyGraphStore.class, SchemaAuditRepository.class, FileStoreConfig.class,
         FormatDetector.class,
         HttpDocumentResolver.class,
         IriGenerator.class,
         IriValidator.class,
         JwtContentPreprocessor.class,
         JacksonConfig.class,
-        JwtContentPreprocessor.class,
         JwtSignatureVerifier.class,
         LoireJwtParser.class,
         ProtectedNamespaceFilter.class,
@@ -103,6 +104,8 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
         Vc11Processor.class,
         Vc2Processor.class,
         VerificationServiceImpl.class,
+        TrustFrameworkJpaDao.class,
+        AdminConfigJpaDao.class,
 })
 //@Import(EmbeddedNeo4JConfig.class)
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)

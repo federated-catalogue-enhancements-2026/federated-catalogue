@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <changeSet author="peleskek" id="2026-03-27-asset-types-config">
+        <comment>CAT-FR-AU-01 Story 032: Add credential_types column to assets table for type tracking,
+            and seed admin_config with asset type restriction defaults.</comment>
+
+        <addColumn tableName="assets">
+            <column name="credential_types" type="varchar(1024)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="assets_aud">
+            <column name="credential_types" type="varchar(1024)"/>
+        </addColumn>
+
+        <!-- Seed asset type restriction defaults (disabled) -->
+        <insert tableName="admin_config">
+            <column name="config_key" value="asset.type.restriction.enabled"/>
+            <column name="config_value" value="false"/>
+        </insert>
+        <insert tableName="admin_config">
+            <column name="config_key" value="asset.type.restriction.allowed"/>
+            <column name="config_value" value="[]"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

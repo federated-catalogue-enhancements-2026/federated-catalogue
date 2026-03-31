@@ -16,6 +16,7 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.assetstore.RdfDetector;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.assettypes.AssetTypeRestrictionService;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.exception.ClientException;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class AssetUploadService {
     private final VerificationService verificationService;
     private final AssetStore assetStorePublisher;
     private final RdfDetector rdfDetector;
+    private final AssetTypeRestrictionService assetTypeRestrictionService;
 
     public AssetMetadata processUpload(byte[] content, String contentType, String originalFilename) {
         if (content == null || content.length == 0) {
@@ -57,6 +59,7 @@ public class AssetUploadService {
         ContentAccessorDirect contentAccessor = new ContentAccessorDirect(text);
 
         CredentialVerificationResult verificationResult = verificationService.verifyCredential(contentAccessor);
+        assetTypeRestrictionService.enforceTypeRestriction(verificationResult.getCredentialTypes());
 
         AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
                 verificationResult.getIssuer(), verificationResult.getValidators(), contentAccessor);

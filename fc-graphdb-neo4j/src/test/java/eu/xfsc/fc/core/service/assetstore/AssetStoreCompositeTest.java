@@ -30,6 +30,8 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
@@ -71,8 +73,8 @@ import lombok.extern.slf4j.Slf4j;
   Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
   CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
   RdfContentTypeProperties.class, JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
-  JwtSignatureVerifier.class, DidDocumentResolver.class,
-  FormatDetector.class, LoireJwtParser.class})
+  JwtSignatureVerifier.class, DidDocumentResolver.class,  FormatDetector.class, LoireJwtParser.class,
+  TrustFrameworkJpaDao.class, AdminConfigJpaDao.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)

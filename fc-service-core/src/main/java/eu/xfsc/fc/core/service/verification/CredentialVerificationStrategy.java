@@ -13,6 +13,8 @@ import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.core.dao.AdminConfigDao;
+import eu.xfsc.fc.core.dao.TrustFrameworkDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -114,12 +116,27 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     @Value("${federated-catalogue.verification.drop-validators:false}")
     private boolean dropValidators;
 
+    private final TrustFrameworkDao trustFrameworkDao;
+    private final AdminConfigDao adminConfigDao;
+
     /**
-     * When true, Gaia-X Trust Framework validation is enforced including trust anchor registry calls.
-     * When false (default), credentials can be uploaded without Gaia-X compliance validation.
+     * Checks if the Gaia-X trust framework is enabled.
+     * Reads from the database (set via admin UI), falling back to false if not found.
      */
-    @Value("${federated-catalogue.verification.trust-framework.gaiax.enabled:false}")
-    boolean gaiaxTrustFrameworkEnabled;
+    private boolean isGaiaxTrustFrameworkEnabled() {
+      return trustFrameworkDao.findById("gaia-x")
+          .map(eu.xfsc.fc.core.pojo.TrustFrameworkConfig::isEnabled)
+          .orElse(false);
+    }
+
+    /**
+     * Checks if a schema validation module is enabled via the admin config.
+     */
+    private boolean isSchemaModuleEnabled(String moduleType) {
+      return adminConfigDao.getValue("schema.module." + moduleType + ".enabled")
+          .map(Boolean::parseBoolean)
+          .orElse(true);
+    }
 
     @Value("${federated-catalogue.verification.participant.type}")
     private String participantType;
@@ -203,8 +220,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         TypedCredentials typedCredentials = parseCredentials(ld, strict && requireVP, verifySemantics);
 
-        // TODO(loire-compatibility): CAT-FR-GD-01 part 3 - Loire Ontology Migration will update resolveBaseClass to handle 2511 namespace types.
-        if (verifySemantics && gaiaxTrustFrameworkEnabled && !typedCredentials.hasClasses()) {
+        // Gate on isGaiaxTrustFrameworkEnabled(): non-Gaia-X VC 2.0 credentials have no known TrustFrameworkBaseClass
+        // TODO(gaia-x-loire): when Loire ontology support lands, resolveBaseClass should return the correct
+        //   Loire type for Gaia-X credentials. Remove this gate and let hasClasses() enforce the check unconditionally.
+        if (verifySemantics && isGaiaxTrustFrameworkEnabled() && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
@@ -220,6 +239,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 verifySemantics, verifyVCSignatures, verifyVPSignatures);
 
         CredentialVerificationResult result = assembleResult(baseClass, typedCredentials, filtered.claims(), validators);
+        // Capture credential types from JSON-LD @type for asset type restriction
+        List<String> types = ld.getTypes();
+        if (types != null) {
+            result.setCredentialTypes(new ArrayList<>(types));
+        }
         if (filtered.hasWarning()) {
             result.setWarnings(List.of(filtered.warning()));
         }
@@ -276,7 +300,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             jwtValidator = jwtSignatureVerifier.verify(body);
         }
 
-        if (format == CredentialFormat.GAIAX_V2_LOIRE && gaiaxTrustFrameworkEnabled) {
+        if (format == CredentialFormat.GAIAX_V2_LOIRE && isGaiaxTrustFrameworkEnabled()) {
             enforceLoirePolicies(body, jwtValidator);
         }
 
@@ -912,7 +936,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         String url = jwk.getX5u();
         if (url == null) {
             // When Gaia-X trust framework is enabled, x5u URL is required for trust anchor validation
-            if (gaiaxTrustFrameworkEnabled) {
+            if (isGaiaxTrustFrameworkEnabled()) {
                 throw new VerificationException("Signatures error; no trust anchor url found");
             }
             log.debug("checkProofSignature; no x5u URL in JWK, skipping trust anchor validation (gaiax.enabled=false)");
@@ -938,7 +962,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      */
     @SuppressWarnings("unchecked")
     private Instant hasPEMTrustAnchorAndIsNotExpired(String uri) throws VerificationException {
-        log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, gaiaxTrustFrameworkEnabled: {}", uri, gaiaxTrustFrameworkEnabled);
+        log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, isGaiaxTrustFrameworkEnabled(): {}", uri, isGaiaxTrustFrameworkEnabled());
         String pem = rest.getForObject(uri, String.class);
         InputStream certStream = new ByteArrayInputStream(Objects.requireNonNull(pem).getBytes(StandardCharsets.UTF_8));
         List<X509Certificate> certs;
@@ -965,7 +989,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
         // Only call Gaia-X Trust Anchor Registry when Gaia-X trust framework is enabled
-        if (gaiaxTrustFrameworkEnabled) {
+        if (isGaiaxTrustFrameworkEnabled()) {
             if (trustAnchorAddr == null || trustAnchorAddr.isBlank()) {
                 log.warn("hasPEMTrustAnchorAndIsNotExpired; Gaia-X trust framework enabled but trust-anchor-url not configured");
                 throw new VerificationException("Signatures error; Gaia-X trust framework enabled but trust-anchor-url not configured");

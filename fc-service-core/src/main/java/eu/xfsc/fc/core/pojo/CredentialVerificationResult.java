@@ -25,6 +25,8 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
    */
   @JsonIgnore
   private List<Validator> validators;
+  @JsonIgnore
+  private List<String> credentialTypes;
 
   public CredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus, String issuer, Instant issuedDateTime,
           String id, List<CredentialClaim> claims, List<Validator> validators) {
@@ -62,6 +64,14 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
       super.setValidatorDids(validators.stream().map(Validator::getDidURI).collect(Collectors.toList()));
     }
     this.validators = validators;
+  }
+
+  public List<String> getCredentialTypes() {
+    return credentialTypes;
+  }
+
+  public void setCredentialTypes(List<String> credentialTypes) {
+    this.credentialTypes = credentialTypes;
   }
 
   @Override

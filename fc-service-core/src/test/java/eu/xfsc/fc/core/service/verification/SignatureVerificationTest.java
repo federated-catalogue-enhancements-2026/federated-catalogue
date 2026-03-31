@@ -27,6 +27,8 @@ import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
+import eu.xfsc.fc.core.dao.adminconfig.AdminConfigJpaDao;
+import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -39,15 +41,14 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 	"federated-catalogue.verification.signature-verifier=uni-res",
 	"federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
 	"federated-catalogue.verification.drop-validators=true",
-	// Enable Gaia-X trust framework to test trust anchor validation
-	"federated-catalogue.verification.trust-framework.gaiax.enabled=true",
 	"federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url=https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {SignatureVerificationTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
         VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheJpaDao.class,
-        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        TrustFrameworkJpaDao.class, AdminConfigJpaDao.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class SignatureVerificationTest {
@@ -75,7 +76,7 @@ public class SignatureVerificationTest {
 	}
 	
 	//@Test
-	void testComplienceV1Signature() {
+	void verifyCredential_v1SignedParticipant_validatorFound() {
 	    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
 	    String path = "VerificationService/sign-unires/participant_v1_signed.jsonld";
 	    CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path));
@@ -83,17 +84,20 @@ public class SignatureVerificationTest {
 	}
 
 	@Test
-	void testJWKCertificate() {
+	void verifyCredential_jwkWithoutX5uAndGaiaxEnabled_throwsVerificationException() {
 	    // This test verifies that when Gaia-X trust framework is ENABLED,
 	    // credentials without x5u (trust anchor URL) in the JWK are rejected.
-	    // Note: This test requires gaiax.enabled=true (set in @SpringBootTest properties)
-	    // With gaiax.enabled=false, this credential would be accepted.
-	    // See GaiaxTrustFrameworkTest for tests covering both scenarios.
-	    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-	    String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
-	    Exception ex = assertThrowsExactly(VerificationException.class, ()
-	            -> verificationService.verifyCredential(getAccessor(path), true, true, true, true));
-	    assertEquals("Signatures error; no trust anchor url found", ex.getMessage());
+	    // Gaia-X enabled state is read from the trust_frameworks DB table.
+	    jdbcTemplate.update("UPDATE trust_frameworks SET enabled = true WHERE id = 'gaia-x'");
+	    try {
+	        schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+	        String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
+	        Exception ex = assertThrowsExactly(VerificationException.class, ()
+	                -> verificationService.verifyCredential(getAccessor(path), true, true, true, true));
+	        assertEquals("Signatures error; no trust anchor url found", ex.getMessage());
+	    } finally {
+	        jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
+	    }
 	}
 
 }

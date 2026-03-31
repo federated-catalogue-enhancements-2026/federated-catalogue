@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.assetstore;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
@@ -21,6 +22,8 @@ public class AssetRecord extends AssetMetadata {
   private Instant expirationTime;
   @Setter
   private String originalFilename;
+  @Setter
+  private List<String> credentialTypes;
 
   public AssetRecord(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor, Instant expirationTime) {
     super(id, issuer, validators, contentAccessor);
@@ -34,17 +37,20 @@ public class AssetRecord extends AssetMetadata {
       Validator minVal = validators.stream().min(new Validator.ExpirationComparator()).orElse(null);
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
+    this.credentialTypes = verificationResult.getCredentialTypes() != null
+        ? new ArrayList<>(verificationResult.getCredentialTypes()) : null;
   }
 
   @Builder
   public AssetRecord(String assetHash, String id, AssetStatus status, String issuer, List<String> validatorDids,
       Instant uploadTime, Instant statusTime, ContentAccessor content, Instant expirationTime,
-      String contentType, Long fileSize, String originalFilename) {
+      String contentType, Long fileSize, String originalFilename, List<String> credentialTypes) {
 	super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, content);
 	this.expirationTime = expirationTime;
 	setContentType(contentType);
 	setFileSize(fileSize);
 	this.originalFilename = originalFilename;
+	this.credentialTypes = credentialTypes;
   }
 
   public String getContent() {

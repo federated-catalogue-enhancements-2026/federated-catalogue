@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Asset Types</title></head>
+<body>
+<div class="container-fluid mt-2">
+    <div id="admin-content" style="display:none">
+
+        <!-- Restriction toggle -->
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="restrictionToggle">
+            <label class="form-check-label" for="restrictionToggle">Enable asset type restriction</label>
+        </div>
+
+        <!-- Empty warning -->
+        <div id="empty-warning" class="alert alert-warning" style="display:none">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Type restriction is active but no types are configured. All uploads will be blocked.
+        </div>
+
+        <!-- Existing types from catalogue -->
+        <div id="existing-types-section" class="mb-3">
+            <h6>Existing Asset Types in Catalogue</h6>
+            <div id="existing-type-tags">
+                <span class="text-muted">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Allowed types tag list -->
+        <div id="types-section" style="display:none">
+            <h6>Allowed Types</h6>
+            <div id="type-tags" class="mb-2"></div>
+
+            <!-- Add type input -->
+            <div class="input-group mb-2" style="max-width:500px">
+                <input type="text" class="form-control" id="newTypeInput"
+                       placeholder="Type name or URI" list="existingTypesList">
+                <datalist id="existingTypesList"></datalist>
+                <button class="btn btn-outline-primary" id="addTypeBtn">Add</button>
+            </div>
+
+            <!-- Quick-select buttons -->
+            <div class="mb-3">
+                <small class="text-muted">Quick add:</small>
+                <button class="btn btn-sm btn-outline-secondary quick-type" data-type="VerifiableCredential">VerifiableCredential</button>
+                <button class="btn btn-sm btn-outline-secondary quick-type" data-type="VerifiablePresentation">VerifiablePresentation</button>
+                <button class="btn btn-sm btn-outline-secondary quick-type" data-type="https://w3id.org/gaia-x/core#Participant">GaiaX Participant</button>
+                <button class="btn btn-sm btn-outline-secondary quick-type" data-type="https://w3id.org/gaia-x/core#ServiceOffering">GaiaX ServiceOffering</button>
+                <button class="btn btn-sm btn-outline-secondary quick-type" data-type="https://w3id.org/gaia-x/core#Resource">GaiaX Resource</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script src="js/admin-asset-types.js"></script>
+</body>
+</html>

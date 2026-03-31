@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.dao.assets;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -29,6 +30,7 @@ public final class AssetMapper {
         .contentType(entity.getContentType())
         .fileSize(entity.getFileSize())
         .originalFilename(entity.getOriginalFilename())
+        .credentialTypes(parseCredentialTypes(entity.getCredentialTypes()))
         .build();
   }
 
@@ -50,6 +52,24 @@ public final class AssetMapper {
     entity.setContentType(record.getContentType());
     entity.setFileSize(record.getFileSize());
     entity.setOriginalFilename(record.getOriginalFilename());
+    entity.setCredentialTypes(serializeCredentialTypes(record.getCredentialTypes()));
     return entity;
+  }
+
+  private static List<String> parseCredentialTypes(String csv) {
+    if (csv == null || csv.isBlank()) {
+      return null;
+    }
+    return Arrays.stream(csv.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toList());
+  }
+
+  private static String serializeCredentialTypes(List<String> types) {
+    if (types == null || types.isEmpty()) {
+      return null;
+    }
+    return String.join(",", types);
   }
 }

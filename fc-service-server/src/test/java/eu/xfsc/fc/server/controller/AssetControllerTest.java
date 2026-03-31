@@ -45,6 +45,7 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.assettypes.AssetTypeRestrictionService;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
@@ -109,6 +110,8 @@ public class AssetControllerTest {
     private SchemaStore schemaStore;
     @Autowired
     private VerificationService verificationService;
+    @Autowired
+    private AssetTypeRestrictionService assetTypeRestrictionService;
 
     private static AssetMetadata assetMeta;
     
@@ -706,6 +709,98 @@ public class AssetControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
+
+    // ===== Asset type enforcement in upload pipeline =====
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void addAsset_restrictionEnabledWrongType_returns400() throws Exception {
+        assetTypeRestrictionService.setConfig(true, List.of("SomeOtherType"));
+        try {
+            MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+                    .content(getMockFileDataAsString(ASSET_FILE_NAME))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+            Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
+            assertTrue(error.getMessage().contains("not allowed"),
+                "Error should mention type not allowed");
+            assertTrue(error.getMessage().contains("SomeOtherType"),
+                "Error should list allowed types");
+        } finally {
+            assetTypeRestrictionService.setConfig(false, List.of());
+        }
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void addAsset_restrictionEnabledMatchingType_returns201() throws Exception {
+        assetTypeRestrictionService.setConfig(true, List.of("VerifiablePresentation"));
+        try {
+            MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+                    .content(getMockFileDataAsString(ASSET_FILE_NAME))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+            Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+            assetStorePublisher.deleteAsset(asset.getAssetHash());
+        } finally {
+            assetTypeRestrictionService.setConfig(false, List.of());
+        }
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void addAsset_restrictionEnabledEmptyList_returns400() throws Exception {
+        assetTypeRestrictionService.setConfig(true, List.of());
+        try {
+            MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+                    .content(getMockFileDataAsString(ASSET_FILE_NAME))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+            Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
+            assertTrue(error.getMessage().contains("no types are configured"),
+                "Error should mention no types configured");
+        } finally {
+            assetTypeRestrictionService.setConfig(false, List.of());
+        }
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void addAsset_restrictionDisabled_returns201() throws Exception {
+        assetTypeRestrictionService.setConfig(false, List.of("SomeOtherType"));
+        try {
+            MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+                    .content(getMockFileDataAsString(ASSET_FILE_NAME))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+            Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+            assetStorePublisher.deleteAsset(asset.getAssetHash());
+        } finally {
+            assetTypeRestrictionService.setConfig(false, List.of());
+        }
+    }
+
+    // ===== Helpers =====
 
     private static AssetMetadata createAssetMetadata() throws IOException {
         String credentialContent = getMockFileDataAsString(ASSET_FILE_NAME);

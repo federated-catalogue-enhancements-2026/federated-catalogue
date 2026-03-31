@@ -12,4 +12,6 @@
     <include file="changesets/006-technical_ids.xml" relativeToChangelogFile="true" />
     <include file="changesets/007-envers_audit.xml" relativeToChangelogFile="true" />
     <include file="changesets/008-rename-timestamps.xml" relativeToChangelogFile="true" />
+    <include file="admin_config.xml" relativeToChangelogFile="true" />
+    <include file="asset_types_config.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

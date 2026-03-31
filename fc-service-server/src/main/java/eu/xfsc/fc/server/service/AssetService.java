@@ -35,6 +35,7 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.assettypes.AssetTypeRestrictionService;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
 import jakarta.validation.ValidationException;
@@ -50,6 +51,7 @@ public class AssetService implements AssetsApiDelegate {
 
   private final VerificationService verificationService;
   private final AssetStore assetStorePublisher;
+  private final AssetTypeRestrictionService assetTypeRestrictionService;
   private final HttpServletRequest httpServletRequest;
 
   /**
@@ -188,6 +190,7 @@ public class AssetService implements AssetsApiDelegate {
       ContentAccessorDirect contentAccessor = new ContentAccessorDirect(body, contentType);
 
       CredentialVerificationResult verificationResult = verificationService.verifyCredential(contentAccessor);
+      assetTypeRestrictionService.enforceTypeRestriction(verificationResult.getCredentialTypes());
 
       AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(), verificationResult.getIssuer(),
               verificationResult.getValidators(), contentAccessor);

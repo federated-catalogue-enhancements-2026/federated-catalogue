@@ -21,4 +21,7 @@ public interface AssetDao {
 	SubjectStatusRecord delete(String hash);
 	int deleteAll();
 
+	/** Returns distinct credential type values from all active assets. */
+	List<String> selectDistinctCredentialTypes();
+
 }

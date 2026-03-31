@@ -58,6 +58,15 @@ class AssetDaoTest {
       Instant uploadTime, Instant statusTime, Instant expirationTime,
       AssetStatus status, String content, List<String> validators,
       String contentType, Long fileSize, String originalFilename) {
+    return buildRecord(hash, subjectId, issuer, uploadTime, statusTime, expirationTime,
+        status, content, validators, contentType, fileSize, originalFilename, null);
+  }
+
+  private static AssetRecord buildRecord(String hash, String subjectId, String issuer,
+      Instant uploadTime, Instant statusTime, Instant expirationTime,
+      AssetStatus status, String content, List<String> validators,
+      String contentType, Long fileSize, String originalFilename,
+      List<String> credentialTypes) {
     return AssetRecord.builder()
         .assetHash(hash)
         .id(subjectId)
@@ -71,6 +80,7 @@ class AssetDaoTest {
         .contentType(contentType)
         .fileSize(fileSize)
         .originalFilename(originalFilename)
+        .credentialTypes(credentialTypes)
         .build();
   }
 
@@ -595,5 +605,139 @@ class AssetDaoTest {
     int count = assetDao.deleteAll();
 
     assertEquals(0, count);
+  }
+
+  // ===== selectDistinctCredentialTypes =====
+
+  @Test
+  void selectDistinctCredentialTypes_emptyTable_returnsEmpty() {
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertTrue(types.isEmpty());
+  }
+
+  @Test
+  void selectDistinctCredentialTypes_singleAsset_returnsTypes() {
+    List<String> credTypes = List.of("VerifiablePresentation", "VerifiableCredential");
+    AssetRecord record = buildRecord("hash-ct1", "sub/ct1", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "content", List.of("did:val:1"),
+        "application/ld+json", 100L, "f.jsonld", credTypes);
+    assetDao.insert(record);
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(2, types.size());
+    assertTrue(types.contains("VerifiablePresentation"));
+    assertTrue(types.contains("VerifiableCredential"));
+  }
+
+  @Test
+  void selectDistinctCredentialTypes_multipleAssets_deduplicates() {
+    AssetRecord r1 = buildRecord("hash-ct2", "sub/ct2", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c1", List.of("did:val:1"),
+        "application/ld+json", 100L, "f1.jsonld",
+        List.of("VerifiablePresentation"));
+    AssetRecord r2 = buildRecord("hash-ct3", "sub/ct3", "iss/2",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-02T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c2", List.of("did:val:1"),
+        "application/ld+json", 100L, "f2.jsonld",
+        List.of("VerifiablePresentation", "ServiceOffering"));
+    assetDao.insert(r1);
+    assetDao.insert(r2);
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(2, types.size());
+    assertTrue(types.contains("VerifiablePresentation"));
+    assertTrue(types.contains("ServiceOffering"));
+  }
+
+  @Test
+  void selectDistinctCredentialTypes_nonActiveExcluded() {
+    AssetRecord active = buildRecord("hash-ct4", "sub/ct4", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c1", List.of("did:val:1"),
+        "application/ld+json", 100L, "f1.jsonld",
+        List.of("VerifiablePresentation"));
+    AssetRecord revoked = buildRecord("hash-ct5", "sub/ct5", "iss/2",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-02T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c2", List.of("did:val:1"),
+        "application/ld+json", 100L, "f2.jsonld",
+        List.of("ServiceOffering"));
+    assetDao.insert(active);
+    assetDao.insert(revoked);
+    assetDao.update("hash-ct5", AssetStatus.REVOKED.ordinal());
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(1, types.size());
+    assertEquals("VerifiablePresentation", types.get(0));
+  }
+
+  @Test
+  void selectDistinctCredentialTypes_nullCredentialTypes_excluded() {
+    AssetRecord withTypes = buildRecord("hash-ct6", "sub/ct6", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c1", List.of("did:val:1"),
+        "application/ld+json", 100L, "f1.jsonld",
+        List.of("VerifiablePresentation"));
+    AssetRecord withoutTypes = buildSimpleRecord("hash-ct7", "sub/ct7", "iss/2",
+        Instant.parse("2024-01-02T00:00:00Z"));
+    assetDao.insert(withTypes);
+    assetDao.insert(withoutTypes);
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(1, types.size());
+    assertEquals("VerifiablePresentation", types.get(0));
+  }
+
+  @Test
+  void selectDistinctCredentialTypes_resultIsSorted() {
+    AssetRecord r1 = buildRecord("hash-ct8", "sub/ct8", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c1", List.of("did:val:1"),
+        "application/ld+json", 100L, "f1.jsonld",
+        List.of("Zebra", "Alpha", "Middle"));
+    assetDao.insert(r1);
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(3, types.size());
+    assertEquals("Alpha", types.get(0));
+    assertEquals("Middle", types.get(1));
+    assertEquals("Zebra", types.get(2));
+  }
+
+  // ===== credentialTypes persistence round-trip =====
+
+  @Test
+  void insert_credentialTypes_persistedAndRetrieved() {
+    List<String> credTypes = List.of("VerifiablePresentation", "ServiceOffering");
+    AssetRecord record = buildRecord("hash-crt", "sub/crt", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "content", List.of("did:val:1"),
+        "application/ld+json", 100L, "f.jsonld", credTypes);
+    assetDao.insert(record);
+
+    AssetRecord result = assetDao.select("hash-crt");
+
+    assertNotNull(result.getCredentialTypes());
+    assertEquals(2, result.getCredentialTypes().size());
+    assertTrue(result.getCredentialTypes().contains("VerifiablePresentation"));
+    assertTrue(result.getCredentialTypes().contains("ServiceOffering"));
+  }
+
+  @Test
+  void insert_nullCredentialTypes_persistsAsNull() {
+    AssetRecord record = buildSimpleRecord("hash-nocrt", "sub/nocrt", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"));
+    assetDao.insert(record);
+
+    AssetRecord result = assetDao.select("hash-nocrt");
+
+    assertNull(result.getCredentialTypes());
   }
 }
