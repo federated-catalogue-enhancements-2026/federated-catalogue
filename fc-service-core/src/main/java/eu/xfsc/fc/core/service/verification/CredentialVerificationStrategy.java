@@ -37,7 +37,7 @@ import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import foundation.identity.jsonld.JsonLDObject;
-import info.weboftrust.ldsignatures.LdProof;
+import com.danubetech.dataintegrity.DataIntegrityProof;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -910,7 +910,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             throw new VerificationException("Signatures error; No proof found");
         }
 
-        LdProof proof = LdProof.fromMap(proofMap);
+        DataIntegrityProof proof = DataIntegrityProof.fromMap(proofMap);
         if (proof.getType() == null) {
             throw new VerificationException("Signatures error; Proof must have 'type' property");
         }
@@ -922,7 +922,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
     }
 
-    private Validator checkProofSignature(JsonLDObject payload, LdProof proof) throws IOException {
+    private Validator checkProofSignature(JsonLDObject payload, DataIntegrityProof proof) throws IOException {
         String vmKey = proof.getVerificationMethod().toString();
         Validator validator = validatorCache.getFromCache(vmKey);
         if (validator == null) {
