@@ -306,7 +306,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
         // Version dispatch — unwrap to JSON-LD
-        // NOTE: CAT-FR-GD-02's VcStructureDetector.isVcStructured() call MUST be placed AFTER
+        // NOTE: A future VcStructureDetector.isVcStructured() call MUST be placed AFTER
         // unwrapping, not before — a JWT-wrapped VC 2.0 payload would not be recognised as a VC.
         if (format == CredentialFormat.GAIAX_V2_LOIRE) {
             payload = loireJwtParser.unwrap(payload);
@@ -656,7 +656,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             String jwtStr = idStr.substring(commaIdx + 1);
             return tryUnwrapJwtVc(jwtStr, docLoader);
         } catch (Exception ex) {
-            log.warn("tryUnwrapEnvelopedVc; failed to unwrap: {}", ex.getMessage());
+            log.warn("tryUnwrapEnvelopedVc; failed to unwrap: {}", ex.getMessage(), ex);
             return null;
         }
     }
@@ -987,7 +987,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             certs = (List<X509Certificate>) certFactory.generateCertificates(certStream);
         } catch (CertificateException ex) {
             log.warn("hasPEMTrustAnchorAndIsNotExpired; certificate error: {}", ex.getMessage());
-            throw new VerificationException("Signatures error; " + ex.getMessage());
+            throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
         }
 
         //Then extract relevant cert
@@ -1000,7 +1000,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 }
             } catch (Exception ex) {
                 log.warn("hasPEMTrustAnchorAndIsNotExpired; check validity error: {}", ex.getMessage());
-                throw new VerificationException("Signatures error; " + ex.getMessage());
+                throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
             }
         }
 
@@ -1020,7 +1020,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 throw ex;
             } catch (Exception ex) {
                 log.warn("hasPEMTrustAnchorAndIsNotExpired; trust anchor error: {}", ex.getMessage());
-                throw new VerificationException("Signatures error; " + ex.getMessage());
+                throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
             }
         } else {
             log.debug("hasPEMTrustAnchorAndIsNotExpired; skipping Gaia-X trust anchor registry validation (gaiax.enabled=false)");
