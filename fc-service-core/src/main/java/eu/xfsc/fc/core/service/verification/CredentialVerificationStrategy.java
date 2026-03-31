@@ -1070,7 +1070,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
             log.debug("enforceLoireTrustChain; trust chain validated for kid: {}",
                 jwtValidator.getDidURI());
-        } catch (VerificationException ex) {
+        } catch (VerificationException | ClientException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new VerificationException(
