@@ -16,7 +16,7 @@
 				"vcard": "http://www.w3.org/2006/vcard/ns#"
 			},
 			"@id": "gax-participant:Participant1",
-			"@type": "gax-participant:LegalPerson",
+			"@type": "https://w3id.org/gaia-x/core#Participant",
 			"gax-participant:registrationNumber": "1234",
 			"gax-participant:legalAddress": {
 				"@type": "vcard:Address",
