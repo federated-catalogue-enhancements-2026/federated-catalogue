@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.assets;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -22,7 +23,7 @@ class AssetMapperTest {
   // ===== toEntity: credentialTypes serialization =====
 
   @Test
-  void toEntity_withCredentialTypes_serializesAsCsv() {
+  void toEntity_withCredentialTypes_convertsToArray() {
     AssetRecord record = AssetRecord.builder()
         .assetHash("hash1").id("sub/1").status(AssetStatus.ACTIVE)
         .uploadTime(NOW).statusTime(NOW)
@@ -31,7 +32,7 @@ class AssetMapperTest {
 
     Asset entity = AssetMapper.toEntity(record);
 
-    assertEquals("VerifiablePresentation,ServiceOffering", entity.getCredentialTypes());
+    assertArrayEquals(new String[]{"VerifiablePresentation", "ServiceOffering"}, entity.getCredentialTypes());
   }
 
   @Test
@@ -65,17 +66,17 @@ class AssetMapperTest {
     assertNull(AssetMapper.toEntity(null));
   }
 
-  // ===== toRecord: credentialTypes parsing =====
+  // ===== toRecord: credentialTypes mapping =====
 
   @Test
-  void toRecord_withCsvCredentialTypes_parsesToList() {
+  void toRecord_withArrayCredentialTypes_returnsAsList() {
     Asset entity = new Asset();
     entity.setAssetHash("hash4");
     entity.setSubjectId("sub/4");
     entity.setStatus((short) AssetStatus.ACTIVE.ordinal());
     entity.setUploadTime(NOW);
     entity.setStatusTime(NOW);
-    entity.setCredentialTypes("VerifiablePresentation,ServiceOffering");
+    entity.setCredentialTypes(new String[]{"VerifiablePresentation", "ServiceOffering"});
 
     AssetRecord record = AssetMapper.toRecord(entity);
 
@@ -85,21 +86,18 @@ class AssetMapperTest {
   }
 
   @Test
-  void toRecord_withWhitespaceCsv_trimsValues() {
+  void toRecord_withEmptyArrayCredentialTypes_returnsNull() {
     Asset entity = new Asset();
     entity.setAssetHash("hash5");
     entity.setSubjectId("sub/5");
     entity.setStatus((short) AssetStatus.ACTIVE.ordinal());
     entity.setUploadTime(NOW);
     entity.setStatusTime(NOW);
-    entity.setCredentialTypes(" VP , SC , LegalParticipant ");
+    entity.setCredentialTypes(new String[]{});
 
     AssetRecord record = AssetMapper.toRecord(entity);
 
-    assertEquals(3, record.getCredentialTypes().size());
-    assertEquals("VP", record.getCredentialTypes().get(0));
-    assertEquals("SC", record.getCredentialTypes().get(1));
-    assertEquals("LegalParticipant", record.getCredentialTypes().get(2));
+    assertNull(record.getCredentialTypes());
   }
 
   @Test
@@ -111,36 +109,6 @@ class AssetMapperTest {
     entity.setUploadTime(NOW);
     entity.setStatusTime(NOW);
     entity.setCredentialTypes(null);
-
-    AssetRecord record = AssetMapper.toRecord(entity);
-
-    assertNull(record.getCredentialTypes());
-  }
-
-  @Test
-  void toRecord_withBlankCredentialTypes_returnsNull() {
-    Asset entity = new Asset();
-    entity.setAssetHash("hash7");
-    entity.setSubjectId("sub/7");
-    entity.setStatus((short) AssetStatus.ACTIVE.ordinal());
-    entity.setUploadTime(NOW);
-    entity.setStatusTime(NOW);
-    entity.setCredentialTypes("   ");
-
-    AssetRecord record = AssetMapper.toRecord(entity);
-
-    assertNull(record.getCredentialTypes());
-  }
-
-  @Test
-  void toRecord_withEmptyStringCredentialTypes_returnsNull() {
-    Asset entity = new Asset();
-    entity.setAssetHash("hash8");
-    entity.setSubjectId("sub/8");
-    entity.setStatus((short) AssetStatus.ACTIVE.ordinal());
-    entity.setUploadTime(NOW);
-    entity.setStatusTime(NOW);
-    entity.setCredentialTypes("");
 
     AssetRecord record = AssetMapper.toRecord(entity);
 

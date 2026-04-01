@@ -14,4 +14,5 @@
     <include file="changesets/008-rename-timestamps.xml" relativeToChangelogFile="true" />
     <include file="admin_config.xml" relativeToChangelogFile="true" />
     <include file="asset_types_config.xml" relativeToChangelogFile="true" />
+    <include file="migrate_credential_types_to_array.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

@@ -27,7 +27,9 @@ public class AdminDashboardConfig {
       @Value("${datastore.file-path}") String fileStorePath) {
     this.webClient = webClientBuilder.build();
     this.keycloakIssuerUrl = keycloakAuthServerUrl + "/realms/" + keycloakRealm;
-    this.keycloakAdminConsoleUrl = keycloakAdminConsoleUrl;
+    this.keycloakAdminConsoleUrl = keycloakAdminConsoleUrl.isBlank()
+        ? keycloakAuthServerUrl + "/admin/master/console/#/" + keycloakRealm
+        : keycloakAdminConsoleUrl;
     this.fileStorePath = fileStorePath;
   }
 }

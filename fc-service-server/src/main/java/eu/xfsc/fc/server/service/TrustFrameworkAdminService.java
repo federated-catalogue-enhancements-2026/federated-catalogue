@@ -36,7 +36,7 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
   @Override
   public ResponseEntity<List<TrustFrameworkEntry>> getTrustFrameworks() {
     List<TrustFrameworkConfig> frameworks = trustFrameworkDao.findAll();
-    List<TrustFrameworkEntry> entries = frameworks.stream()
+    List<TrustFrameworkEntry> entries = frameworks.parallelStream()
         .map(this::toEntry)
         .toList();
     return ResponseEntity.ok(entries);

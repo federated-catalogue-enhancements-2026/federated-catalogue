@@ -17,7 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.xfsc.fc.core.dao.AdminConfigDao;
 import eu.xfsc.fc.core.exception.ClientException;
@@ -30,6 +33,9 @@ class AssetTypeRestrictionServiceTest {
 
   @Mock
   private AdminConfigDao adminConfigDao;
+
+  @Spy
+  private ObjectMapper objectMapper = new ObjectMapper();
 
   @InjectMocks
   private AssetTypeRestrictionService service;
@@ -158,5 +164,86 @@ class AssetTypeRestrictionServiceTest {
         () -> service.enforceTypeRestriction(List.of("VerifiableCredential")));
 
     assertTrue(ex.getMessage().contains("no types are configured"));
+  }
+
+  // --- validateTypeInput ---
+
+  @Test
+  void validateTypeInput_withNull_doesNotThrow() {
+    assertDoesNotThrow(() -> service.validateTypeInput(null));
+  }
+
+  @Test
+  void validateTypeInput_withEmptyList_doesNotThrow() {
+    assertDoesNotThrow(() -> service.validateTypeInput(Collections.emptyList()));
+  }
+
+  @Test
+  void validateTypeInput_withValidTypes_doesNotThrow() {
+    assertDoesNotThrow(() -> service.validateTypeInput(
+        List.of("VerifiableCredential", "https://w3.org/ns/credentials#VerifiableCredential")));
+  }
+
+  @Test
+  void validateTypeInput_withBlankEntry_throwsClientException() {
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.validateTypeInput(List.of("Valid", "  ")));
+
+    assertTrue(ex.getMessage().contains("must not be blank"));
+  }
+
+  @Test
+  void validateTypeInput_withComma_throwsClientException() {
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.validateTypeInput(List.of("Inva,lid")));
+
+    assertTrue(ex.getMessage().contains("must not contain commas"));
+  }
+
+  @Test
+  void validateTypeInput_withControlCharacter_throwsClientException() {
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.validateTypeInput(List.of("Bad\u0001Type")));
+
+    assertTrue(ex.getMessage().contains("control characters"));
+  }
+
+  @Test
+  void validateTypeInput_withDuplicate_throwsClientException() {
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.validateTypeInput(List.of("VerifiableCredential", "VerifiableCredential")));
+
+    assertTrue(ex.getMessage().contains("Duplicate"));
+  }
+
+  @Test
+  void validateTypeInput_withTooLongEntry_throwsClientException() {
+    String longType = "A".repeat(257);
+
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.validateTypeInput(List.of(longType)));
+
+    assertTrue(ex.getMessage().contains("maximum length"));
+  }
+
+  @Test
+  void setConfig_withInvalidType_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> service.setConfig(true, List.of("Valid", "Inva,lid")));
+  }
+
+  @Test
+  void setConfig_withPaddedTypes_storesTrimmedValues() {
+    service.setConfig(true, List.of("  ServiceOffering  ", " VerifiableCredential "));
+
+    verify(adminConfigDao).setValue(eq(KEY_ALLOWED), eq("[\"ServiceOffering\",\"VerifiableCredential\"]"));
+  }
+
+  @Test
+  void setConfig_withPaddedDuplicates_throwsClientException() {
+    ClientException ex = assertThrows(ClientException.class,
+        () -> service.setConfig(true, List.of(" VP ", "VP")));
+
+    assertTrue(ex.getMessage().contains("Duplicate"));
   }
 }

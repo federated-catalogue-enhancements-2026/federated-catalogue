@@ -711,6 +711,21 @@ class AssetDaoTest {
     assertEquals("Zebra", types.get(2));
   }
 
+  @Test
+  void selectDistinctCredentialTypes_intraAssetDuplicates_deduplicated() {
+    AssetRecord r1 = buildRecord("hash-ct9", "sub/ct9", "iss/1",
+        Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-01T00:00:00Z"), null,
+        AssetStatus.ACTIVE, "c1", List.of("did:val:1"),
+        "application/ld+json", 100L, "f1.jsonld",
+        List.of("VerifiablePresentation", "VerifiablePresentation"));
+    assetDao.insert(r1);
+
+    List<String> types = assetDao.selectDistinctCredentialTypes();
+
+    assertEquals(1, types.size());
+    assertEquals("VerifiablePresentation", types.get(0));
+  }
+
   // ===== credentialTypes persistence round-trip =====
 
   @Test

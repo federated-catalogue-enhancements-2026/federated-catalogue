@@ -57,13 +57,13 @@ public interface AssetRepository
           @Param("chunkid") int chunkId,
           @Param("limit") int limit);
 
-  /** Returns distinct non-null credential_types values from active assets. */
+  /** Returns distinct credential types from all active assets (PostgreSQL array unwrapped with UNNEST). */
   @Query(value = """
-    SELECT DISTINCT credential_types
-    FROM assets
+    SELECT DISTINCT t AS type
+    FROM assets, UNNEST(credential_types) AS t
     WHERE status = :status
         AND credential_types IS NOT NULL
-        AND credential_types <> ''
+    ORDER BY type
   """, nativeQuery = true)
   List<String> findDistinctCredentialTypes(@Param("status") int activeStatus);
 }

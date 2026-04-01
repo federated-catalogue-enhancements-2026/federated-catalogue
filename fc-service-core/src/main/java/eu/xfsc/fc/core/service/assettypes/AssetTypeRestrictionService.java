@@ -1,7 +1,9 @@
 package eu.xfsc.fc.core.service.assettypes;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -26,9 +28,10 @@ public class AssetTypeRestrictionService {
 
   private static final String KEY_ENABLED = "asset.type.restriction.enabled";
   private static final String KEY_ALLOWED = "asset.type.restriction.allowed";
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final int MAX_TYPE_LENGTH = 256;
 
   private final AdminConfigDao adminConfigDao;
+  private final ObjectMapper objectMapper;
 
   /**
    * Check if asset type restriction is enabled.
@@ -49,12 +52,51 @@ public class AssetTypeRestrictionService {
   }
 
   /**
+   * Validates a list of asset type strings. Rejects blank entries, duplicates,
+   * types exceeding the max length, commas (business rule for readability),
+   * and control characters.
+   *
+   * @param types the list to validate; null is treated as empty (no error).
+   * @throws ClientException if any entry is invalid.
+   */
+  public void validateTypeInput(List<String> types) {
+    if (types == null || types.isEmpty()) {
+      return;
+    }
+    Set<String> seen = new HashSet<>();
+    for (String type : types) {
+      if (type == null || type.isBlank()) {
+        throw new ClientException("Asset type must not be blank.");
+      }
+      if (type.length() > MAX_TYPE_LENGTH) {
+        throw new ClientException(
+            "Asset type exceeds maximum length of " + MAX_TYPE_LENGTH + " characters: "
+            + type.substring(0, 32) + "...");
+      }
+      if (type.contains(",")) {
+        throw new ClientException("Asset type must not contain commas: " + type);
+      }
+      for (char c : type.toCharArray()) {
+        if (c < 32) {
+          throw new ClientException("Asset type must not contain control characters: " + type);
+        }
+      }
+      if (!seen.add(type)) {
+        throw new ClientException("Duplicate asset type in list: " + type);
+      }
+    }
+  }
+
+  /**
    * Save the restriction configuration.
    */
   public void setConfig(boolean enabled, List<String> allowedTypes) {
+    List<String> trimmedAllowedTypes = allowedTypes == null ? null
+        : allowedTypes.stream().map(t -> t != null ? t.trim() : null).toList();
+    validateTypeInput(trimmedAllowedTypes);
     adminConfigDao.setValue(KEY_ENABLED, String.valueOf(enabled));
     try {
-      adminConfigDao.setValue(KEY_ALLOWED, MAPPER.writeValueAsString(allowedTypes != null ? allowedTypes : List.of()));
+      adminConfigDao.setValue(KEY_ALLOWED, objectMapper.writeValueAsString(trimmedAllowedTypes != null ? trimmedAllowedTypes : List.of()));
     } catch (JsonProcessingException e) {
       throw new ClientException("Failed to serialize allowed types: " + e.getMessage());
     }
@@ -90,7 +132,7 @@ public class AssetTypeRestrictionService {
 
   private List<String> parseJsonArray(String json) {
     try {
-      return MAPPER.readValue(json, new TypeReference<List<String>>() {});
+      return objectMapper.readValue(json, new TypeReference<List<String>>() {});
     } catch (JsonProcessingException e) {
       log.warn("Failed to parse allowed types JSON: {}", json, e);
       return Collections.emptyList();

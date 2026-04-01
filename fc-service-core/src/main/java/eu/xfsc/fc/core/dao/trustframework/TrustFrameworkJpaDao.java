@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.core.dao.TrustFrameworkDao;
 import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
@@ -30,6 +31,7 @@ public class TrustFrameworkJpaDao implements TrustFrameworkDao {
   }
 
   @Override
+  @Transactional
   public int updateEnabled(String id, boolean enabled) {
     return repository.findById(id)
         .map(entity -> {
@@ -42,6 +44,7 @@ public class TrustFrameworkJpaDao implements TrustFrameworkDao {
   }
 
   @Override
+  @Transactional
   public int updateConfig(String id, String serviceUrl, String apiVersion, int timeoutSeconds) {
     return repository.findById(id)
         .map(entity -> {

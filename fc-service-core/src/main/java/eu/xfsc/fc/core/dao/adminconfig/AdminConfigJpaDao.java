@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.core.dao.AdminConfigDao;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AdminConfigJpaDao implements AdminConfigDao {
   }
 
   @Override
+  @Transactional
   public void setValue(String key, String value) {
     AdminConfigEntry entry = repository.findById(key)
         .orElse(new AdminConfigEntry(key, null, null));

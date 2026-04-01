@@ -13,11 +13,8 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -124,14 +121,7 @@ public class AssetJpaDao implements AssetDao {
 
     @Override
     public List<String> selectDistinctCredentialTypes() {
-        List<String> csvRows = repository.findDistinctCredentialTypes(
-            AssetStatus.ACTIVE.ordinal());
-        return csvRows.stream()
-            .flatMap(csv -> Arrays.stream(csv.split(",")))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.collectingAndThen(
-                Collectors.toCollection(TreeSet::new),
-                treeSet -> List.copyOf(treeSet)));
+        // Repository returns already-deduplicated, sorted types via UNNEST(credential_types)
+        return repository.findDistinctCredentialTypes(AssetStatus.ACTIVE.ordinal());
     }
 }
