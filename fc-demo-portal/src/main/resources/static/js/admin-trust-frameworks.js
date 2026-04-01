@@ -22,6 +22,17 @@ $(document).ready(function() {
             '<div class="alert alert-danger">Failed to load trust frameworks.</div>');
         }
       },
+      dom: "<'row mb-2 align-items-center'<'col-md-6'f><'col-md-6 d-flex justify-content-end'l>><'row'<'col-sm-12'tr>><'row mt-2'<'col-md-5'i><'col-md-7 d-flex justify-content-end'p>>",
+      initComplete: function() {
+        var $filter = $(this.api().table().container()).find('.dataTables_filter label');
+        var $input = $filter.find('input').detach();
+        $filter.empty().append(
+          $('<div class="input-group input-group-sm">').append(
+            $('<span class="input-group-text"><i class="bi bi-search"></i></span>'),
+            $input
+          )
+        );
+      },
       columns: [
         { data: 'name' },
         {
@@ -106,7 +117,7 @@ $(document).ready(function() {
         contentType: 'application/json',
         data: JSON.stringify(config),
         success: function() {
-          bootstrap.Modal.getInstance('#tfConfigModal').hide();
+          bootstrap.Modal.getInstance(document.getElementById('tfConfigModal')).hide();
           table.ajax.reload();
         },
         error: function() {

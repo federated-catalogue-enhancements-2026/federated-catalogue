@@ -557,6 +557,12 @@ components:
         databaseStatus:
           type: string
           description: Database status (UP/DOWN)
+        keycloakUrl:
+          type: string
+          description: Keycloak issuer URL
+        fileStorePath:
+          type: string
+          description: File store directory path
     KeycloakAdminUrl:
       type: object
       properties:

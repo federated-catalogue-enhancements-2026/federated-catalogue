@@ -30,9 +30,16 @@ $(document).ready(function() {
     // Load health status
     $.getJSON('/admin/health', function(data) {
       renderStatus('catalogue', data.catalogueStatus);
+      $('#status-catalogue-details').text('Federated Catalogue Service');
+
       renderStatus('keycloak', data.keycloakStatus);
+      $('#status-keycloak-details').text(data.keycloakUrl || '-');
+
       renderStatus('filestore', data.fileStoreStatus);
+      $('#status-filestore-details').text(data.fileStorePath || '-');
+
       renderStatus('database', data.databaseStatus);
+      $('#status-database-details').text('PostgreSQL');
 
       if (data.graphDbStatus) {
         var graphUp = data.graphDbStatus.connected ? 'UP' : 'DOWN';
@@ -43,6 +50,7 @@ $(document).ready(function() {
         );
       } else {
         renderStatus('graphdb', 'UNKNOWN');
+        $('#status-graphdb-details').text('-');
       }
     }).fail(function() {
       renderStatus('catalogue', 'UNKNOWN');
@@ -86,6 +94,10 @@ $(document).ready(function() {
   $('#refresh-btn').on('click', function() {
     loadData();
   });
+
+  // Auto-refresh every 30 seconds (guard against interval stacking on SPA re-navigation)
+  if (window._dashboardTimer) clearInterval(window._dashboardTimer);
+  window._dashboardTimer = setInterval(loadData, 30000);
 
   // Initial load
   loadData();

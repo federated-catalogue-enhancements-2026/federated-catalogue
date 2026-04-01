@@ -10,6 +10,9 @@
 
         <div id="admin-content">
             <!-- Key Metrics -->
+            <h6 class="text-muted text-uppercase fw-semibold mb-2 admin-section-header">
+                <i class="bi bi-bar-chart me-1"></i>Key Metrics
+            </h6>
             <div class="row mb-3 g-2">
                 <div class="col-xl-2 col-md-4 d-flex">
                     <div class="card text-center w-100" style="border-top: 3px solid #0d6efd;">
@@ -70,18 +73,18 @@
                 </div>
             </div>
 
-            <!-- Last updated + refresh -->
-            <div class="d-flex align-items-center mb-3">
-                <small class="text-muted">Last updated: <span id="last-updated">-</span></small>
-                <button id="refresh-btn" class="btn btn-sm btn-outline-secondary ms-2" title="Refresh">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
-            </div>
-
-            <!-- System Status Row -->
+            <!-- System Health -->
+            <h6 class="text-muted text-uppercase fw-semibold mb-2 admin-section-header">
+                <i class="bi bi-heart-pulse me-1"></i>System Health
+            </h6>
             <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">System Status</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Component Status</span>
+                    <small class="text-muted">Last updated: <span id="last-updated">-</span>
+                        <button id="refresh-btn" class="btn btn-sm btn-outline-secondary ms-2" title="Refresh">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </small>
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered mb-0" id="health-table">
@@ -96,7 +99,7 @@
                             <tr id="row-catalogue">
                                 <td><i class="bi bi-server me-2"></i>Catalogue Service</td>
                                 <td><span id="status-catalogue" class="badge bg-secondary"><span class="spinner-border spinner-border-sm" role="status"></span></span></td>
-                                <td>-</td>
+                                <td id="status-catalogue-details">-</td>
                             </tr>
                             <tr id="row-graphdb">
                                 <td><i class="bi bi-share me-2"></i>Graph Database</td>
@@ -106,17 +109,17 @@
                             <tr id="row-keycloak">
                                 <td><i class="bi bi-shield-lock me-2"></i>Keycloak</td>
                                 <td><span id="status-keycloak" class="badge bg-secondary"><span class="spinner-border spinner-border-sm" role="status"></span></span></td>
-                                <td>-</td>
+                                <td id="status-keycloak-details">-</td>
                             </tr>
                             <tr id="row-filestore">
                                 <td><i class="bi bi-folder me-2"></i>File Store</td>
                                 <td><span id="status-filestore" class="badge bg-secondary"><span class="spinner-border spinner-border-sm" role="status"></span></span></td>
-                                <td>-</td>
+                                <td id="status-filestore-details">-</td>
                             </tr>
                             <tr id="row-database">
                                 <td><i class="bi bi-hdd-stack me-2"></i>Database</td>
                                 <td><span id="status-database" class="badge bg-secondary"><span class="spinner-border spinner-border-sm" role="status"></span></span></td>
-                                <td>-</td>
+                                <td id="status-database-details">-</td>
                             </tr>
                         </tbody>
                     </table>

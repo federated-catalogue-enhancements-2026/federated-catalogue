@@ -146,6 +146,7 @@ public class AdminDashboardService implements AdminApiDelegate {
       health.setGraphDbStatus(graphStatus);
     }
 
+    health.setKeycloakUrl(config.getKeycloakIssuerUrl());
     try {
       config.getWebClient().get().uri(config.getKeycloakIssuerUrl()).retrieve()
           .toBodilessEntity().timeout(KEYCLOAK_TIMEOUT).block();
@@ -155,6 +156,7 @@ public class AdminDashboardService implements AdminApiDelegate {
       health.setKeycloakStatus("DOWN");
     }
 
+    health.setFileStorePath(config.getFileStorePath());
     try {
       File fileDir = new File(config.getFileStorePath());
       health.setFileStoreStatus(fileDir.exists() && fileDir.canWrite() ? "UP" : "DOWN");

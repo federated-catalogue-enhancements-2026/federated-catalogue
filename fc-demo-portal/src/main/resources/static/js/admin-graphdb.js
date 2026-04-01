@@ -57,7 +57,7 @@ $(document).ready(function() {
       contentType: 'application/json',
       data: JSON.stringify({ backend: selected }),
       success: function(data) {
-        bootstrap.Modal.getInstance('#confirmSwitchModal').hide();
+        bootstrap.Modal.getInstance(document.getElementById('confirmSwitchModal')).hide();
         alert(data.message || 'Backend switch requested. Restart the server.');
         loadStatus();
       },

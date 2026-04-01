@@ -11327,3 +11327,169 @@ body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
     margin-left: -15rem;
   }
 }
+/* =============================================
+   DataTables — Bootstrap 5 style overrides
+   ============================================= */
+
+/* Search input */
+.dataTables_wrapper .dataTables_filter label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.dataTables_wrapper .dataTables_filter input {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #212529;
+  background-color: #fff;
+  width: 220px;
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(13,110,253,.2);
+}
+
+/* Length select */
+.dataTables_wrapper .dataTables_length label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.dataTables_wrapper .dataTables_length select {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.35rem 1.8rem 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #212529;
+  background-color: #fff;
+  appearance: auto;
+}
+.dataTables_wrapper .dataTables_length select:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(13,110,253,.2);
+}
+
+/* Info */
+.dataTables_wrapper .dataTables_info {
+  padding-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Pagination */
+.dataTables_wrapper .dataTables_paginate {
+  padding-top: 0.2rem;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  display: inline-block;
+  padding: 0.3rem 0.65rem;
+  margin-left: 2px;
+  font-size: 0.8rem;
+  color: #0d6efd !important;
+  text-decoration: none;
+  background-color: #fff;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background-color: #e9ecef !important;
+  color: #0a58ca !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  color: #fff !important;
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+  color: #6c757d !important;
+  cursor: default;
+  background-color: #fff !important;
+}
+
+/* Table */
+table.dataTable {
+  border-collapse: collapse !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+table.dataTable thead th,
+table.dataTable thead td {
+  padding: 0.6rem 0.75rem;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6 !important;
+  border-top: none !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+table.dataTable tbody td {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  vertical-align: middle;
+  border-top: 1px solid #dee2e6;
+  border-bottom: none;
+}
+table.dataTable tbody tr:hover > td {
+  background-color: rgba(13,110,253,.04);
+}
+/* Remove DataTables default outer border */
+.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody {
+  border-top: 1px solid #dee2e6 !important;
+}
+
+/* Fix DataTables default floats — must override jquery.dataTables.min.css */
+.dataTables_wrapper .dataTables_filter {
+  float: none !important;
+  text-align: left !important;
+}
+.dataTables_wrapper .dataTables_length {
+  float: none !important;
+  text-align: right !important;
+}
+
+/* Fix no-footer bottom border color (was black from dataTables CSS) */
+table.dataTable.no-footer {
+  border-bottom: 1px solid #dee2e6 !important;
+}
+
+/* Search input-group icon styling */
+.dataTables_wrapper .dataTables_filter label {
+  margin: 0;
+}
+.dataTables_wrapper .dataTables_filter .input-group-text {
+  background-color: #f8f9fa;
+  border-right: 0;
+  color: #6c757d;
+  padding: 0.35rem 0.6rem;
+}
+.dataTables_wrapper .dataTables_filter .input-group input {
+  border-left: 0;
+  border-color: #dee2e6;
+  border-radius: 0 0.375rem 0.375rem 0 !important;
+}
+.dataTables_wrapper .dataTables_filter .input-group input:focus {
+  border-color: #86b7fe;
+  box-shadow: none;
+}
+
+/* Admin dashboard section headers */
+.admin-section-header {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
