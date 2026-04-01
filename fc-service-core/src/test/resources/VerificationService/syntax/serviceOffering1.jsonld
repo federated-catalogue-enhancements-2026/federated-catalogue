@@ -17,7 +17,7 @@
 				"xsd": "http://www.w3.org/2001/XMLSchema#"
 			},
 			"@id": "https://www.example.org/Service1",
-			"@type": "https://w3id.org/gaia-x/core#ServiceOffering",
+			"@type": "gax-service:ServiceOffering",
 			"gax-service:dataExport": {
 				"@type": "gax-service:DataExport",
 				"gax-core:accessType": "access type",

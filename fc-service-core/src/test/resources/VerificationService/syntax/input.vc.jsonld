@@ -18,11 +18,18 @@
     "credentialSubject": {
       "id": "did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd",
       "@type": [
-           "https://w3id.org/gaia-x/core#Participant"
+           "http://w3id.org/gaia-x/participant#Participant"
         ],
       "degree": {
         "type": "BachelorDegree",
         "name": "Bachelor of Science and Arts"
       }
+    },
+    "proof": {
+      "type": "Ed25519Signature2018",
+      "created": "2019-12-11T03:50:55Z",
+      "verificationMethod": "did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k#z6MkiukuAuQAE8ozxvmahnQGzApvtW7KT5XXKfojjwbdEomY",
+      "proofPurpose": "assertionMethod",
+      "jws": "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..uzx8px7eGewfc5Qa-GN1qjcYZH4nX3PBBaFW22x_573nnMu_Uzn6oT6ITL54QEk08XCqCE2OX2L-8ovsffXPDg"
     }
 }

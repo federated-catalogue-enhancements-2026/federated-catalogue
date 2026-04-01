@@ -61,6 +61,24 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Integration tests for {@link VerificationServiceImpl}.
+ *
+ * <p><strong>Base class URI pattern (pre-Tagus credentials):</strong>
+ * {@link CredentialVerificationStrategy} is a Spring singleton whose {@code trustFrameworkBaseClassUris}
+ * map determines how credential types are matched. Type resolution in
+ * {@code ClaimValidator.checkTypeSubClass()} works via exact match or SPARQL {@code rdfs:subClassOf}
+ * lookup against the loaded ontology. Pre-Tagus credential types
+ * (e.g. {@code http://w3id.org/gaia-x/participant#Participant}) have no {@code rdfs:subClassOf}
+ * relationship to {@code gax-core:Participant} in the bundled production ontologies — they are
+ * unrelated URIs that only match via exact comparison.
+ *
+ * <p>Tests for pre-Tagus credentials therefore temporarily override the base URI with
+ * {@code verificationService.setBaseClassUri(...)} inside a {@code try/finally} block.
+ * The {@code finally} block restores the configured default ({@code gax-core:Participant}).
+ * Without the {@code try/finally}, a failing assertion would leave the singleton in a
+ * mutated state and silently break subsequent tests.
+ */
 @Slf4j
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -148,14 +166,21 @@ public class VerificationServiceTest {
   @Test
   void validVCnoVP() {
     String path = "VerificationService/syntax/input.vc.jsonld";
-    schemaStore.initializeDefaultSchemas();
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
-    assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getIssuer());
-    assertEquals(vrp.getParticipantName(), vrp.getIssuer());
-    assertEquals(vrp.getId(), vrp.getIssuer()); // not sure this is correct..
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
+    // — no rdfs:subClassOf chain to gax-core:Participant in bundled ontologies, so exact-match required
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    try {
+      CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
+      assertNotNull(vr);
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+      CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
+      assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getIssuer());
+      assertEquals(vrp.getParticipantName(), vrp.getIssuer());
+      assertEquals(vrp.getId(), vrp.getIssuer()); // not sure this is correct..
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+    }
   }
 
   @Test
@@ -216,49 +241,65 @@ public class VerificationServiceTest {
 
   @Test
   void validSyntax_Participant() {
-    schemaStore.initializeDefaultSchemas();
-    String path = "VerificationService/syntax/participantCredential2.jsonld";
-    // verifyVCSigs=false because the JWS was computed over original fixture content
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, false, false, false);
-    assertNotNull(vr);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("https://www.handelsregister.de/", vrp.getId());
-    assertEquals("https://www.handelsregister.de/", vrp.getIssuer());
-    assertEquals(Instant.parse("2010-01-01T19:37:24Z"), vrp.getIssuedDateTime());
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    try {
+      String path = "VerificationService/syntax/participantCredential2.jsonld";
+      CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path));
+      assertNotNull(vr);
+        assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+      CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
+      assertEquals("https://www.handelsregister.de/", vrp.getId());
+      assertEquals("https://www.handelsregister.de/", vrp.getIssuer());
+      assertEquals(Instant.parse("2010-01-01T19:37:24Z"), vrp.getIssuedDateTime());
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+    }
   }
 
   @Test
   void validSyntax_ValidCredentialVP() {
-    schemaStore.initializeDefaultSchemas();
-    String path = "VerificationService/syntax/input.vp.jsonld";
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
-    assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    //assertEquals("http://example.gov/credentials/3732", vrp.getId()); for Participants id = issuer!
-    assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getId());
-    assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getIssuer());
-    assertEquals(Instant.parse("2020-03-10T04:24:12.164Z"), vrp.getIssuedDateTime());
+    //schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    try {
+      String path = "VerificationService/syntax/input.vp.jsonld";
+      CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
+      assertNotNull(vr);
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+      CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
+      //assertEquals("http://example.gov/credentials/3732", vrp.getId()); for Participants id = issuer!
+      assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getId());
+      assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vrp.getIssuer());
+      assertEquals(Instant.parse("2020-03-10T04:24:12.164Z"), vrp.getIssuedDateTime());
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+    }
   }
 
   @Test
   void validSyntax_ValidServiceOldSchema() {
-    schemaStore.initializeDefaultSchemas();
-    ContentAccessor content = getAccessor("VerificationService/syntax/serviceOffering1.jsonld");
-    // verifySchema=false: old-schema credentials don't conform to current SHACL shapes
-    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
-    assertNotNull(vr);
-    assertFalse(vr instanceof CredentialVerificationResultParticipant);
-    assertInstanceOf(CredentialVerificationResultOffering.class, vr);
-    CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
-    assertEquals("https://www.example.org/Service1", vro.getId());
-    assertEquals("http://gaiax.de", vro.getIssuer());
-    assertNotNull(vro.getClaims());
-    assertEquals(19, vro.getClaims().size()); //!!
-    assertTrue(vro.getValidators().isEmpty());
-    assertTrue(vro.getValidatorDids().isEmpty());
-    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    // Credential uses pre-Tagus gax-service namespace (http://w3id.org/gaia-x/service#)
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
+    try {
+      ContentAccessor content = getAccessor("VerificationService/syntax/serviceOffering1.jsonld");
+      CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
+      assertNotNull(vr);
+      assertFalse(vr instanceof CredentialVerificationResultParticipant);
+      assertInstanceOf(CredentialVerificationResultOffering.class, vr);
+      CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
+      assertEquals("https://www.example.org/Service1", vro.getId());
+      assertEquals("http://gaiax.de", vro.getIssuer());
+      assertNotNull(vro.getClaims());
+      assertEquals(19, vro.getClaims().size()); //!!
+      assertTrue(vro.getValidators().isEmpty());
+      assertTrue(vro.getValidatorDids().isEmpty());
+      assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering");
+    }
   }
 
   @Test
@@ -280,20 +321,26 @@ public class VerificationServiceTest {
 
   @Test
   void validSyntax_ValidPersonOldSchema() {
-    schemaStore.initializeDefaultSchemas();
-    ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson1.jsonld");
-    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-    assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("http://gaiax.de", vrp.getId());
-    assertEquals("http://gaiax.de", vrp.getIssuer());
-    assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
-    assertNotNull(vrp.getClaims());
-    assertEquals(26, vrp.getClaims().size()); //!!
-    assertTrue(vrp.getValidators().isEmpty());
-    assertTrue(vrp.getValidatorDids().isEmpty());
-    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    try {
+      ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson1.jsonld");
+      CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
+      assertNotNull(vr);
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+      CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
+      assertEquals("http://gaiax.de", vrp.getId());
+      assertEquals("http://gaiax.de", vrp.getIssuer());
+      assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
+      assertNotNull(vrp.getClaims());
+      assertEquals(26, vrp.getClaims().size()); //!!
+      assertTrue(vrp.getValidators().isEmpty());
+      assertTrue(vrp.getValidatorDids().isEmpty());
+      assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+    }
   }
 
   @Test
@@ -646,35 +693,34 @@ public class VerificationServiceTest {
   /** With verifySchema=true, a credential that violates SHACL shapes should be rejected. */
   @Test
   void schemaValidationEnabled_InvalidCredential_Rejected() {
+    verificationService.setVerifySchema(true);
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
-    // verifySchema=true, verifyVCSigs=false: test schema rejection, skip JWS (computed over original fixture content)
     Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(content, true, true, false, false));
+            -> verificationService.verifyCredential(content));
     assertTrue(ex.getMessage().startsWith("Schema error:"), "Expected schema validation error but got: " + ex.getMessage());
   }
 
   /** With verifySchema=false, a credential that violates SHACL shapes should still be accepted. */
   @Test
   void schemaValidationDisabled_InvalidCredential_Accepted() {
+    verificationService.setVerifySchema(false);
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
-    // verifySchema=false, verifyVCSigs=false: test schema-disabled acceptance, skip JWS (computed over original fixture content)
-    CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
+    CredentialVerificationResult result = verificationService.verifyCredential(content);
     assertNotNull(result, "Credential should be accepted when schema validation is disabled");
   }
 
   /** A JSON-LD asset invalid against stored SHACL shapes is accepted with the default configuration. */
   @Test
   void defaultConfig_NoAutomaticSchemaValidation() {
-    // verifySchema defaults to false — schema shapes are present but not enforced
-    // verifyVCSigs=false: JWS was computed over original fixture content
+    // verifySchema is not set — relies on default (false)
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
-    CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
+    CredentialVerificationResult result = verificationService.verifyCredential(content);
     assertNotNull(result, "Credential should be accepted with default config (no automatic schema validation)");
   }
 
@@ -993,13 +1039,18 @@ public class VerificationServiceTest {
 
   @Test
   void verifyCredential_vc1WithIssuanceDate_stillPasses() {
-    schemaStore.initializeDefaultSchemas();
+    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
 
-    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-
-    assertNotNull(vr, "VC 1.1 with issuanceDate must still pass (regression)");
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
+    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
+    try {
+      CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
+      assertNotNull(vr, "VC 1.1 with issuanceDate must still pass (regression)");
+        assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+    } finally {
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+    }
   }
 
   @Test

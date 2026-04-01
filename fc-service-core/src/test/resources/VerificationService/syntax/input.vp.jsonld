@@ -23,7 +23,7 @@
       "credentialSubject": {
         "id": "did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd",
         "@type": [
-             "https://w3id.org/gaia-x/core#Participant"
+             "http://w3id.org/gaia-x/participant#Participant"
           ],
         "degree": {
           "type": "BachelorDegree",
