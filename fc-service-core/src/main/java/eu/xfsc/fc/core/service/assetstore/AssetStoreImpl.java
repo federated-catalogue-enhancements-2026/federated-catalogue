@@ -104,6 +104,7 @@ public class AssetStoreImpl implements AssetStore {
         .content(assetMetadata.getContentAccessor())
         .expirationTime(expirationTime)
         .contentType("application/ld+json")
+        .changeComment(assetMetadata.getChangeComment())
         .build();
 
     SubjectHashRecord subjectHash = null;
@@ -240,6 +241,40 @@ public class AssetStoreImpl implements AssetStore {
   public void clear() {
 	int cnt = dao.deleteAll();
     log.debug("clear; deleted {} assets", cnt);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<AssetRecord> getVersionHistory(String id) {
+    return dao.selectVersions(id);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PaginatedResults<AssetRecord> getVersionHistoryPage(String id, int page, int size) {
+    PaginatedResults<AssetRecord> result = dao.selectVersionsPageWithTotal(id, page, size);
+    if (result.getTotalCount() == 0) {
+      throw new NotFoundException(String.format("no asset found for id %s", id));
+    }
+    return result;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AssetRecord getByIdAndVersion(String id, int version) {
+    return dao.selectVersion(id, version)
+        .orElseThrow(() -> new NotFoundException(
+            String.format("no asset found for id %s at version %d", id, version)));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public int getVersionCount(String id) {
+    int count = dao.getVersionCount(id);
+    if (count == 0) {
+      throw new NotFoundException(String.format("no asset found for id %s", id));
+    }
+    return count;
   }
 
 }

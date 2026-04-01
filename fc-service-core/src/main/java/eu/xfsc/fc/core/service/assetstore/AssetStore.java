@@ -129,4 +129,43 @@ public interface AssetStore {
    */
   void clear();
 
+  /**
+   * Returns all versions of the asset in descending order (newest first).
+   *
+   * @param id The IRI (subjectId) of the asset.
+   * @return List of asset records with version metadata. Empty list if asset not found.
+   */
+  List<AssetRecord> getVersionHistory(String id);
+
+  /**
+   * Returns a paginated page of asset versions in descending order (newest first),
+   * plus the total version count.
+   *
+   * @param id   The IRI (subjectId) of the asset.
+   * @param page 0-based page index.
+   * @param size Page size.
+   * @return Paginated results containing version records.
+   * @throws eu.xfsc.fc.core.exception.NotFoundException if asset does not exist.
+   */
+  PaginatedResults<AssetRecord> getVersionHistoryPage(String id, int page, int size);
+
+  /**
+   * Returns a specific version (1-based ordinal) of the asset.
+   *
+   * @param id      The IRI (subjectId) of the asset.
+   * @param version 1-based version ordinal.
+   * @return The asset record at that version.
+   * @throws eu.xfsc.fc.core.exception.NotFoundException if asset or version does not exist.
+   */
+  AssetRecord getByIdAndVersion(String id, int version);
+
+  /**
+   * Returns the total number of versions of the asset.
+   *
+   * @param id The IRI (subjectId) of the asset.
+   * @return Total version count.
+   * @throws eu.xfsc.fc.core.exception.NotFoundException if asset does not exist.
+   */
+  int getVersionCount(String id);
+
 }

@@ -31,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
+import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
@@ -46,7 +47,7 @@ import jakarta.persistence.EntityManager;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {
     EnversAuditTest.TestConfig.class,
-    AssetJpaDao.class, SchemaJpaDao.class, SchemaAuditRepository.class,
+    AssetJpaDao.class, AssetAuditRepository.class, SchemaJpaDao.class, SchemaAuditRepository.class,
     DatabaseConfig.class
 })
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
@@ -220,18 +221,18 @@ class EnversAuditTest {
             List.of("did:val:1")))
     );
 
-    // Insert second asset for same subject — deprecates first, creates new
+    // Update same subject in-place — Envers records a MOD revision on the same entity row
     transactionTemplate.executeWithoutResult(status ->
         assetDao.insert(buildAssetRecord("hash-multi-2", "sub/multi", "iss/multi",
             List.of("did:val:1")))
     );
 
-    // First asset should have 2 revisions: ADD + MOD (deprecated)
+    // Query all revisions for "sub/multi" — both ADD (hash-multi-1) and MOD (hash-multi-2) on same row
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
           .forRevisionsOfEntity(Asset.class, false, true)
-          .add(AuditEntity.property("assetHash").eq("hash-multi-1"))
+          .add(AuditEntity.property("subjectId").eq("sub/multi"))
           .getResultList();
     });
 
@@ -239,6 +240,9 @@ class EnversAuditTest {
     assertEquals(2, revisions.size());
     assertEquals(RevisionType.ADD, ((Object[]) revisions.get(0))[2]);
     assertEquals(RevisionType.MOD, ((Object[]) revisions.get(1))[2]);
+    // ADD revision has original hash; MOD revision has updated hash
+    assertEquals("hash-multi-1", ((Asset) ((Object[]) revisions.get(0))[0]).getAssetHash());
+    assertEquals("hash-multi-2", ((Asset) ((Object[]) revisions.get(1))[0]).getAssetHash());
   }
 
   @Test
