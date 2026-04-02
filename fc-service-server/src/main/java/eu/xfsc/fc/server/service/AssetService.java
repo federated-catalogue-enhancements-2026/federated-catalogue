@@ -1,7 +1,34 @@
 package eu.xfsc.fc.server.service;
 
-import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
-import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
+import eu.xfsc.fc.api.generated.model.Asset;
+import eu.xfsc.fc.api.generated.model.AssetResult;
+import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.api.generated.model.AssetVersion;
+import eu.xfsc.fc.api.generated.model.AssetVersionList;
+import eu.xfsc.fc.api.generated.model.Assets;
+import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.pojo.AssetFilter;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.PaginatedResults;
+import eu.xfsc.fc.core.service.assetstore.AssetRecord;
+import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.verification.VerificationService;
+import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriUtils;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -11,37 +38,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.util.UriUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import eu.xfsc.fc.api.generated.model.Asset;
-import eu.xfsc.fc.api.generated.model.AssetResult;
-import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.api.generated.model.AssetVersion;
-import eu.xfsc.fc.api.generated.model.AssetVersionList;
-import eu.xfsc.fc.api.generated.model.Assets;
-import eu.xfsc.fc.core.service.assetstore.AssetRecord;
-import eu.xfsc.fc.core.exception.ClientException;
-import eu.xfsc.fc.core.exception.ConflictException;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.PaginatedResults;
-import eu.xfsc.fc.core.pojo.AssetFilter;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
-import eu.xfsc.fc.core.service.assetstore.AssetStore;
-import eu.xfsc.fc.core.service.verification.VerificationService;
-import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
-import jakarta.validation.ValidationException;
-import lombok.extern.slf4j.Slf4j;
+import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
+import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
 
 /**
  * Implementation of the {@link eu.xfsc.fc.server.generated.controller.AssetsApiDelegate} interface.
@@ -309,8 +307,6 @@ public class AssetService implements AssetsApiDelegate {
     av.setCreatedBy(snapshot.getIssuer());
     av.setStatus(AssetStatus.REVOKED);
     av.setIsCurrent(true);
-    av.setPreviousVersion(version > 1 ? version - 1 : null);
-    av.setNextVersion(null);
     av.setChangeComment(snapshot.getChangeComment());
 
     log.debug("revokeAssetVersion.exit; revoked version {} of asset {}", version, id);
@@ -359,8 +355,6 @@ public class AssetService implements AssetsApiDelegate {
     av.setCreatedBy(record.getIssuer());
     av.setStatus(record.getStatus());
     av.setIsCurrent(record.getIsCurrent());
-    av.setPreviousVersion(record.getPreviousVersion());
-    av.setNextVersion(record.getNextVersion());
     av.setChangeComment(record.getChangeComment());
     return av;
   }

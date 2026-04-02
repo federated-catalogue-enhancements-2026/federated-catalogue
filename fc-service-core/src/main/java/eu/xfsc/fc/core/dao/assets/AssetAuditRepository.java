@@ -24,7 +24,7 @@ import org.hibernate.envers.query.AuditQuery;
  * Keeps Envers-specific types out of {@link AssetJpaDao}.
  *
  * <p>Version numbers are 1-based ordinals computed from the Envers revision order.
- * The list is returned descending (newest first), matching AC-4.
+ * The list is returned descending (newest first).
  * Status override at query time: non-current, non-REVOKED snapshots display as DEPRECATED.
  */
 @Repository
@@ -51,23 +51,10 @@ public class AssetAuditRepository {
     for (int i = 0; i < total; i++) {
       int version = i + 1;
       boolean isCurrent = (version == total);
-      result.add(toRecord(revisions.get(i), version, total, isCurrent));
+      result.add(toRecord(revisions.get(i), version, isCurrent));
     }
     Collections.reverse(result);
     return result;
-  }
-
-  /**
-   * Return a paginated page of versions for an asset entity, ordered descending (newest first).
-   *
-   * @param entityId the surrogate PK of the Asset
-   * @param page     0-based page index
-   * @param size     page size
-   * @return list of asset records for the requested page
-   */
-  @SuppressWarnings("unchecked") // Envers API returns raw List<Object[]>; cast is safe per forRevisionsOfEntity contract
-  List<AssetRecord> findVersionsPage(Long entityId, int page, int size) {
-    return findVersionsPage(entityId, page, size, countVersions(entityId));
   }
 
   @SuppressWarnings("unchecked") // Envers API returns raw List<Object[]>; cast is safe per forRevisionsOfEntity contract
@@ -92,7 +79,7 @@ public class AssetAuditRepository {
     for (int i = 0; i < revisions.size(); i++) {
       int version = firstAsc + i + 1;
       boolean isCurrent = (version == total);
-      result.add(toRecord(revisions.get(i), version, total, isCurrent));
+      result.add(toRecord(revisions.get(i), version, isCurrent));
     }
     Collections.reverse(result);
     return result;
@@ -126,7 +113,7 @@ public class AssetAuditRepository {
       return Optional.empty();
     }
     boolean isCurrent = (version == total);
-    return Optional.of(toRecord(revisions.getFirst(), version, total, isCurrent));
+    return Optional.of(toRecord(revisions.getFirst(), version, isCurrent));
   }
 
   /**
@@ -170,7 +157,7 @@ public class AssetAuditRepository {
         .addOrder(AuditEntity.revisionNumber().asc());
   }
 
-  private AssetRecord toRecord(Object[] revision, int version, int total, boolean isCurrent) {
+  private AssetRecord toRecord(Object[] revision, int version, boolean isCurrent) {
     Asset snapshot = (Asset) revision[0];
     DefaultRevisionEntity revEntity = (DefaultRevisionEntity) revision[1];
     Instant revTimestamp = Instant.ofEpochMilli(revEntity.getTimestamp());
@@ -182,9 +169,6 @@ public class AssetAuditRepository {
       case REVOKED -> AssetStatus.REVOKED;
       default -> AssetStatus.DEPRECATED;
     };
-
-    Integer previousVersion = version > 1 ? version - 1 : null;
-    Integer nextVersion = version < total ? version + 1 : null;
 
     AssetRecord record = AssetRecord.builder()
         .assetHash(snapshot.getAssetHash())
@@ -202,8 +186,6 @@ public class AssetAuditRepository {
         .changeComment(snapshot.getChangeComment())
         .build();
     record.setVersion(version);
-    record.setPreviousVersion(previousVersion);
-    record.setNextVersion(nextVersion);
     record.setIsCurrent(isCurrent);
     return record;
   }

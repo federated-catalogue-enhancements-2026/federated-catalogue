@@ -130,14 +130,6 @@ public interface AssetStore {
   void clear();
 
   /**
-   * Returns all versions of the asset in descending order (newest first).
-   *
-   * @param id The IRI (subjectId) of the asset.
-   * @return List of asset records with version metadata. Empty list if asset not found.
-   */
-  List<AssetRecord> getVersionHistory(String id);
-
-  /**
    * Returns a paginated page of asset versions in descending order (newest first),
    * plus the total version count.
    *

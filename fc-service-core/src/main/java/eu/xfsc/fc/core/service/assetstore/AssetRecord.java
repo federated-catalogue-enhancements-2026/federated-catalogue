@@ -27,12 +27,6 @@ public class AssetRecord extends AssetMetadata {
   /** Whether this is the current (latest) version. Null when not in a version-history context. */
   @Setter
   private Boolean isCurrent;
-  /** Version ordinal of the preceding version. Null for version 1. */
-  @Setter
-  private Integer previousVersion;
-  /** Version ordinal of the succeeding version. Null for the current version. */
-  @Setter
-  private Integer nextVersion;
 
   /**
    * Creates a record from explicit metadata fields.

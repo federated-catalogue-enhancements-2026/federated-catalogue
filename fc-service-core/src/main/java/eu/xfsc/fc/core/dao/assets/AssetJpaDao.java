@@ -6,24 +6,17 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectHashRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * JPA-backed implementation of {@link AssetDao}.
- *
- * <p>Uses Hibernate Envers for version history. Asset updates are applied in-place via
- * {@link #insert(AssetRecord)}: when a row with the same {@code subjectId} already exists,
- * it is updated rather than replaced, and Envers records the prior state as a new revision.
- */
-@Repository
+@Component
 @RequiredArgsConstructor
 public class AssetJpaDao implements AssetDao {
 

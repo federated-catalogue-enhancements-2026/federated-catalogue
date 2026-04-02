@@ -21,16 +21,8 @@ public interface AssetDao {
 	SubjectStatusRecord delete(String hash);
 	int deleteAll();
 
-	/** Returns all versions descending (newest first). Empty list if asset not found. */
 	List<AssetRecord> selectVersions(String subjectId);
-
-	/** Returns paginated versions + total count in one DAO call (avoids double findBySubjectId). */
 	PaginatedResults<AssetRecord> selectVersionsPageWithTotal(String subjectId, int page, int size);
-
-	/** Returns a specific version by 1-based ordinal, or empty if not found. */
 	Optional<AssetRecord> selectVersion(String subjectId, int version);
-
-	/** Returns the total number of Envers revisions for the asset. 0 if not found. */
 	int getVersionCount(String subjectId);
-
 }

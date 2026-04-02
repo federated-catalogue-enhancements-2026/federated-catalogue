@@ -1,37 +1,40 @@
 package eu.xfsc.fc.core.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-
-import static eu.xfsc.fc.core.util.HashUtils.calculateSha256AsHex;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static eu.xfsc.fc.core.util.HashUtils.calculateSha256AsHex;
+
 
 /**
  * Class for handling the metadata of an Asset, and optionally a
  * reference to a content accessor.
  */
-@lombok.AllArgsConstructor
-@lombok.NoArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 public class AssetMetadata extends Asset {
 
   /**
    * A reference to the asset content.
    */
-  @lombok.Getter
-  @lombok.Setter
+  @Getter
+  @Setter
   @JsonIgnore
   private ContentAccessor contentAccessor;
 
   /** Optional change note for this version, set by the caller before storing. */
-  @lombok.Getter
-  @lombok.Setter
+  @Getter
+  @Setter
   @JsonIgnore
   private String changeComment;
 
@@ -46,7 +49,7 @@ public class AssetMetadata extends Asset {
   public AssetMetadata(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor) {
     super(calculateSha256AsHex(contentAccessor.getContentAsString()), id, AssetStatus.ACTIVE, issuer,
         validators != null ? validators.stream().map(Validator::getDidURI).collect(Collectors.toList()) : null, Instant.now(), Instant.now(),
-        null, null, null);
+        null, null, null); // null: contentType, fileSize, warnings
     this.contentAccessor = contentAccessor;
   }
 
@@ -78,7 +81,7 @@ public class AssetMetadata extends Asset {
   public AssetMetadata(String assetHash, String id, AssetStatus status, String issuer,
       List<String> validatorDids, Instant uploadTime, Instant statusTime,
       ContentAccessor contentAccessor) {
-    super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, null, null, null);
+    super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, null, null, null); // null: contentType, fileSize, warnings
     this.contentAccessor = contentAccessor;
   }
   

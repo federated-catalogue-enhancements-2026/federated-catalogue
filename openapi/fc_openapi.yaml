@@ -414,14 +414,6 @@ components:
         isCurrent:
           type: boolean
           description: 'Whether this is the current (latest) version.'
-        previousVersion:
-          type: integer
-          nullable: true
-          description: 'Version ordinal of the preceding version. Null for version 1.'
-        nextVersion:
-          type: integer
-          nullable: true
-          description: 'Version ordinal of the succeeding version. Null for the current version.'
         changeComment:
           type: string
           nullable: true
