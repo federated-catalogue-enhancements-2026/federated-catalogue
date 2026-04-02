@@ -16,6 +16,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -58,23 +59,23 @@ public class FormatDetector {
 
     private DetectionContext buildContext(String body) {
         if (!body.startsWith(JWT_PREFIX)) {
-            return new DetectionContext(body, Optional.empty(), parseJson(body));
+            return new DetectionContext(body, null, parseJson(body));
         }
         try {
             SignedJWT jwt = SignedJWT.parse(body);
-            return new DetectionContext(body, Optional.of(jwt), parseJson(jwt.getPayload().toString()));
+            return new DetectionContext(body, jwt, parseJson(jwt.getPayload().toString()));
         } catch (ParseException ex) {
             log.debug("buildContext; JWT parse failed: {} → treating as non-JWT", ex.getMessage());
-            return new DetectionContext(body, Optional.empty(), Optional.empty());
+            return new DetectionContext(body, null, null);
         }
     }
 
-    private Optional<JsonNode> parseJson(String json) {
+    private @Nullable JsonNode parseJson(String json) {
         try {
-            return Optional.of(objectMapper.readTree(json));
+            return objectMapper.readTree(json);
         } catch (JsonProcessingException ex) {
             log.debug("buildContext; JSON parse failed → no parsed context available");
-            return Optional.empty();
+            return null;
         }
     }
 }

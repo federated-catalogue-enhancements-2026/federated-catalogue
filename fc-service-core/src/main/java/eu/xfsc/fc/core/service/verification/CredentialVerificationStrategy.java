@@ -181,12 +181,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     @PostConstruct
-    private void initRestTemplate() {
-        rest = restTemplate();
-    }
-
-    @PostConstruct
     private void initializeTrustFrameworkBaseClasses() {
+        rest = restTemplate();
+
         loireBaseClassUris = new HashMap<>();
         loireBaseClassUris.put(SERVICE_OFFERING, serviceOfferingType);
         loireBaseClassUris.put(RESOURCE, resourceType);

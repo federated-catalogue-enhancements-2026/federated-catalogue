@@ -29,13 +29,13 @@ public class TagusMatcher implements FormatMatcher {
       return Optional.empty();
     }
 
-    JsonNode root = ctx.parsedJson().orElse(null);
+    JsonNode root = ctx.parsedJson();
     if (root == null) {
       return Optional.empty();
     }
 
-    JsonNode context = root.get(RDF_CONTEXT_KEY);
-    if (context != null && FormatMatcher.contextContains(context, VC_11_CONTEXT)) {
+    JsonNode rdfContext = root.get(RDF_CONTEXT_KEY);
+    if (rdfContext != null && FormatMatcher.contextContains(rdfContext, VC_11_CONTEXT)) {
       log.debug("match; VC 1.1 context → GAIAX_V1_TAGUS");
       return Optional.of(CredentialFormat.GAIAX_V1_TAGUS);
     }

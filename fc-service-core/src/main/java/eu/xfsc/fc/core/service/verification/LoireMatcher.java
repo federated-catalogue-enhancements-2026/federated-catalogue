@@ -8,6 +8,7 @@ import com.nimbusds.jose.JWSHeader;
 import java.util.Optional;
 import java.util.Set;
 
+import com.nimbusds.jwt.SignedJWT;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.core.annotation.Order;
@@ -38,21 +39,19 @@ public class LoireMatcher implements FormatMatcher {
 
   @Override
   public Optional<CredentialFormat> match(DetectionContext ctx) {
-    if (!ctx.isJwt()) {
+    final SignedJWT jwt = ctx.jwt();
+    if (jwt == null) {
       return Optional.empty();
     }
 
-    if(ctx.jwt().isEmpty()){
-        return Optional.empty();
-    }
-    JWSHeader header = ctx.jwt().get().getHeader();
+    final JWSHeader header = jwt.getHeader();
     String typ = header.getType() != null ? header.getType().toString() : null;
     if (typ == null || !LOIRE_TYP_VALUES.contains(typ)) {
       return Optional.empty();
     }
 
     // Loire typ confirmed — validate payload structure
-    JsonNode payload = ctx.parsedJson().orElse(null);
+    final JsonNode payload = ctx.parsedJson();
     if (payload != null && payload.has(RDF_CONTEXT_KEY) && !payload.has("vc") && !payload.has("vp")) {
       log.debug("match; Loire typ '{}' + top-level @context → GAIAX_V2_LOIRE", typ);
       return Optional.of(CredentialFormat.GAIAX_V2_LOIRE);

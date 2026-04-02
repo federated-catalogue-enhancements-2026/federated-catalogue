@@ -2,8 +2,7 @@ package eu.xfsc.fc.core.service.verification;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nimbusds.jwt.SignedJWT;
-
-import java.util.Optional;
+import org.springframework.lang.Nullable;
 
 /**
  * Pre-parsed credential payload, built once by {@link FormatDetector} and passed to each
@@ -16,14 +15,14 @@ import java.util.Optional;
  *   <li>{@code Optional.empty()} if parsing failed</li>
  * </ul>
  */
-record DetectionContext(
+public record DetectionContext(
     String body,
-    Optional<SignedJWT> jwt,
-    Optional<JsonNode> parsedJson
+    @Nullable SignedJWT jwt,
+    @Nullable JsonNode parsedJson
 ) {
 
   /** Returns {@code true} if the credential was successfully parsed as a signed JWT. */
   public boolean isJwt() {
-    return jwt.isPresent();
+    return jwt != null;
   }
 }

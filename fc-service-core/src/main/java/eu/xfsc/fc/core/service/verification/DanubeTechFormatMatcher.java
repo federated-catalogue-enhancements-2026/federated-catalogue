@@ -31,8 +31,8 @@ public class DanubeTechFormatMatcher implements FormatMatcher {
 
   @Override
   public Optional<CredentialFormat> match(DetectionContext ctx) {
-    JsonNode parsedJson = ctx.parsedJson().orElse(null);
-    if (parsedJson == null) {
+      final JsonNode parsedJson = ctx.parsedJson();
+      if (parsedJson == null) {
       return Optional.empty();
     }
 
@@ -44,8 +44,8 @@ public class DanubeTechFormatMatcher implements FormatMatcher {
       return Optional.empty();
     }
 
-    JsonNode context = parsedJson.get(RDF_CONTEXT_KEY);
-    if (context != null && FormatMatcher.contextContains(context, VC_20_CONTEXT)) {
+    JsonNode rdfContext = parsedJson.get(RDF_CONTEXT_KEY);
+    if (rdfContext != null && FormatMatcher.contextContains(rdfContext, VC_20_CONTEXT)) {
       log.debug("match; VC 2.0 context (non-JWT) → VC2_DANUBETECH");
       return Optional.of(CredentialFormat.VC2_DANUBETECH);
     }
