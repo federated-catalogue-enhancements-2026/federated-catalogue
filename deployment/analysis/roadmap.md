@@ -216,25 +216,28 @@ Once deployed, all developers can access the services using these URLs:
 **For Production:**
 Register a proper domain and create DNS A records pointing to your ingress IP. Then use hostnames like `fc-server.staging.yourcompany.com`.
 
-### 7. Container Registry Access
+### 7. Container Registry and Image Building
 
-The current Helm chart references:
-```
-node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-service-server:latest
-```
+As the project is currently hosted on GitHub, the GitHub Container Registry (ghcr.io) is used to provide the Docker images.
 
-**You'll need to:**
-- Either have access to this registry
-- Or build and push the image to your own registry
+---
 
-**Building the image:**
-```bash
-# Build the FC service image
-docker build --target fc-service-server -t your-registry.io/fc-service:2.1.0 .
+#### GitHub Actions Automated Build Setup
 
-# Push to your registry
-docker push your-registry.io/fc-service:2.1.0
-```
+A GitHub Actions workflow has been created at `.github/workflows/docker-build.yml` that automatically builds and pushes Docker images to GitHub Container Registry.
+
+**What the workflow does:**
+- Builds two Docker images: `fc-service-server` and `fc-demo-portal`
+- Pushes images to `ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-service-server` and `ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal` 
+- Triggers on:
+  - Push to `main` or `develop` branches
+  - Git tags (e.g., `v2.1.0`)
+  - Manual dispatch
+  - Pull requests (build only, no push)
+- Uses GitHub Actions cache to speed up builds
+- Automatically tags images with branch names, versions, and `latest`
+
+**No local building required** - images are built in the cloud.
 
 ---
 

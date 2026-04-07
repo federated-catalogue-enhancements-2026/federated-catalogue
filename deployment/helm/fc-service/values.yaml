@@ -11,10 +11,10 @@ name: fc-service
 replicaCount: 1
 
 image:
-  repository: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-service-server
+  repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-service-server
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "feature-kubernetes"
 
 #imagePullSecrets: []
 #nameOverride: ""
