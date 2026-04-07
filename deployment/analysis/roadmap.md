@@ -123,11 +123,11 @@ Look for a storage class marked `(default)`. If none exists, you'll need to conf
 
 DNS configuration is required for **two purposes**:
 
-1. **External Access**: Clients need to reach the services via Ingress:
-   - `fc-server` → Main FC service API
-   - `key-server` → Keycloak authentication
+1. **External Access**: Clients (developers, CI/CD pipelines, etc.) need to reach the services via Ingress:
+   - `fc-server.X.X.X.X.sslip.io` → Main FC service API
+   - `key-server.X.X.X.X.sslip.io` → Keycloak authentication
 
-2. **JWT Issuer Validation**: The FC service validates OAuth tokens by checking the issuer claim. Keycloak issues tokens with `iss: "http://key-server/realms/gaia-x"`, so the FC service pods must be able to resolve `key-server` to validate these tokens correctly.
+2. **JWT Issuer Validation**: The FC service validates OAuth tokens by checking the issuer claim. Keycloak issues tokens with `iss: "http://key-server.X.X.X.X.sslip.io/realms/gaia-x"`, so the FC service pods must be able to resolve this hostname to validate tokens correctly.
 
 **Without proper DNS**, you'll see errors like:
 - `401 Unauthorized` when calling the FC API
@@ -136,11 +136,17 @@ DNS configuration is required for **two purposes**:
 
 ---
 
-#### Option 1: /etc/hosts File (Development/Testing)
+#### Using sslip.io for Zero-Configuration DNS
 
-This is the **simplest approach for test clusters** and works well for local development or single-user testing.
+**This deployment uses sslip.io**, a free wildcard DNS service that automatically resolves hostnames containing IP addresses.
 
-**Step 1: Get the Ingress Controller IP**
+**How sslip.io works:**
+- You configure hostnames with embedded IP addresses: `fc-server.192.168.1.100.sslip.io`
+- When anyone tries to resolve this hostname, sslip.io returns the embedded IP: `192.168.1.100`
+- Works from anywhere: developer laptops, CI/CD pipelines, inside cluster pods
+- **Zero local configuration required** - no `/etc/hosts` editing needed!
+
+**Step 1: Get Your Ingress Controller IP**
 
 ```bash
 # Find the ingress controller service
@@ -150,232 +156,65 @@ kubectl get svc -n ingress-nginx
 # NAME                                    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)
 # nginx-ingress-ingress-nginx-controller  LoadBalancer   10.43.242.156   192.168.1.100   80:30080/TCP,443:30443/TCP
 
-# The EXTERNAL-IP is what you need (192.168.1.100 in this example)
-# If using NodePort instead of LoadBalancer, use any node's IP address
+# Use the EXTERNAL-IP (192.168.1.100 in this example)
+# If TYPE is NodePort instead of LoadBalancer, use any node's IP address
 ```
 
-**Step 2: Add Entries to /etc/hosts**
+**Step 2: Update values.yaml with Your Ingress IP**
 
-On **your local machine** (where you'll access the services from):
-
-```bash
-# Edit /etc/hosts (requires sudo)
-sudo nano /etc/hosts
-
-# Add these lines (replace 192.168.1.100 with your ingress IP):
-192.168.1.100  fc-server
-192.168.1.100  key-server
-```
-
-**Step 3: Configure hostAliases in Helm Values**
-
-The FC service **pods** also need to resolve `key-server` for JWT validation. Add hostAliases to your values file:
+The default `values.yaml` includes placeholder hostnames with `INGRESS_IP`:
 
 ```yaml
-# values-production.yaml
-hostAliases:
-  - ip: "10.43.242.156"  # Use the CLUSTER-IP of your ingress controller service
-    hostnames:
-      - key-server
-```
-
-**How to get the correct IP for hostAliases:**
-```bash
-# Get the ClusterIP of the ingress controller service
-kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
-
-# Example output: 10.43.242.156
-# Use this IP in hostAliases above
-```
-
-**Step 4: Verify DNS Resolution**
-
-```bash
-# From your local machine:
-ping fc-server
-# Should resolve to your ingress IP
-
-# From inside a FC service pod:
-kubectl exec -it <fc-service-pod> -n federated-catalogue -- nslookup key-server
-# Should resolve to the ingress ClusterIP
-```
-
-**Pros:**
-- ✅ Simple and quick to set up
-- ✅ No cluster configuration required
-- ✅ Works immediately
-
-**Cons:**
-- ❌ Must configure on every developer's machine
-- ❌ Doesn't work for automated clients (CI/CD, external services)
-- ❌ Hard-coded IPs (breaks if ingress IP changes)
-
-**Recommendation for Test Clusters**: ⭐ **Use this approach** for initial testing and development.
-
----
-
-#### Option 2: Internal Cluster DNS (CoreDNS Configuration)
-
-This approach configures **CoreDNS** (Kubernetes' internal DNS server) to resolve your custom hostnames. Better for shared test clusters.
-
-**Step 1: Create a ConfigMap for Custom DNS**
-
-```bash
-# Create a ConfigMap with custom DNS entries
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns-custom
-  namespace: kube-system
-data:
-  fc-service.server: |
-    fc-server {
-      hosts {
-        10.43.242.156 fc-server
-        fallthrough
-      }
-    }
-    key-server {
-      hosts {
-        10.43.242.156 key-server
-        fallthrough
-      }
-    }
-EOF
-```
-
-Replace `10.43.242.156` with your ingress controller's ClusterIP.
-
-**Step 2: Update CoreDNS to Import Custom Config**
-
-Most Kubernetes distributions (K3s, K8s, etc.) support custom CoreDNS configuration. Check your distribution's documentation:
-
-**For K3s:**
-```bash
-# Edit the CoreDNS ConfigMap
-kubectl edit configmap coredns -n kube-system
-
-# Add this import line in the Corefile (inside the .:53 block):
-.:53 {
-    errors
-    health
-    ready
-    kubernetes cluster.local in-addr.arpa ip6.arpa {
-      pods insecure
-      fallthrough in-addr.arpa ip6.arpa
-    }
-    import /etc/coredns/custom/*.server  # <-- Add this line
-    prometheus :9153
-    forward . /etc/resolv.conf
-    cache 30
-    loop
-    reload
-    loadbalance
-}
-```
-
-**For standard Kubernetes:**
-```bash
-# CoreDNS should auto-load ConfigMaps from coredns-custom
-# Check if custom config is loaded:
-kubectl get configmap -n kube-system coredns-custom
-```
-
-**Step 3: Restart CoreDNS**
-
-```bash
-# Delete CoreDNS pods to reload configuration
-kubectl rollout restart deployment coredns -n kube-system
-
-# Wait for restart
-kubectl rollout status deployment coredns -n kube-system
-```
-
-**Step 4: Verify DNS Resolution**
-
-```bash
-# Test from a pod in your namespace
-kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup fc-server
-
-# Should resolve to your ingress IP
-# Expected output:
-# Server:         10.43.0.10
-# Address:        10.43.0.10:53
-#
-# Name:   fc-server
-# Address: 10.43.242.156
-```
-
-**Step 5: Remove hostAliases from Helm Values**
-
-Since DNS now works cluster-wide, you can remove the hostAliases hack:
-
-```yaml
-# values-production.yaml
-hostAliases: []  # Empty - use cluster DNS instead
-```
-
-**Step 6: Configure External Access**
-
-For external access from your local machine, you still need either:
-
-**Option A:** Add to your local `/etc/hosts` (same as Option 1, Step 2)
-
-**Option B:** Use a wildcard DNS service like nip.io or sslip.io:
-
-```yaml
-# values-production.yaml
 ingress:
   hosts:
-    - host: fc-server.192.168.1.100.nip.io
-      paths:
-        - path: /
-          pathType: Prefix
+    - host: fc-server.INGRESS_IP.sslip.io
 
 keycloak:
   ingress:
-    hostname: key-server.192.168.1.100.nip.io
+    hostname: key-server.INGRESS_IP.sslip.io
+
+env:
+  - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+    value: http://key-server.INGRESS_IP.sslip.io/realms/gaia-x
 ```
 
-This works because `*.nip.io` automatically resolves to the IP in the hostname (e.g., `fc-server.192.168.1.100.nip.io` → `192.168.1.100`).
+**Replace `INGRESS_IP` with your actual IP** (e.g., `192.168.1.100`):
 
-**Pros:**
-- ✅ Works for all pods in the cluster automatically
-- ✅ No per-pod configuration needed (no hostAliases)
-- ✅ Better for shared/multi-user test clusters
-- ✅ Survives pod restarts
 
-**Cons:**
-- ❌ Requires cluster-admin access to modify CoreDNS
-- ❌ More complex setup
-- ❌ Can be overwritten by cluster updates
+**Step 3: Verify DNS Resolution (Optional)**
 
-**Recommendation for Test Clusters**: Use this if you have multiple developers sharing the cluster or if you want a cleaner solution.
+Test that sslip.io is working before deploying:
 
----
+```bash
+# From your local machine
+nslookup fc-server.192.168.1.100.sslip.io
+# Should return: 192.168.1.100
 
-#### Option 3: External DNS with LoadBalancer (Production)
+# Or use curl to test
+curl -I http://192.168.1.100
+```
 
-For production deployments, use real DNS with a DNS provider (Cloudflare, Route53, Google Cloud DNS, etc.).
+**Step 4: Deploy (Covered in Later Steps)**
 
-This option is covered in detail later in the deployment guide (Step 8: Configure DNS).
+Once deployed, all developers can access the services using these URLs:
+- FC Service API: `http://fc-server.192.168.1.100.sslip.io`
+- Keycloak Admin: `http://key-server.192.168.1.100.sslip.io`
+- API Docs: `http://fc-server.192.168.1.100.sslip.io/api/docs`
 
----
+**Advantages:**
+- ✅ **Zero local configuration** - works immediately for all developers
+- ✅ **Works from anywhere** - laptops, CI/CD, inside pods
+- ✅ **Single source of truth** - IP only in values.yaml
+- ✅ **Easy to update** - change values file, redeploy
+- ✅ **No cluster-admin required** - no CoreDNS modifications needed
 
-#### **Recommendation for Non-Production Test Cluster**
+**Disadvantages:**
+- ⚠️ **"Ugly" URLs** - Contains IP address in hostname
+- ⚠️ **External dependency** - Relies on sslip.io service (highly available, but external)
+- ⚠️ **Not for production** - Use real DNS for production environments
 
-**Start with Option 1 (/etc/hosts)** for initial testing:
-- Fastest to set up
-- No cluster permissions required
-- Easy to troubleshoot
-
-**Upgrade to Option 2 (CoreDNS)** if:
-- Multiple developers need access
-- You want to test closer to production setup
-- You have cluster-admin permissions
-
-**Use Option 3 (External DNS)** only for production or production-like staging environments.
+**For Production:**
+Register a proper domain and create DNS A records pointing to your ingress IP. Then use hostnames like `fc-server.staging.yourcompany.com`.
 
 ### 7. Container Registry Access
 
@@ -941,41 +780,48 @@ curl http://localhost:8081/actuator/health
 # {"status":"UP"}
 ```
 
-### Step 8: Configure DNS
+### Step 8: Verify DNS Configuration
 
-For the ingresses to work, you need DNS resolution:
+**DNS is already configured** via sslip.io hostnames in your values.yaml. You don't need to configure anything locally!
 
-#### Option A: Development (local /etc/hosts)
+**Verify the hostnames are accessible:**
+
 ```bash
-# Get the ingress controller external IP
-kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller
+# Get your ingress IP (should match what you put in values.yaml)
+kubectl get svc -n ingress-nginx
 
-# Add to /etc/hosts (replace with actual IP):
-# 192.168.1.100  fc-service.yourdomain.com
-# 192.168.1.100  keycloak.yourdomain.com
+# Test DNS resolution
+nslookup fc-server.192.168.1.100.sslip.io
+# Should return: 192.168.1.100
+
+nslookup key-server.192.168.1.100.sslip.io
+# Should return: 192.168.1.100
 ```
 
-#### Option B: Production (DNS provider)
-Create DNS A records pointing to your ingress controller's external IP or LoadBalancer.
+**No local configuration needed!** All developers on your team can access the services using the same URLs without any setup on their machines.
+
+---
 
 ### Step 9: Test the Application
 
+Replace `192.168.1.100` with your actual ingress IP in all commands below.
+
 #### 9.1 Access Keycloak Admin Console
 ```bash
-# Open in browser
-open http://keycloak.yourdomain.com
+# Open in browser (replace with your ingress IP)
+open http://key-server.192.168.1.100.sslip.io
 
 # Login with:
 # Username: admin
-# Password: (the admin password you set)
+# Password: (the admin password you set in values.yaml)
 ```
 
 Verify the `gaia-x` realm was imported successfully.
 
 #### 9.2 Get an OAuth Token
 ```bash
-# Get a token from Keycloak
-curl -X POST http://keycloak.yourdomain.com/realms/gaia-x/protocol/openid-connect/token \
+# Get a token from Keycloak (replace with your ingress IP)
+curl -X POST http://key-server.192.168.1.100.sslip.io/realms/gaia-x/protocol/openid-connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=federated-catalogue" \
   -d "client_secret=YOUR_CLIENT_SECRET" \
@@ -983,17 +829,22 @@ curl -X POST http://keycloak.yourdomain.com/realms/gaia-x/protocol/openid-connec
   | jq -r '.access_token'
 ```
 
+**Note:** The `client_secret` value should match what's configured in Keycloak. Check the `fc-keycloak-client-secret` Kubernetes secret or the Keycloak admin console.
+
 #### 9.3 Test the FC API
 ```bash
 # Save the token
 TOKEN="<token from previous command>"
 
-# Test API access
+# Test API access (replace with your ingress IP)
 curl -H "Authorization: Bearer $TOKEN" \
-  http://fc-service.yourdomain.com/query
+  http://fc-server.192.168.1.100.sslip.io/query
+
+# Check health endpoint (no auth required)
+curl http://fc-server.192.168.1.100.sslip.io/actuator/health
 
 # Check API documentation
-open http://fc-service.yourdomain.com/api/docs
+open http://fc-server.192.168.1.100.sslip.io/api/docs
 ```
 
 ---

@@ -2,6 +2,11 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# IMPORTANT: Replace INGRESS_IP with your actual ingress controller IP address
+# Get it with: kubectl get svc -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+# Example: If your ingress IP is 192.168.1.100, replace all instances of INGRESS_IP with 192.168.1.100
+# This configuration uses sslip.io for automatic DNS resolution without local configuration
+
 name: fc-service
 replicaCount: 1
 
@@ -45,7 +50,7 @@ service:
 ingress:
   enabled: true
   className: nginx
-  annotations: 
+  annotations:
     # kubernetes.io/tls-acme: "true"
     kubernetes.io/ingress.allow-http: "true"
 #    cert-manager.io/cluster-issuer: cert-manager-webhook
@@ -60,14 +65,14 @@ ingress:
 #          return 403;
 #        }
   hosts:
-    - host: fc-server
+    - host: fc-server.82.165.249.107.sslip.io
       paths:
         - path: /
           pathType: Prefix
 #  tls:
 #    - secretName: wildcard-gxfs-dev
 #      hosts:
-#        - fc-server
+#        - fc-server.INGRESS_IP.sslip.io
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -112,10 +117,9 @@ affinity:
           
 restartPolicy: Always
 
-hostAliases:
-  - ip: "10.97.11.112" #use ClusterIP of your Ingress Controller here
-    hostnames:
-      - key-server
+# hostAliases are not needed when using sslip.io for DNS resolution
+# The cluster DNS will automatically resolve *.sslip.io hostnames
+hostAliases: []
     
 storage:
   enabled: false
@@ -154,7 +158,7 @@ env:
         name: fc-postgres
         key: postgres-password
   - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-    value: http://key-server/realms/gaia-x
+    value: http://key-server.82.165.249.107.sslip.io/realms/gaia-x
 #  - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
 #    value: DEBUG  
 
@@ -191,9 +195,9 @@ keycloak:
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
     - name: KEYCLOAK_FRONTEND_URL
-      value: "http://key-server/"
+      value: "http://key-server.82.165.249.107.sslip.io/"
     - name: KEYCLOAK_ADMIN_URL
-      value: "http://key-server/admin/"
+      value: "http://key-server.82.165.249.107.sslip.io/admin/"
   extraVolumeMounts:
     - name: config
       mountPath: "/opt/bitnami/keycloak/data/import"
@@ -229,7 +233,7 @@ keycloak:
       nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
     pathType: Prefix
     path: /
-    hostname: key-server
+    hostname: key-server.82.165.249.107.sslip.io
     servicePort: 8080
 #    tls: true
   serviceAccount:
