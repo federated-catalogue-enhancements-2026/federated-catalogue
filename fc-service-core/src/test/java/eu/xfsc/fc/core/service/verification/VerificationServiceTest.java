@@ -112,6 +112,9 @@ public class VerificationServiceTest {
   @MockitoSpyBean
   private Vc2Processor vc2ProcessorSpy;
 
+  @MockitoSpyBean
+  private LoireJwtParser loireJwtParserSpy;
+
   @Autowired
   private ProtectedNamespaceProperties protectedNsProps;
 
@@ -1108,6 +1111,64 @@ public class VerificationServiceTest {
     }
   }
 
+  // --- EnvelopedVerifiableCredential / EnvelopedVerifiablePresentation ---
+
+  @Test
+  void verifyCredential_evcWrapper_innerVcJwtUnwrappedAndProcessed() {
+    // EVC per ICAM 24.07: outer JSON-LD wrapper with data: URI carrying a Loire VC JWT.
+    // The wrapper is stripped and the inner JWT is routed through the Loire (GAIAX_V2_LOIRE) path.
+    String innerJwt = fakeLoireJwt("did:example:issuer");
+    String evcBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
+        + "\"type\":\"EnvelopedVerifiableCredential\","
+        + "\"id\":\"data:application/vc+ld+json+jwt," + innerJwt + "\"}";
+    ContentAccessor content = new ContentAccessorDirect(evcBody, "application/vc+ld+json");
+
+    CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+    assertNotNull(result, "EVC wrapper must be unwrapped and inner Loire VC processed");
+    verify(loireJwtParserSpy).unwrap(any());
+  }
+
+  @Test
+  void verifyCredential_evpWrapper_innerVpJwtUnwrappedAndProcessed() {
+    // EVP per ICAM 24.07: outer JSON-LD wrapper with data: URI carrying a Loire VP JWT.
+    // The wrapper is stripped and the inner JWT is routed through the Loire (GAIAX_V2_LOIRE) path.
+    String innerJwt = fakeLoireVpJwt("did:example:issuer");
+    String evpBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
+        + "\"type\":\"EnvelopedVerifiablePresentation\","
+        + "\"id\":\"data:application/vp+ld+jwt," + innerJwt + "\"}";
+    ContentAccessor content = new ContentAccessorDirect(evpBody, "application/vp+ld+json");
+
+    verificationService.verifyCredential(content, false, false, false, false);
+
+    verify(loireJwtParserSpy).unwrap(any());
+  }
+
+  @Test
+  void verifyCredential_evcWrapper_missingId_throwsClientException() {
+    String evcBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
+        + "\"type\":\"EnvelopedVerifiableCredential\"}";
+    ContentAccessor content = new ContentAccessorDirect(evcBody, "application/vc+ld+json");
+
+    ClientException ex = assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false));
+
+    assertTrue(ex.getMessage().contains("EnvelopedVerifiable*"), ex.getMessage());
+  }
+
+  @Test
+  void verifyCredential_evcWrapper_malformedDataUri_throwsClientException() {
+    String evcBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
+        + "\"type\":\"EnvelopedVerifiableCredential\","
+        + "\"id\":\"not-a-data-uri\"}";
+    ContentAccessor content = new ContentAccessorDirect(evcBody, "application/vc+ld+json");
+
+    ClientException ex = assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false));
+
+    assertTrue(ex.getMessage().contains("EnvelopedVerifiable*"), ex.getMessage());
+  }
+
   // --- helpers ---
 
   /** Builds a fake danubetech-style JWT wrapping the given VC JSON under a {@code vc} claim. */
@@ -1127,12 +1188,25 @@ public class VerificationServiceTest {
   private static String fakeLoireJwt(String iss) {
     var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
     String header = encoder.encodeToString(
-        "{\"alg\":\"RS256\",\"typ\":\"vc+jwt\"}".getBytes(StandardCharsets.UTF_8));
+        "{\"alg\":\"RS256\",\"typ\":\"vc+jwt\",\"cty\":\"vc\"}".getBytes(StandardCharsets.UTF_8));
     String payloadJson = """
         {"iss":"%s","@context":["https://www.w3.org/ns/credentials/v2"],\
         "type":["VerifiableCredential"],\
         "issuer":"%s",\
         "credentialSubject":{"id":"%s"}}""".formatted(iss, iss, iss);
+    String payload = encoder.encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
+    return header + "." + payload + ".AAAA";
+  }
+
+  /** Builds a fake Loire VP JWT (typ=vp+ld+jwt, top-level fields, no vp wrapper). */
+  private static String fakeLoireVpJwt(String iss) {
+    var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+    String header = encoder.encodeToString(
+        "{\"alg\":\"RS256\",\"typ\":\"vp+ld+jwt\",\"cty\":\"vp\"}".getBytes(StandardCharsets.UTF_8));
+    String payloadJson = """
+        {"iss":"%s","@context":["https://www.w3.org/ns/credentials/v2"],\
+        "type":["VerifiablePresentation"],\
+        "holder":"%s"}""".formatted(iss, iss);
     String payload = encoder.encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
     return header + "." + payload + ".AAAA";
   }

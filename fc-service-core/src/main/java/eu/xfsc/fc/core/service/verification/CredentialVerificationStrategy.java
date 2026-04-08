@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.verification;
 
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.DATA_URI_PREFIX;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PREFIX;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.RDF_CONTEXT_KEY;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
@@ -283,6 +284,18 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         payload = new ContentAccessorDirect(body, payload.getContentType());
 
         CredentialFormat format = formatDetector.detect(payload);
+
+        // EVC/EVP: JSON-LD wrapper whose `id` is a data: URI carrying the inner JWT.
+        // VC 2.0 EVC bodies are detected as VC2_DANUBETECH by FormatDetector — unwrap before dispatch.
+        if (!body.startsWith(JWT_PREFIX)) {
+            String envelopedJwt = tryExtractEnvelopedJwt(body);
+            if (envelopedJwt != null) {
+                body = envelopedJwt;
+                payload = new ContentAccessorDirect(body);
+                format = formatDetector.detect(payload);
+            }
+        }
+
         // Reject ambiguous/unrecognizable JWTs — non-JWT payloads fall through to
         // vc11Processor which provides more specific syntactic error messages.
         if (format == CredentialFormat.UNKNOWN && body.startsWith(JWT_PREFIX)) {
@@ -637,7 +650,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private VerifiableCredential tryUnwrapEnvelopedVc(Map<String, Object> entryMap,
         DocumentLoader docLoader) {
         Object idObj = resolveId(entryMap);
-        if (!(idObj instanceof String idStr) || !idStr.startsWith("data:")) {
+        if (!(idObj instanceof String idStr) || !idStr.startsWith(DATA_URI_PREFIX)) {
             log.debug("tryUnwrapEnvelopedVc; no data: URI in EnvelopedVerifiableCredential");
             return null;
         }
@@ -878,6 +891,63 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
         return validators;
+    }
+
+    /**
+     * If {@code body} is a VC 2.0 EnvelopedVerifiableCredential or EnvelopedVerifiablePresentation
+     * JSON-LD wrapper, extracts and returns the inner JWT from the {@code id} data: URI.
+     * Returns {@code null} if {@code body} is not an enveloped credential wrapper.
+     *
+     * @throws ClientException if the body is a valid wrapper but its data: URI is malformed
+     */
+    @SuppressWarnings("unchecked") // objectMapper.readValue with Map.class returns raw Map type
+    private String tryExtractEnvelopedJwt(String body) {
+        if (!body.startsWith("{")) {
+            return null;
+        }
+        try {
+            Map<String, Object> json = objectMapper.readValue(body, Map.class);
+            Object typeObj = resolveType(json);
+            boolean hasEnvelopedType;
+            if (typeObj instanceof String s) {
+                hasEnvelopedType = "EnvelopedVerifiableCredential".equals(s)
+                    || "EnvelopedVerifiablePresentation".equals(s);
+            } else if (typeObj instanceof List<?> types) {
+                hasEnvelopedType = types.contains("EnvelopedVerifiableCredential")
+                    || types.contains("EnvelopedVerifiablePresentation");
+            } else {
+                return null;
+            }
+            if (!hasEnvelopedType) {
+                return null;
+            }
+            Object ctxObj = json.get(RDF_CONTEXT_KEY);
+            boolean hasVc20Context = (ctxObj instanceof String ctx && VC_20_CONTEXT.equals(ctx))
+                || (ctxObj instanceof List<?> ctxs && ctxs.contains(VC_20_CONTEXT));
+            if (!hasVc20Context) {
+                return null;
+            }
+            Object idObj = resolveId(json);
+            if (!(idObj instanceof String id) || !id.startsWith(DATA_URI_PREFIX)) {
+                throw new ClientException(
+                    "EnvelopedVerifiable*: 'id' must be a data: URI; got: " + idObj);
+            }
+            int comma = id.indexOf(',');
+            if (comma < 0) {
+                throw new ClientException(
+                    "EnvelopedVerifiable*: malformed data: URI (no comma separator)");
+            }
+            String jwt = id.substring(comma + 1);
+            if (jwt.isBlank()) {
+                throw new ClientException("EnvelopedVerifiable*: data: URI payload is empty");
+            }
+            return jwt;
+        } catch (ClientException e) {
+            throw e;
+        } catch (Exception e) {
+            log.debug("tryExtractEnvelopedJwt; not a valid EVC/EVP wrapper: {}", e.getMessage());
+            return null;
+        }
     }
 
     private boolean isEnvelopedVerifiableCredential(Object typeObj, Object contextObj) {

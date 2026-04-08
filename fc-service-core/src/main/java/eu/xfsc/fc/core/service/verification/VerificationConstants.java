@@ -17,6 +17,8 @@ public final class VerificationConstants {
 
   public static final String RDF_CONTEXT_KEY = "@context";
 
+  public static final String DATA_URI_PREFIX = "data:";
+
   private VerificationConstants() {
   }
 }
