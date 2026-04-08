@@ -64,6 +64,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -138,15 +139,20 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     @Value("${federated-catalogue.verification.resource.legacy-type:${federated-catalogue.verification.resource.type}}")
     private String legacyResourceType;
 
+    // Additional Loire-only sibling roots for SERVICE_OFFERING (e.g. gx:DigitalServiceOffering).
+    // Tagus / gax-core has no sibling classes so no legacy-additional-types is needed.
+    @Value("${federated-catalogue.verification.service-offering.additional-types:#{T(java.util.Collections).emptyList()}}")
+    private List<String> serviceOfferingAdditionalTypes;
+
     /** Loire (Gaia-X 2511) type URIs — used for GAIAX_V2_LOIRE credentials. */
-    private Map<TrustFrameworkBaseClass, String> loireBaseClassUris;
+    private Map<TrustFrameworkBaseClass, List<String>> loireBaseClassUris;
     /** Legacy Tagus (gax-core) type URIs — used for GAIAX_V1_TAGUS credentials. */
-    private Map<TrustFrameworkBaseClass, String> legacyBaseClassUris;
+    private Map<TrustFrameworkBaseClass, List<String>> legacyBaseClassUris;
     /**
      * Alias to {@link #legacyBaseClassUris} kept for backward compatibility with
      * {@link #setBaseClassUri(TrustFrameworkBaseClass, String)} used in tests.
      */
-    private Map<TrustFrameworkBaseClass, String> trustFrameworkBaseClassUris;
+    private Map<TrustFrameworkBaseClass, List<String>> trustFrameworkBaseClassUris;
 
     private final JwtContentPreprocessor jwtPreprocessor;
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
@@ -185,15 +191,19 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private void initializeTrustFrameworkBaseClasses() {
         rest = restTemplate();
 
-        loireBaseClassUris = new HashMap<>();
-        loireBaseClassUris.put(SERVICE_OFFERING, serviceOfferingType);
-        loireBaseClassUris.put(RESOURCE, resourceType);
-        loireBaseClassUris.put(PARTICIPANT, participantType);
+        List<String> loireSoRoots = new ArrayList<>();
+        loireSoRoots.add(serviceOfferingType);
+        loireSoRoots.addAll(serviceOfferingAdditionalTypes);
 
-        legacyBaseClassUris = new HashMap<>();
-        legacyBaseClassUris.put(SERVICE_OFFERING, legacyServiceOfferingType);
-        legacyBaseClassUris.put(RESOURCE, legacyResourceType);
-        legacyBaseClassUris.put(PARTICIPANT, legacyParticipantType);
+        loireBaseClassUris = new EnumMap<>(TrustFrameworkBaseClass.class);
+        loireBaseClassUris.put(SERVICE_OFFERING, loireSoRoots);
+        loireBaseClassUris.put(RESOURCE, List.of(resourceType));
+        loireBaseClassUris.put(PARTICIPANT, List.of(participantType));
+
+        legacyBaseClassUris = new EnumMap<>(TrustFrameworkBaseClass.class);
+        legacyBaseClassUris.put(SERVICE_OFFERING, List.of(legacyServiceOfferingType));
+        legacyBaseClassUris.put(RESOURCE, List.of(legacyResourceType));
+        legacyBaseClassUris.put(PARTICIPANT, List.of(legacyParticipantType));
 
         // trustFrameworkBaseClassUris is an alias to legacyBaseClassUris so that
         // setBaseClassUri() (called by tests) continues to work as before.
@@ -270,7 +280,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     public void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
-        trustFrameworkBaseClassUris.put(baseClass, uri);
+        trustFrameworkBaseClassUris.put(baseClass, List.of(uri));
     }
 
     /**
@@ -744,7 +754,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * </ul>
      */
     private TrustFrameworkBaseClass resolveBaseClass(VerifiableCredential credential, CredentialFormat format) {
-        Map<TrustFrameworkBaseClass, String> classUris =
+        Map<TrustFrameworkBaseClass, List<String>> classUris =
             format == CredentialFormat.GAIAX_V2_LOIRE ? loireBaseClassUris : trustFrameworkBaseClassUris;
         ContentAccessor ontology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
         TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(

@@ -29,4 +29,7 @@ gx:ServiceOffering a owl:Class ;
     rdfs:subClassOf gx:GaiaXEntity .
 
 gx:DigitalServiceOffering a owl:Class ;
-    rdfs:subClassOf gx:ServiceOffering .
+    rdfs:subClassOf gx:GaiaXEntity .
+
+gx:DataProduct a owl:Class ;
+    rdfs:subClassOf gx:DigitalServiceOffering .

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.jena.riot.system.stream.StreamManager;
@@ -32,17 +33,19 @@ import eu.xfsc.fc.core.util.ClaimValidator;
 class LoireTypeResolutionTest {
 
   /** 2511 namespace type URIs — matches Loire (GAIAX_V2_LOIRE) processing path. */
-  private static final Map<TrustFrameworkBaseClass, String> LOIRE_CLASS_URIS = new EnumMap<>(Map.of(
-      PARTICIPANT, "https://w3id.org/gaia-x/2511#Participant",
-      RESOURCE, "https://w3id.org/gaia-x/2511#Resource",
-      SERVICE_OFFERING, "https://w3id.org/gaia-x/2511#ServiceOffering"
+  private static final Map<TrustFrameworkBaseClass, List<String>> LOIRE_CLASS_URIS = new EnumMap<>(Map.of(
+      PARTICIPANT, List.of("https://w3id.org/gaia-x/2511#Participant"),
+      RESOURCE, List.of("https://w3id.org/gaia-x/2511#Resource"),
+      SERVICE_OFFERING, List.of(
+          "https://w3id.org/gaia-x/2511#ServiceOffering",
+          "https://w3id.org/gaia-x/2511#DigitalServiceOffering")
   ));
 
   /** Legacy gax-core type URIs — matches Tagus (GAIAX_V1_TAGUS) processing path. */
-  private static final Map<TrustFrameworkBaseClass, String> LEGACY_CLASS_URIS = new EnumMap<>(Map.of(
-      PARTICIPANT, "https://w3id.org/gaia-x/core#Participant",
-      RESOURCE, "https://w3id.org/gaia-x/core#Resource",
-      SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering"
+  private static final Map<TrustFrameworkBaseClass, List<String>> LEGACY_CLASS_URIS = new EnumMap<>(Map.of(
+      PARTICIPANT, List.of("https://w3id.org/gaia-x/core#Participant"),
+      RESOURCE, List.of("https://w3id.org/gaia-x/core#Resource"),
+      SERVICE_OFFERING, List.of("https://w3id.org/gaia-x/core#ServiceOffering")
   ));
 
   private ContentAccessorDirect gx2511Ontology;
@@ -75,7 +78,7 @@ class LoireTypeResolutionTest {
   }
 
   @Test
-  @DisplayName("gx:DigitalServiceOffering (subtype) resolves to SERVICE_OFFERING via 2511 ontology")
+  @DisplayName("gx:DigitalServiceOffering (GaiaXEntity sibling) resolves to SERVICE_OFFERING via explicit root")
   void getSubjectType_digitalServiceOffering_returnsServiceOffering() {
     String credential = buildCredential("https://w3id.org/gaia-x/2511#DigitalServiceOffering");
 
@@ -83,7 +86,19 @@ class LoireTypeResolutionTest {
         ClaimValidator.getSubjectType(gx2511Ontology, streamManager, credential, LOIRE_CLASS_URIS);
 
     assertEquals(SERVICE_OFFERING, result,
-        "gx:DigitalServiceOffering rdfs:subClassOf gx:ServiceOffering; should resolve to SERVICE_OFFERING");
+        "gx:DigitalServiceOffering is a sibling of gx:ServiceOffering; resolves via explicit DigitalServiceOffering root");
+  }
+
+  @Test
+  @DisplayName("gx:DataProduct (subtype of DigitalServiceOffering) resolves to SERVICE_OFFERING")
+  void getSubjectType_dataProduct_returnsServiceOffering() {
+    String credential = buildCredential("https://w3id.org/gaia-x/2511#DataProduct");
+
+    TrustFrameworkBaseClass result =
+        ClaimValidator.getSubjectType(gx2511Ontology, streamManager, credential, LOIRE_CLASS_URIS);
+
+    assertEquals(SERVICE_OFFERING, result,
+        "gx:DataProduct rdfs:subClassOf gx:DigitalServiceOffering; traversal from DSO root reaches DataProduct");
   }
 
   @Test

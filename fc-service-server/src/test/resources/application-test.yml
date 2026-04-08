@@ -16,6 +16,7 @@ federated-catalogue:
       legacy-type: "https://w3id.org/gaia-x/gax-trust-framework#Resource"
     service-offering:
       type: "https://w3id.org/gaia-x/2511#ServiceOffering"
+      additional-types: "https://w3id.org/gaia-x/2511#DigitalServiceOffering"
       legacy-type: "http://w3id.org/gaia-x/service#ServiceOffering"
   query:
     partners:

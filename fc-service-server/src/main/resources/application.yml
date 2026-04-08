@@ -172,6 +172,7 @@ federated-catalogue:
       legacy-type: "https://w3id.org/gaia-x/core#Resource"
     service-offering:
       type: "https://w3id.org/gaia-x/2511#ServiceOffering"
+      additional-types: "https://w3id.org/gaia-x/2511#DigitalServiceOffering"
       legacy-type: "https://w3id.org/gaia-x/core#ServiceOffering"
     semantics: true
     schema: false
