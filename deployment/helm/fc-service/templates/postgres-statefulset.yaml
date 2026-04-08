@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fc-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: fc-postgres
+spec:
+  serviceName: fc-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-postgres
+  template:
+    metadata:
+      labels:
+        app: fc-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: {{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: {{ .Values.postgresql.auth.database }}
+        - name: POSTGRES_USER
+          value: {{ .Values.postgresql.auth.username }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.postgresql.auth.password }}
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+      volumes:
+      - name: init-scripts
+        configMap:
+          name: fc-postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.persistence.size }}

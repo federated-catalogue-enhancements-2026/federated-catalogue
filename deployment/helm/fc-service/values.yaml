@@ -31,11 +31,11 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: 
-  allowPrivilegeEscalation: false
+podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {} 
+securityContext:
+  allowPrivilegeEscalation: false 
 #  # capabilities:
 #  #   drop:
 #  #   - ALL
@@ -163,84 +163,94 @@ env:
 #    value: DEBUG  
 
 postgresql:
-  fullnameOverride: fc-postgres
-  nameOverride: fc-postgres
+  # Using official PostgreSQL image (not Bitnami)
+  image:
+    repository: postgres
+    tag: "15.2"
   auth:
     postgresPassword: postgres
     username: keycloak
     password: keycloak
-    database: keycloak
-  primary:
-    persistence:
-      enabled: true
-    initdb:
-      user: postgres
-      password: postgres
-      scripts:
-        00_init_keycloak.sql: |  
-          CREATE USER keycloak WITH PASSWORD 'keycloak';
-          CREATE DATABASE "keycloak" WITH OWNER keycloak;
-          GRANT ALL PRIVILEGES ON DATABASE keycloak TO $POSTGRES_USER;
+    database: postgres  # Default database
+  persistence:
+    enabled: true
+    size: 10Gi
   
 keycloak:
   fullnameOverride: fc-keycloak
+  replicas: 1
+
+  # Use official Keycloak image from quay.io
   image:
-    tag: 26.0
-  auth:
-    adminUser: admin
-    adminPassword: admin
-  extraEnvVars:
-    - name: KEYCLOAK_EXTRA_ARGS
-      value: "--import-realm"
-    - name: PROXY_ADDRESS_FORWARDING
-      value: "true"
-    - name: KEYCLOAK_FRONTEND_URL
-      value: "http://key-server.82.165.249.107.sslip.io/"
-    - name: KEYCLOAK_ADMIN_URL
-      value: "http://key-server.82.165.249.107.sslip.io/admin/"
-  extraVolumeMounts:
-    - name: config
-      mountPath: "/opt/bitnami/keycloak/data/import"
+    repository: quay.io/keycloak/keycloak
+    tag: ""  # Use chart default (26.5.5)
+
+  # Command and arguments for realm import
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+  args:
+    - "start"
+    - "--import-realm"
+
+  # HTTP configuration
+  http:
+    enabled: true
+
+  # Hostname configuration
+  hostname:
+    hostname: key-server.82.165.249.107.sslip.io
+    strict: false
+    strictBackchannel: false
+
+  # Proxy configuration
+  proxy:
+    enabled: true
+    mode: edge
+
+  # Database configuration
+  database:
+    vendor: postgres
+    hostname: fc-postgres
+    port: 5432
+    database: keycloak
+    username: keycloak
+    existingSecret: fc-postgres
+    existingSecretPasswordKey: password
+
+  # Admin credentials (only set via extraEnv, not duplicated)
+  extraEnv: |-
+    - name: KEYCLOAK_ADMIN
+      value: admin
+    - name: KEYCLOAK_ADMIN_PASSWORD
+      value: admin
+
+  # Realm import via volume mount
+  extraVolumeMounts: |-
+    - name: realm-config
+      mountPath: "/opt/keycloak/data/import"
       readOnly: true
-  extraVolumes:
-    - name: config
+
+  extraVolumes: |-
+    - name: realm-config
       configMap:
         name: fc-keycloak-realm-configmap
-        items:
-        - key: "gaia-x-realm.json"
-          path: "gaia-x-realm.json"
-  logging:
-    level: "DEBUG,io.quarkus:INFO,freemarker.cache:INFO,liquibase:INFO,org.hibernate:INFO,org.infinispan:INFO,org.keycloak.services.scheduled:INFO,org.keycloak.transaction:INFO,io.netty.buffer.PoolThreadCache:INFO,org.keycloak.models.sessions.infinispan:INFO"
-#  proxy: edge
-  postgresql:
-    enabled: false
-    auth:
-      existingSecret: fc-postgres
-  externalDatabase:
-    host: fc-postgres
-    database: keycloak
-    user: keycloak
-    #password: keycloak
-    existingSecret: fc-postgres
-    existingSecretPasswordKey: "password"
+
+  # Ingress configuration
   ingress:
     enabled: true
     ingressClassName: nginx
     annotations:
-#      kubernetes.io/ingress.allow-http: "true"
-##      cert-manager.io/cluster-issuer: cert-manager-webhook
-#      nginx.ingress.kubernetes.io/ssl-redirect: "false"
       nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
-    pathType: Prefix
-    path: /
-    hostname: key-server.82.165.249.107.sslip.io
-    servicePort: 8080
-#    tls: true
-  serviceAccount:
-    create: false
+    rules:
+      - host: key-server.82.165.249.107.sslip.io
+        paths:
+          - path: /
+            pathType: Prefix
+
+  # Service
   service:
-    ports:
-      http: 8080  
+    type: ClusterIP
+    httpPort: 8080  
     
 neo4j:
   fullnameOverride: fc-neo4j

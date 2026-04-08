@@ -41,7 +41,7 @@ The application consists of **4 main runtime components**:
 Configuration file provided by ECO. Copy this file and set the Kubernetes context to this cluster with:
 
 ```bash
-export KUBECONFIG=config.yaml
+export KUBECONFIG=/absolute/path/to/your/config.yaml
 ```
 
 Now, the cluster should be configured. Test with:
@@ -401,25 +401,25 @@ helm dependency update
 
 You should see a new directory `charts/` with the downloaded dependencies.
 
-### Step 5: Validate the Chart
+### Step 3: Validate the Chart
 
 Before actually deploying, validate your configuration:
 
 ```bash
 # Lint the chart for syntax errors
-helm lint . -f values-production.yaml
+helm lint . -f values.yaml
 
 # Dry-run to see what will be created
 helm install fc-service . \
   --namespace federated-catalogue \
-  --values values-production.yaml \
+  --values values.yaml \
   --dry-run \
   --debug
 ```
 
 **What this does**: Checks for errors without actually creating resources. Review the output carefully.
 
-### Step 6: Install the Helm Chart
+### Step 4: Install the Helm Chart
 
 Now deploy the application:
 
@@ -427,7 +427,7 @@ Now deploy the application:
 # Install the chart
 helm install fc-service . \
   --namespace federated-catalogue \
-  --values values-production.yaml \
+  --values values.yaml \
   --timeout 10m
 
 # Watch the deployment
