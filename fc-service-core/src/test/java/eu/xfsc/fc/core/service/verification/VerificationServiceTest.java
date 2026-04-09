@@ -56,6 +56,7 @@ import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -100,9 +101,6 @@ public class VerificationServiceTest {
 
   @Autowired
   private VerificationServiceImpl verificationService;
-
-  @Autowired
-  private CredentialVerificationStrategy credentialVerificationStrategy;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -897,14 +895,14 @@ public class VerificationServiceTest {
         "{\"kty\":\"EC\",\"x5c\":[\"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg==\"]}", null);
     when(jwtVerifierMock.verify(any())).thenReturn(validatorWithX5c);
 
-    ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", true);
+    jdbcTemplate.update("UPDATE trust_frameworks SET enabled = true WHERE id = 'gaia-x'");
     try {
       ClientException ex = assertThrowsExactly(ClientException.class,
           () -> verificationService.verifyCredential(loireJwt, false, false, false, true));
       assertTrue(ex.getMessage().contains("x5c"), "Error must mention x5c: " + ex.getMessage());
       assertTrue(ex.getMessage().contains("x5u"), "Error must suggest x5u: " + ex.getMessage());
     } finally {
-      ReflectionTestUtils.setField(credentialVerificationStrategy, "gaiaxTrustFrameworkEnabled", false);
+      jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
     }
   }
 
