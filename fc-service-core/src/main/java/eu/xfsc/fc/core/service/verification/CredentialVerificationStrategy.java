@@ -1,9 +1,17 @@
 package eu.xfsc.fc.core.service.verification;
 
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.DATA_URI_PREFIX;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.EVC_TYPE;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.EVP_TYPE;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PREFIX;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.MEDIA_TYPE_VC_JWT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.MEDIA_TYPE_VC_LD_JSON;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.MEDIA_TYPE_VP_JWT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.MEDIA_TYPE_VP_LD_JSON;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.RDF_CONTEXT_KEY;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VERIFIABLE_CREDENTIAL_KEY;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.VP_TYPE;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
@@ -293,6 +301,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         String body = payload.getContentAsString().strip();
         payload = new ContentAccessorDirect(body, payload.getContentType());
 
+        validateContentTypeMatchesBody(payload.getContentType(), body);
+
         CredentialFormat format = formatDetector.detect(payload);
 
         // EVC/EVP: JSON-LD wrapper whose `id` is a data: URI carrying the inner JWT.
@@ -342,6 +352,35 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
+     * Validates that an explicit VC/VP content-type header matches the actual body format.
+     * Generic content-types ({@code application/json}, {@code application/ld+json}, or null)
+     * are auto-detected and skip this check.
+     *
+     * @throws ClientException if the content-type declares JWT but body is JSON-LD, or vice versa
+     */
+    private static void validateContentTypeMatchesBody(String contentType, String body) {
+        if (contentType == null) {
+            return;
+        }
+        String ct = contentType.strip().toLowerCase();
+        boolean ctExpectsJwt = ct.equals(MEDIA_TYPE_VC_JWT) || ct.equals(MEDIA_TYPE_VP_JWT);
+        boolean ctExpectsJsonLd = ct.equals(MEDIA_TYPE_VC_LD_JSON)
+            || ct.equals(MEDIA_TYPE_VP_LD_JSON);
+        if (!ctExpectsJwt && !ctExpectsJsonLd) {
+            return;
+        }
+        boolean bodyIsJwt = body.startsWith(JWT_PREFIX);
+        if (ctExpectsJwt && !bodyIsJwt) {
+            throw new ClientException(
+                "Content-Type '" + contentType + "' expects a JWT but body is not a JWT");
+        }
+        if (ctExpectsJsonLd && bodyIsJwt) {
+            throw new ClientException(
+                "Content-Type '" + contentType + "' expects JSON-LD but body is a JWT");
+        }
+    }
+
+    /**
      * Phase 2: Resolve the dominant base class from typed credentials and validate type constraints.
      */
     private TrustFrameworkBaseClass resolvePrimaryBaseClass(TypedCredentials typedCredentials,
@@ -386,7 +425,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      */
     private FilteredClaims extractAndValidateClaims(ContentAccessor payload, boolean strictSemantics) {
         long stamp = System.currentTimeMillis();
-        List<CredentialClaim> claims = extractClaims(payload);
+        // Resolve inner EVCs before claim extraction — claim extractors cannot handle
+        // EVC wrappers with data: URIs. This is intentionally NOT in detectAndUnwrap()
+        // because signature verification needs the original EVC entries intact.
+        ContentAccessor claimPayload = resolveInnerEnvelopedCredentials(payload);
+        List<CredentialClaim> claims = extractClaims(claimPayload);
         FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
         claims = filtered.claims();
         log.debug("verifyCredential; claims extracted: {}, time taken: {}",
@@ -546,7 +589,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (checkAbsence(presentation, "type", "@type")) {
             sb.append(" - VerifiablePresentation must contain 'type' property").append(sep);
         }
-        if (checkAbsence(presentation, "verifiableCredential")) {
+        if (checkAbsence(presentation, VERIFIABLE_CREDENTIAL_KEY)) {
             sb.append(" - VerifiablePresentation must contain 'verifiableCredential' property").append(sep);
         }
         TypedCredentials tcreds = getCredentials(presentation, format);
@@ -606,7 +649,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private TypedCredentials getCredentials(VerifiablePresentation vp, CredentialFormat format) {
         log.trace("getCredentials.enter; got VP: {}", vp);
-        Object obj = vp.getJsonObject().get("verifiableCredential");
+        Object obj = vp.getJsonObject().get(VERIFIABLE_CREDENTIAL_KEY);
         Map<VerifiableCredential, TrustFrameworkBaseClass> creds;
         switch (obj) {
             case null -> creds = Collections.emptyMap();
@@ -799,10 +842,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      */
     private boolean isVpJwtClaims(JWTClaimsSet claims) {
         Object typeObj = claims.getClaim("type");
-        if (typeObj instanceof List<?> types && types.contains("VerifiablePresentation")) {
+        if (typeObj instanceof List<?> types && types.contains(VP_TYPE)) {
             return true;
         }
-        if (typeObj instanceof String typeStr && "VerifiablePresentation".equals(typeStr)) {
+        if (typeObj instanceof String typeStr && VP_TYPE.equals(typeStr)) {
             return true;
         }
         return claims.getClaim("vp") != null;
@@ -862,7 +905,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * and inline JSON-LD VCs with proof fields.
      */
     private List<Validator> verifyInnerVcCredentials(JsonLDObject ld) {
-        Object vcArrayObj = ld.getJsonObject().get("verifiableCredential");
+        Object vcArrayObj = ld.getJsonObject().get(VERIFIABLE_CREDENTIAL_KEY);
         if (vcArrayObj == null) {
             return List.of();
         }
@@ -887,7 +930,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     Object idObj = resolveId(vcMap);
                     if (!(idObj instanceof String idStr)) {
                         throw new ClientException(
-                                "EnvelopedVerifiableCredential missing 'id' field");
+                                EVC_TYPE + " missing 'id' field");
                     }
                     validators.add(jwtSignatureVerifier.verifyFromDataUrl(idStr));
                 } else {
@@ -920,11 +963,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             Object typeObj = resolveType(json);
             boolean hasEnvelopedType;
             if (typeObj instanceof String s) {
-                hasEnvelopedType = "EnvelopedVerifiableCredential".equals(s)
-                    || "EnvelopedVerifiablePresentation".equals(s);
+                hasEnvelopedType = EVC_TYPE.equals(s) || EVP_TYPE.equals(s);
             } else if (typeObj instanceof List<?> types) {
-                hasEnvelopedType = types.contains("EnvelopedVerifiableCredential")
-                    || types.contains("EnvelopedVerifiablePresentation");
+                hasEnvelopedType = types.contains(EVC_TYPE) || types.contains(EVP_TYPE);
             } else {
                 return null;
             }
@@ -937,21 +978,15 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             if (!hasVc20Context) {
                 return null;
             }
+            String resolvedType = typeObj instanceof String s
+                ? (EVC_TYPE.equals(s) ? EVC_TYPE : EVP_TYPE)
+                : (((List<?>) typeObj).contains(EVC_TYPE) ? EVC_TYPE : EVP_TYPE);
             Object idObj = resolveId(json);
             if (!(idObj instanceof String id) || !id.startsWith(DATA_URI_PREFIX)) {
                 throw new ClientException(
-                    "EnvelopedVerifiable*: 'id' must be a data: URI; got: " + idObj);
+                    resolvedType + ": 'id' must be a data: URI; got: " + idObj);
             }
-            int comma = id.indexOf(',');
-            if (comma < 0) {
-                throw new ClientException(
-                    "EnvelopedVerifiable*: malformed data: URI (no comma separator)");
-            }
-            String jwt = id.substring(comma + 1);
-            if (jwt.isBlank()) {
-                throw new ClientException("EnvelopedVerifiable*: data: URI payload is empty");
-            }
-            return jwt;
+            return extractJwtFromDataUri(id, resolvedType);
         } catch (ClientException e) {
             throw e;
         } catch (Exception e) {
@@ -963,9 +998,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private boolean isEnvelopedVerifiableCredential(Object typeObj, Object contextObj) {
         boolean hasType = false;
         if (typeObj instanceof String typeStr) {
-            hasType = "EnvelopedVerifiableCredential".equals(typeStr);
+            hasType = EVC_TYPE.equals(typeStr);
         } else if (typeObj instanceof List<?> types) {
-            hasType = types.contains("EnvelopedVerifiableCredential");
+            hasType = types.contains(EVC_TYPE);
         }
         if (!hasType) {
             return false;
@@ -978,6 +1013,103 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             return contexts.contains(VC_20_CONTEXT);
         }
         return false;
+    }
+
+    /**
+     * Resolves {@code EnvelopedVerifiableCredential} entries inside a VP's
+     * {@code verifiableCredential} array. Each EVC's {@code data:} URI is parsed,
+     * the inner JWT payload is extracted, and the EVC entry is replaced with the
+     * unwrapped VC JSON-LD. Non-VP payloads and VPs without EVCs pass through unchanged.
+     */
+    @SuppressWarnings("unchecked")
+    private ContentAccessor resolveInnerEnvelopedCredentials(ContentAccessor payload) {
+        String json = payload.getContentAsString();
+        if (!json.startsWith("{")) {
+            return payload;
+        }
+        try {
+            Map<String, Object> root = objectMapper.readValue(json, Map.class);
+            Object typeObj = resolveType(root);
+            boolean isVp = typeObj instanceof List<?> types
+                ? types.contains(VP_TYPE) : VP_TYPE.equals(typeObj);
+            if (!isVp) {
+                return payload;
+            }
+
+            Object vcObj = root.get(VERIFIABLE_CREDENTIAL_KEY);
+            if (!(vcObj instanceof List<?> vcList) || vcList.isEmpty()) {
+                return payload;
+            }
+
+            boolean modified = false;
+            List<Object> resolved = new ArrayList<>(vcList.size());
+            for (Object entry : vcList) {
+                if (entry instanceof Map<?, ?> vcMap) {
+                    Object entryType = resolveType(vcMap);
+                    Object entryCtx = vcMap.get(RDF_CONTEXT_KEY);
+                    if (isEnvelopedVerifiableCredential(entryType, entryCtx)) {
+                        Object idObj = resolveId(vcMap);
+                        Map<String, Object> unwrapped = unwrapEnvelopedVcJwt(idObj);
+                        if (unwrapped != null) {
+                            resolved.add(unwrapped);
+                            modified = true;
+                            continue;
+                        }
+                    }
+                }
+                resolved.add(entry);
+            }
+            if (!modified) {
+                return payload;
+            }
+            root.put(VERIFIABLE_CREDENTIAL_KEY, resolved);
+            return new ContentAccessorDirect(objectMapper.writeValueAsString(root));
+        } catch (Exception e) {
+            log.debug("resolveInnerEnvelopedCredentials; pass-through: {}", e.getMessage());
+            return payload;
+        }
+    }
+
+    /**
+     * Extracts the JWT from an EVC's {@code data:} URI and returns
+     * the JWT payload as a parsed JSON map (the inner VC JSON-LD).
+     *
+     * @return the unwrapped VC as a map, or {@code null} if extraction fails
+     */
+    @SuppressWarnings("unchecked") // objectMapper.readValue with Map.class returns raw Map type
+    private Map<String, Object> unwrapEnvelopedVcJwt(Object idObj) {
+        if (!(idObj instanceof String id) || !id.startsWith(DATA_URI_PREFIX)) {
+            return null;
+        }
+        try {
+            String jwt = extractJwtFromDataUri(id, EVC_TYPE);
+            SignedJWT signedJwt = SignedJWT.parse(jwt);
+            String innerJson = signedJwt.getPayload().toString();
+            return objectMapper.readValue(innerJson, Map.class);
+        } catch (Exception e) {
+            log.debug("unwrapEnvelopedVcJwt; failed to parse inner JWT: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extracts the compact JWT string from a {@code data:} URI by splitting at the first comma.
+     *
+     * @param dataUri  the full data: URI
+     * @param typeName the credential type name for error messages (e.g. {@code EVC_TYPE})
+     * @throws ClientException if the URI has no comma separator or the payload is empty
+     */
+    private static String extractJwtFromDataUri(String dataUri, String typeName) {
+        int comma = dataUri.indexOf(',');
+        if (comma < 0) {
+            throw new ClientException(
+                typeName + ": malformed data: URI (no comma separator)");
+        }
+        String jwt = dataUri.substring(comma + 1);
+        if (jwt.isBlank()) {
+            throw new ClientException(typeName + ": data: URI payload is empty");
+        }
+        return jwt;
     }
 
     @SuppressWarnings("unchecked")

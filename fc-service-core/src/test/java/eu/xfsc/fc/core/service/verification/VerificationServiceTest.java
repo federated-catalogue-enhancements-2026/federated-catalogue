@@ -1153,7 +1153,7 @@ public class VerificationServiceTest {
     ClientException ex = assertThrowsExactly(ClientException.class,
         () -> verificationService.verifyCredential(content, false, false, false, false));
 
-    assertTrue(ex.getMessage().contains("EnvelopedVerifiable*"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("EnvelopedVerifiableCredential"), ex.getMessage());
   }
 
   @Test
@@ -1166,7 +1166,7 @@ public class VerificationServiceTest {
     ClientException ex = assertThrowsExactly(ClientException.class,
         () -> verificationService.verifyCredential(content, false, false, false, false));
 
-    assertTrue(ex.getMessage().contains("EnvelopedVerifiable*"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("EnvelopedVerifiableCredential"), ex.getMessage());
   }
 
   // --- helpers ---
