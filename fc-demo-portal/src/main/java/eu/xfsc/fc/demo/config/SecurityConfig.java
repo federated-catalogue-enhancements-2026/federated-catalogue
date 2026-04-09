@@ -27,7 +27,7 @@ public class SecurityConfig {
         		  .requestMatchers(antMatcher("/index.html")).permitAll()
         		  .requestMatchers(antMatcher("/css/**")).permitAll()
         		  .requestMatchers(antMatcher("/js/**")).permitAll()
-        		  .requestMatchers(antMatcher("/admin/**")).hasRole("ADMIN_ALL")
+        		  .requestMatchers(antMatcher("/admin/**")).authenticated()
 		  .anyRequest().authenticated()
        	  )
           .oauth2Login(oauth2Login ->
