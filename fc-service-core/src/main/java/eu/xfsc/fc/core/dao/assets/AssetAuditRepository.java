@@ -14,7 +14,6 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.hibernate.envers.query.AuditQuery;
@@ -49,11 +48,10 @@ public class AssetAuditRepository {
     int total = revisions.size();
     List<AssetRecord> result = new ArrayList<>(total);
     for (int i = 0; i < total; i++) {
-      int version = i + 1;
-      boolean isCurrent = (version == total);
+      int version = total - i;
+      boolean isCurrent = (i == 0);
       result.add(toRecord(revisions.get(i), version, isCurrent));
     }
-    Collections.reverse(result);
     return result;
   }
 
@@ -62,26 +60,23 @@ public class AssetAuditRepository {
     if (total == 0) {
       return List.of();
     }
-    // Descending page: skip from the end
-    int skipFromEnd = page * size;
-    int firstAsc = Math.max(0, total - skipFromEnd - size);
-    int maxResults = Math.min(size, total - skipFromEnd);
+    int offset = page * size;
+    int maxResults = Math.min(size, total - offset);
     if (maxResults <= 0) {
       return List.of();
     }
 
     List<Object[]> revisions = baseRevisionsQuery(entityId)
-        .setFirstResult(firstAsc)
+        .setFirstResult(offset)
         .setMaxResults(maxResults)
         .getResultList();
 
     List<AssetRecord> result = new ArrayList<>(revisions.size());
     for (int i = 0; i < revisions.size(); i++) {
-      int version = firstAsc + i + 1;
+      int version = total - (offset + i);
       boolean isCurrent = (version == total);
       result.add(toRecord(revisions.get(i), version, isCurrent));
     }
-    Collections.reverse(result);
     return result;
   }
 
@@ -105,7 +100,7 @@ public class AssetAuditRepository {
     }
 
     List<Object[]> revisions = baseRevisionsQuery(entityId)
-        .setFirstResult(version - 1)
+        .setFirstResult(total - version)
         .setMaxResults(1)
         .getResultList();
 
@@ -154,7 +149,7 @@ public class AssetAuditRepository {
     return AuditReaderFactory.get(entityManager).createQuery()
         .forRevisionsOfEntity(Asset.class, false, true)
         .add(AuditEntity.id().eq(entityId))
-        .addOrder(AuditEntity.revisionNumber().asc());
+        .addOrder(AuditEntity.revisionNumber().desc());
   }
 
   private AssetRecord toRecord(Object[] revision, int version, boolean isCurrent) {

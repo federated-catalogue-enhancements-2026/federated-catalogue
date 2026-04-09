@@ -119,10 +119,8 @@ class EnversAuditTest {
 
     assertNotNull(revisions);
     assertEquals(1, revisions.size());
-    Object[] row = (Object[]) revisions.getFirst();
-    Asset audited = (Asset) row[0];
-    RevisionType revType = (RevisionType) row[2];
-    assertEquals(RevisionType.ADD, revType);
+    Asset audited = (Asset) auditRow(revisions, 0)[0];
+    assertEquals(RevisionType.ADD, revisionType(revisions, 0));
     assertEquals("hash-1", audited.getAssetHash());
     assertEquals("sub/1", audited.getSubjectId());
     assertEquals("iss/1", audited.getIssuer());
@@ -172,13 +170,9 @@ class EnversAuditTest {
 
     assertNotNull(revisions);
     assertEquals(2, revisions.size());
-
-    Object[] insertRow = (Object[]) revisions.get(0);
-    assertEquals(RevisionType.ADD, insertRow[2]);
-
-    Object[] updateRow = (Object[]) revisions.get(1);
-    assertEquals(RevisionType.MOD, updateRow[2]);
-    Asset updated = (Asset) updateRow[0];
+    assertEquals(RevisionType.ADD, revisionType(revisions, 0));
+    assertEquals(RevisionType.MOD, revisionType(revisions, 1));
+    Asset updated = (Asset) auditRow(revisions, 1)[0];
     assertEquals((short) AssetStatus.REVOKED.ordinal(), updated.getStatus());
   }
 
@@ -204,30 +198,23 @@ class EnversAuditTest {
 
     assertNotNull(revisions);
     assertEquals(2, revisions.size());
-
-    Object[] deleteRow = (Object[]) revisions.get(1);
-    assertEquals(RevisionType.DEL, deleteRow[2]);
-    // store_data_at_delete=true: full state captured
-    Asset deleted = (Asset) deleteRow[0];
+    assertEquals(RevisionType.DEL, revisionType(revisions, 1));
+    Asset deleted = (Asset) auditRow(revisions, 1)[0];
     assertEquals("hash-del", deleted.getAssetHash());
     assertEquals("sub/del", deleted.getSubjectId());
   }
 
   @Test
   void multipleTransactions_createSeparateRevisions() {
-    // Insert first asset for sub/multi (ACTIVE)
     transactionTemplate.executeWithoutResult(status ->
         assetDao.insert(buildAssetRecord("hash-multi-1", "sub/multi", "iss/multi",
             List.of("did:val:1")))
     );
-
-    // Update same subject in-place — Envers records a MOD revision on the same entity row
     transactionTemplate.executeWithoutResult(status ->
         assetDao.insert(buildAssetRecord("hash-multi-2", "sub/multi", "iss/multi",
             List.of("did:val:1")))
     );
 
-    // Query all revisions for "sub/multi" — both ADD (hash-multi-1) and MOD (hash-multi-2) on same row
     List<?> revisions = transactionTemplate.execute(status -> {
       var reader = AuditReaderFactory.get(entityManager);
       return reader.createQuery()
@@ -238,11 +225,10 @@ class EnversAuditTest {
 
     assertNotNull(revisions);
     assertEquals(2, revisions.size());
-    assertEquals(RevisionType.ADD, ((Object[]) revisions.get(0))[2]);
-    assertEquals(RevisionType.MOD, ((Object[]) revisions.get(1))[2]);
-    // ADD revision has original hash; MOD revision has updated hash
-    assertEquals("hash-multi-1", ((Asset) ((Object[]) revisions.get(0))[0]).getAssetHash());
-    assertEquals("hash-multi-2", ((Asset) ((Object[]) revisions.get(1))[0]).getAssetHash());
+    assertEquals(RevisionType.ADD, revisionType(revisions, 0));
+    assertEquals(RevisionType.MOD, revisionType(revisions, 1));
+    assertEquals("hash-multi-1", ((Asset) auditRow(revisions, 0)[0]).getAssetHash());
+    assertEquals("hash-multi-2", ((Asset) auditRow(revisions, 1)[0]).getAssetHash());
   }
 
   @Test
@@ -291,8 +277,7 @@ class EnversAuditTest {
 
     assertNotNull(schemaRevisions);
     assertEquals(1, schemaRevisions.size());
-    Object[] row = (Object[]) schemaRevisions.getFirst();
-    assertEquals(RevisionType.ADD, row[2]);
+    assertEquals(RevisionType.ADD, revisionType(schemaRevisions, 0));
 
     // Verify schematerms_AUD also has entries
     List<?> termRevisions = transactionTemplate.execute(status -> {
@@ -328,8 +313,8 @@ class EnversAuditTest {
 
     assertNotNull(schemaRevisions);
     assertEquals(2, schemaRevisions.size());
-    assertEquals(RevisionType.ADD, ((Object[]) schemaRevisions.get(0))[2]);
-    assertEquals(RevisionType.MOD, ((Object[]) schemaRevisions.get(1))[2]);
+    assertEquals(RevisionType.ADD, revisionType(schemaRevisions, 0));
+    assertEquals(RevisionType.MOD, revisionType(schemaRevisions, 1));
   }
 
   @Test
@@ -354,7 +339,7 @@ class EnversAuditTest {
 
     assertNotNull(schemaRevisions);
     assertEquals(2, schemaRevisions.size());
-    assertEquals(RevisionType.DEL, ((Object[]) schemaRevisions.get(1))[2]);
+    assertEquals(RevisionType.DEL, revisionType(schemaRevisions, 1));
 
     // Verify term deletion also audited
     List<?> termRevisions = transactionTemplate.execute(status -> {
@@ -367,8 +352,7 @@ class EnversAuditTest {
 
     assertNotNull(termRevisions);
     assertFalse(termRevisions.isEmpty());
-    Object[] lastTermRev = (Object[]) termRevisions.getLast();
-    assertEquals(RevisionType.DEL, lastTermRev[2]);
+    assertEquals(RevisionType.DEL, revisionType(termRevisions, termRevisions.size() - 1));
   }
 
   // ===== AuditReader query tests =====
@@ -411,8 +395,7 @@ class EnversAuditTest {
           .forRevisionsOfEntity(Asset.class, false, true)
           .add(AuditEntity.property("assetHash").eq("hash-ts"))
           .getResultList();
-      Object[] row = (Object[]) results.getFirst();
-      var revEntity = (org.hibernate.envers.DefaultRevisionEntity) row[1];
+      var revEntity = (org.hibernate.envers.DefaultRevisionEntity) auditRow(results, 0)[1];
       return Instant.ofEpochMilli(revEntity.getTimestamp());
     });
 
@@ -455,5 +438,15 @@ class EnversAuditTest {
     });
     // Still only 1 (the INSERT) — no DEL entry from bulk delete
     assertEquals(1, countAfter);
+  }
+
+  // --- Audit row helpers ---
+
+  private static Object[] auditRow(List<?> revisions, int index) {
+    return (Object[]) revisions.get(index);
+  }
+
+  private static RevisionType revisionType(List<?> revisions, int index) {
+    return (RevisionType) auditRow(revisions, index)[2];
   }
 }

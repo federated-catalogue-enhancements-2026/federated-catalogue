@@ -9,21 +9,21 @@ import eu.xfsc.fc.core.service.assetstore.SubjectStatusRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class AssetJpaDao implements AssetDao {
 
     private static final short ACTIVE_STATUS = (short) AssetStatus.ACTIVE.ordinal();
 
     private final AssetRepository repository;
-    private final AssetAuditRepository auditHelper;
+    private final AssetAuditRepository auditRepository;
 
     @Override
     public Optional<AssetRecord> selectBySubjectId(String subjectId) {
@@ -133,7 +133,7 @@ public class AssetJpaDao implements AssetDao {
     @Transactional(readOnly = true)
     public List<AssetRecord> selectVersions(String subjectId) {
         return repository.findBySubjectId(subjectId)
-            .map(entity -> auditHelper.findAllVersions(entity.getId()))
+            .map(entity -> auditRepository.findAllVersions(entity.getId()))
             .orElse(List.of());
     }
 
@@ -141,7 +141,7 @@ public class AssetJpaDao implements AssetDao {
     @Transactional(readOnly = true)
     public PaginatedResults<AssetRecord> selectVersionsPageWithTotal(String subjectId, int page, int size) {
         return repository.findBySubjectId(subjectId)
-            .map(entity -> auditHelper.findVersionsPageWithTotal(entity.getId(), page, size))
+            .map(entity -> auditRepository.findVersionsPageWithTotal(entity.getId(), page, size))
             .orElse(new PaginatedResults<>(0, List.of()));
     }
 
@@ -149,14 +149,14 @@ public class AssetJpaDao implements AssetDao {
     @Transactional(readOnly = true)
     public Optional<AssetRecord> selectVersion(String subjectId, int version) {
         return repository.findBySubjectId(subjectId)
-            .flatMap(entity -> auditHelper.findVersion(entity.getId(), version));
+            .flatMap(entity -> auditRepository.findVersion(entity.getId(), version));
     }
 
     @Override
     @Transactional(readOnly = true)
     public int getVersionCount(String subjectId) {
         return repository.findBySubjectId(subjectId)
-            .map(entity -> auditHelper.countVersions(entity.getId()))
+            .map(entity -> auditRepository.countVersions(entity.getId()))
             .orElse(0);
     }
 }

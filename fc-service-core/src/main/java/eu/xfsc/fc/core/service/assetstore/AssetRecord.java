@@ -59,7 +59,7 @@ public class AssetRecord extends AssetMetadata {
   }
 
   /**
-   * Builder constructor used by {@link AssetMapper} and {@link AssetAuditRepository}.
+   * Creates a record from explicit fields.
    *
    * @param assetHash       SHA-256 content hash
    * @param id              asset IRI / subjectId

@@ -879,6 +879,7 @@ paths:
           required: false
           schema:
             type: integer
+            minimum: 1
       security:
         - jwt: []
       responses:
@@ -975,13 +976,16 @@ paths:
           schema:
             type: integer
             default: 0
+            minimum: 0
         - name: size
           in: query
-          description: Page size.
+          description: Page size (1–100).
           required: false
           schema:
             type: integer
             default: 20
+            minimum: 1
+            maximum: 100
       security:
         - jwt: []
       responses:
@@ -991,6 +995,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssetVersionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1022,6 +1028,7 @@ paths:
           required: true
           schema:
             type: integer
+            minimum: 1
       security:
         - jwt: []
       responses:

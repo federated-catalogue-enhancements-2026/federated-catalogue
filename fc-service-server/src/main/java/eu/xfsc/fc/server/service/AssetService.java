@@ -185,8 +185,6 @@ public class AssetService implements AssetsApiDelegate {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public ResponseEntity<Asset> addAsset(String body) {
     log.debug("addAsset.enter; got asset of length: {}", body.length());
-    // TODO: 27.07.2022 Need to change the description and the order of actions in the documentation.
-    //  The FH scheme is different from the real process.
     AssetMetadata assetMetadata = verifyAndStore(body, null, null);
     log.debug("addAsset.exit; returning asset with id: {}", assetMetadata.getId());
     String encodedId = UriUtils.encodePathSegment(assetMetadata.getId(), StandardCharsets.UTF_8);

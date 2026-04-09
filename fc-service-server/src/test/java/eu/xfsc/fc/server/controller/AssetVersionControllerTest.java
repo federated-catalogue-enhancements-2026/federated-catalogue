@@ -94,6 +94,7 @@ public class AssetVersionControllerTest {
           assetStorePublisher.getVersionHistoryPage(ASSET_IRI, 0, 1);
       if (!page.getResults().isEmpty()) {
         assetStorePublisher.deleteAsset(page.getResults().getFirst().getAssetHash());
+        assertEquals(0, assetStorePublisher.getVersionCount(ASSET_IRI), "asset should be deleted after test");
       }
     } catch (NotFoundException e) {
       // asset not created or already deleted — expected
@@ -230,11 +231,41 @@ public class AssetVersionControllerTest {
   }
 
   @Test
-  public void readAssetVersions_withoutPermission_returnsForbidden() throws Exception {
+  public void readAssetVersions_withoutPermission_returnsUnauthorized() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}/versions", ASSET_IRI)
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void readAssetVersions_negativePage_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}/versions", ASSET_IRI)
+            .param("page", "-1")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void readAssetVersions_zeroSize_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}/versions", ASSET_IRI)
+            .param("size", "0")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void readAssetVersions_sizeExceedsMax_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}/versions", ASSET_IRI)
+            .param("size", "101")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   // ===== GET /assets/{id}?version=X =====
@@ -272,6 +303,14 @@ public class AssetVersionControllerTest {
   }
 
   @Test
+  public void readAssetById_withoutPermission_returnsUnauthorized() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", ASSET_IRI)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   @WithMockUser(roles = {"ASSET_READ"})
   public void readAssetById_withVersionParamOutOfRange_returnsNotFound() throws Exception {
     storeVersion(CONTENT_V1, null);
@@ -284,13 +323,24 @@ public class AssetVersionControllerTest {
 
   @Test
   @WithMockUser(roles = {"ASSET_READ"})
-  public void readAssetById_withVersionParamZero_returnsNotFound() throws Exception {
+  public void readAssetById_withVersionParamZero_returnsBadRequest() throws Exception {
     storeVersion(CONTENT_V1, null);
 
     mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}?version=0", ASSET_IRI)
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockUser(roles = {"ASSET_READ"})
+  public void readAssetById_withNegativeVersionParam_returnsBadRequest() throws Exception {
+    storeVersion(CONTENT_V1, null);
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}?version=-1", ASSET_IRI)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   // ===== POST /assets/{id}/versions/{version}/revoke =====
@@ -356,6 +406,18 @@ public class AssetVersionControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  public void revokeAssetVersion_negativeVersion_returnsBadRequest() throws Exception {
+    storeVersion(CONTENT_V1, null);
+
+    mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/versions/{version}/revoke", ASSET_IRI, -1)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
