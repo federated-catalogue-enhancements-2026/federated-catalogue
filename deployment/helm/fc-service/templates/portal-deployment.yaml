@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-demo-portal
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: fc-demo-portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-demo-portal
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: fc-demo-portal
+    spec:
+      containers:
+        - name: fc-demo-portal
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
+          imagePullPolicy: Always
+          env:
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FC_CLIENT_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fc-keycloak-client-secret
+                  key: keycloak_client_secret
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
+              value: {{ .Values.portal.keycloakIssuerUri }}
+            - name: FEDERATED_CATALOGUE_BASE_URI
+              value: {{ .Values.portal.fcBaseUri }}
+          ports:
+            - name: http
+              containerPort: 8088
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8088
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+      restartPolicy: Always

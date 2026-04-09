@@ -144,21 +144,23 @@ env:
 #        name: fc-neo4j-secret
 #        key: password   
   - name: KEYCLOAK_AUTH_SERVER_URL
-    value: http://fc-keycloak-headless.fed-cat.svc.cluster.local:8080
+    value: http://fc-keycloak-headless.federated-catalogue.svc.cluster.local:8080/auth
   - name: KEYCLOAK_CREDENTIALS_SECRET
     valueFrom:
       secretKeyRef:
         name: fc-keycloak-client-secret
-        key: keycloak_client_secret   
+        key: keycloak_client_secret
   - name: SPRING_DATASOURCE_URL
     value: jdbc:postgresql://fc-postgres:5432/postgres
+  - name: SPRING_DATASOURCE_USERNAME
+    value: keycloak
   - name: SPRING_DATASOURCE_PASSWORD
     valueFrom:
       secretKeyRef:
         name: fc-postgres
-        key: postgres-password
+        key: password
   - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-    value: http://key-server.82.165.249.107.sslip.io/realms/gaia-x
+    value: http://key-server.82.165.249.107.sslip.io/auth/realms/gaia-x
 #  - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
 #    value: DEBUG  
 
@@ -202,10 +204,9 @@ keycloak:
     strict: false
     strictBackchannel: false
 
-  # Proxy configuration
+  # Proxy configuration - disabled; KC_PROXY_HEADERS set directly in extraEnv (Keycloak 26+)
   proxy:
-    enabled: true
-    mode: edge
+    enabled: false
 
   # Database configuration
   database:
@@ -217,12 +218,18 @@ keycloak:
     existingSecret: fc-postgres
     existingSecretPasswordKey: password
 
-  # Admin credentials (only set via extraEnv, not duplicated)
+  # Admin credentials and proxy headers (Keycloak 26+ requires KC_PROXY_HEADERS, not KC_PROXY)
   extraEnv: |-
     - name: KEYCLOAK_ADMIN
       value: admin
     - name: KEYCLOAK_ADMIN_PASSWORD
       value: admin
+    - name: KC_PROXY_HEADERS
+      value: xforwarded
+    - name: KC_HOSTNAME
+      value: key-server.82.165.249.107.sslip.io
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
 
   # Realm import via volume mount
   extraVolumeMounts: |-
@@ -250,8 +257,16 @@ keycloak:
   # Service
   service:
     type: ClusterIP
-    httpPort: 8080  
-    
+    httpPort: 8080
+
+portal:
+  image:
+    repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal
+    tag: "feature-kubernetes"
+  host: fc-demo-portal.82.165.249.107.sslip.io
+  keycloakIssuerUri: http://key-server.82.165.249.107.sslip.io/auth/realms/gaia-x
+  fcBaseUri: http://fc-service:8081
+
 neo4j:
   fullnameOverride: fc-neo4j
   neo4j:
