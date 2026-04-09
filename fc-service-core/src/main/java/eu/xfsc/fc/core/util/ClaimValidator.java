@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +29,6 @@ import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -119,7 +119,6 @@ public class ClaimValidator {
             resetJenaLiteralValidation();
         }
 
-    	URI uri;
         Triple triple = model.getGraph().find().next();
         // --- subject ----------------------------------------------------
         Node s = triple.getSubject();
@@ -271,13 +270,14 @@ public class ClaimValidator {
         //ContentAccessor gaxOntology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
         OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
         model.read(new StringReader(ontology.getContentAsString()), null, Lang.TURTLE.getName());
-        ResultSet results;
+        List<String> subClassUris = new ArrayList<>();
         try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
-            results = qe.execSelect();
+            ResultSet results = qe.execSelect();
+            while (results.hasNext()) {
+                subClassUris.add(results.next().get("uri").toString());
+            }
         }
-        while (results.hasNext()) {
-          QuerySolution q = results.next();
-          String node =  q.get("uri").toString();
+        for (String node : subClassUris) {
           if (node.equals(type)) {
             return true;
           }
