@@ -4,15 +4,15 @@ Deploys the full Federated Catalogue stack to Kubernetes.
 
 ## Components
 
-| Component      | Image                                              | Port |
-|----------------|----------------------------------------------------|------|
-| fc-service     | ghcr.io/.../fc-service-server:feature-kubernetes   | 8081 |
-| fc-demo-portal | ghcr.io/.../fc-demo-portal:feature-kubernetes      | 8088 |
-| Keycloak 26    | quay.io/keycloak/keycloak (keycloakx 7.1.9)        | 8080 |
-| PostgreSQL 15  | postgres:15.2                                      | 5432 |
-| Neo4j 5.18     | neo4j:5.18.0 (with APOC, GDS, n10s plugins)        | 7687 |
+| Component      | Image                                            | Port |
+|----------------|--------------------------------------------------|------|
+| fc-service     | ghcr.io/eclipse-xfsc/federated-catalogue/fc-service-server | 8081 |
+| fc-demo-portal | ghcr.io/eclipse-xfsc/federated-catalogue/fc-demo-portal    | 8088 |
+| Keycloak 26    | quay.io/keycloak/keycloak (keycloakx 7.1.9)      | 8080 |
+| PostgreSQL 15  | postgres:15.2                                    | 5432 |
+| Fuseki         | docker.io/stain/jena-fuseki                      | 3030 |
 
-Sub-chart dependencies: `keycloakx 7.1.9`, `neo4j 5.18.1`. All GHCR images are public — no pull secret required.
+Sub-chart dependency: `keycloakx 7.1.9`. All GHCR images are public — no pull secret required.
 
 ---
 
@@ -108,7 +108,7 @@ helm upgrade --install fc-service deployment/helm/fc-service \
 kubectl get pods -n federated-catalogue
 ```
 
-All five pods should reach `Running` / `1/1`. Neo4j and fc-service take ~60 s to pass their readiness probes. Neo4j also runs an init container that downloads ~200 MB of plugins from GitHub on first start — allow extra time on cold start.
+All five pods should reach `Running` / `1/1`. Fuseki and fc-service take ~60 s to pass their readiness probes. On first start, Fuseki waits for its PVC to be provisioned — allow extra time on cold start.
 
 ---
 
@@ -135,10 +135,10 @@ helm upgrade --install fc-service deployment/helm/fc-service \
   --server-side=true --force-conflicts
 ```
 
-StatefulSet pods (Keycloak, Neo4j, Postgres) do not roll automatically on upgrade — delete them manually if a config change needs to be picked up:
+StatefulSet pods (Keycloak, Postgres, Fuseki) do not roll automatically on upgrade — delete them manually if a config change needs to be picked up:
 
 ```bash
-kubectl delete pod fc-keycloak-0 fc-postgres-0 -n federated-catalogue
+kubectl delete pod fc-keycloak-0 fc-postgres-0 fc-fuseki-0 -n federated-catalogue
 ```
 
 ---
@@ -161,3 +161,5 @@ The Keycloak OAuth2 client secret (`fc-keycloak-client-secret`) is intentionally
 `/tmp` (Spring Boot JAR extraction) and `/logs` (Logback) are mounted as `emptyDir` volumes. Both are configurable via `volumes` / `volumeMounts` in `values.yaml`.
 
 PostgreSQL runs as root (`allowPrivilegeEscalation: false` only) — required by the official image's gosu-based initialisation.
+
+Fuseki runs as UID 9008 (`fuseki` user). The pod security context sets `fsGroup: 9008` so the mounted PVC is writable on first start.
