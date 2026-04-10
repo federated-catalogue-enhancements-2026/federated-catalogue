@@ -146,17 +146,13 @@ env:
   - name: FEDERATED_CATALOGUE_VERIFICATION_SIGNATURES
     value: "true"
   - name: GRAPHSTORE_IMPL
-    value: neo4j
+    value: fuseki
   - name: GRAPHSTORE_URI
-    value: bolt://fc-neo4j:7687
-  - name: GRAPHSTORE_QUERY_TIMEOUT_IN_SECONDS
-    value: "5"
+    value: http://fc-fuseki:3030/ds
+  - name: GRAPHSTORE_USER
+    value: admin
   - name: GRAPHSTORE_PASSWORD
-    value: neo12345
-#    valueFrom:
-#      secretKeyRef:
-#        name: fc-neo4j-secret
-#        key: password
+    value: admin
   - name: KEYCLOAK_AUTH_SERVER_URL
     value: http://fc-keycloak-headless.federated-catalogue.svc.cluster.local:8080/auth
   - name: KEYCLOAK_CREDENTIALS_SECRET
@@ -330,41 +326,20 @@ portal:
   tolerations: []
   affinity: {}
 
-neo4j:
-  fullnameOverride: fc-neo4j
-  neo4j:
-    name: fc-neo4j-db
-    password: "neo12345"
-  volumes:
-    data:
-      mode: defaultStorageClass
-  env:
-    NEO4J_PLUGINS: '["apoc", "graph-data-science", "n10s"]'
-  additionalVolumes:
-    - name: fc-neo4j-data
-      emptyDir: {}
-  additionalVolumeMounts:
-    - name: fc-neo4j-data
-      mountPath: "/var/lib/neo4j/plugins"
-  config:
-    dbms.security.procedures.unrestricted: gds.*,apoc.*,n10s.*,semantics.*
-    dbms.security.procedures.allowlist: gds.*,apoc.*,n10s.*,semantics.*
-  initContainers:
-    - name: init-plugins
-      image: appropriate/curl:latest
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: fc-neo4j-data
-          mountPath: /var/lib/neo4j/plugins
-      securityContext:
-        allowPrivilegeEscalation: false
-      command:
-        - "/bin/sh"
-        - "-c"
-        - |
-          curl -L https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/5.18.0/apoc-5.18.0-extended.jar -O
-          curl -L https://github.com/neo4j-labs/neosemantics/releases/download/5.18.0/neosemantics-5.18.0.jar -O
-          curl -L https://graphdatascience.ninja/neo4j-graph-data-science-2.6.6.jar -O
-          cp -R apoc-5.18.0-extended.jar /var/lib/neo4j/plugins
-          cp -R neosemantics-5.18.0.jar /var/lib/neo4j/plugins
-          cp -R neo4j-graph-data-science-2.6.6.jar /var/lib/neo4j/plugins
+fuseki:
+  fullnameOverride: fc-fuseki
+  image:
+    repository: docker.io/stain/jena-fuseki
+    tag: "latest"
+  dataset: ds
+  adminPassword: admin
+  jvmArgs: "-Xmx1g"
+  persistence:
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

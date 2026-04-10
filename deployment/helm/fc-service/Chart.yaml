@@ -16,9 +16,6 @@ version: 0.4.0
 appVersion: "2.1.0"
 
 dependencies:
-  - name: neo4j
-    version: 5.18.1
-    repository: "https://neo4j.github.io/helm-charts/"
   - name: keycloakx
     version: 7.1.9
     repository: "https://codecentric.github.io/helm-charts"

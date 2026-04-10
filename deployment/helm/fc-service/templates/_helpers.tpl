@@ -114,3 +114,30 @@ PostgreSQL selector labels
 app.kubernetes.io/name: {{ include "fc-service.postgres.fullname" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Fully qualified name for the Fuseki component.
+*/}}
+{{- define "fc-service.fuseki.fullname" -}}
+{{- .Values.fuseki.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Fuseki labels
+*/}}
+{{- define "fc-service.fuseki.labels" -}}
+helm.sh/chart: {{ include "fc-service.chart" . }}
+{{ include "fc-service.fuseki.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Fuseki selector labels
+*/}}
+{{- define "fc-service.fuseki.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "fc-service.fuseki.fullname" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
