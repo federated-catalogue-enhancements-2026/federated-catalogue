@@ -1,0 +1,161 @@
+# fc-service Helm Chart
+
+Deploys the full Federated Catalogue stack to Kubernetes.
+
+## Components
+
+| Component      | Image                                              | Port |
+|----------------|----------------------------------------------------|------|
+| fc-service     | ghcr.io/.../fc-service-server:feature-kubernetes   | 8081 |
+| fc-demo-portal | ghcr.io/.../fc-demo-portal:feature-kubernetes      | 8088 |
+| Keycloak 26    | quay.io/keycloak/keycloak (keycloakx 7.1.9)        | 8080 |
+| PostgreSQL 15  | postgres:15.2                                      | 5432 |
+| Neo4j 5.18     | neo4j:5.18.0 (with APOC, GDS, n10s plugins)        | 7687 |
+
+Sub-chart dependencies: `keycloakx 7.1.9`, `neo4j 5.18.1`. All GHCR images are public — no pull secret required.
+
+---
+
+## New cluster setup
+
+### 1. Install nginx ingress controller
+
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  -n ingress-nginx --create-namespace
+```
+
+Wait until the controller has an external IP:
+
+```bash
+kubectl get svc ingress-nginx-controller -n ingress-nginx --watch
+```
+
+Note the `EXTERNAL-IP` — you will need it in step 3.
+
+### 2. Install cert-manager
+
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager \
+  -n cert-manager --create-namespace \
+  --set crds.enabled=true
+```
+
+Verify all pods are running before continuing:
+
+```bash
+kubectl get pods -n cert-manager
+```
+
+### 3. Configure the ingress IP
+
+Edit the three anchor lines at the top of `values.yaml`:
+
+```yaml
+ingressIP: <EXTERNAL-IP>
+fcServiceHost: &fcServiceHost "fc-server.<EXTERNAL-IP>.sslip.io"
+keycloakHost:  &keycloakHost  "key-server.<EXTERNAL-IP>.sslip.io"
+portalHost:    &portalHost    "fc-demo-portal.<EXTERNAL-IP>.sslip.io"
+```
+
+All other hostname references throughout `values.yaml` and the templates derive from these three lines automatically.
+
+### 4. Apply the Let's Encrypt ClusterIssuer
+
+```bash
+kubectl apply -f deployment/cert-manager/clusterissuer.yaml
+```
+
+### 5. Create namespace and out-of-band secrets
+
+The Keycloak OAuth2 client secret is not managed by Helm. Its value must match the `secret` field of the `fc-service` client in `gaia-x-realm.json` (currently `**********`):
+
+```bash
+kubectl create namespace federated-catalogue
+
+kubectl create secret generic fc-keycloak-client-secret \
+  --from-literal=keycloak_client_secret=<value-matching-gaia-x-realm.json> \
+  -n federated-catalogue
+```
+
+### 6. Pull chart dependencies
+
+```bash
+helm dependency build deployment/helm/fc-service
+```
+
+### 7. Deploy
+
+```bash
+helm upgrade --install fc-service deployment/helm/fc-service \
+  -n federated-catalogue \
+  -f deployment/helm/fc-service/values.yaml \
+  --server-side=true --force-conflicts
+```
+
+`-f values.yaml` is required — without it Helm reuses stored release values and ignores local changes.  
+`--server-side=true --force-conflicts` is required for Helm v4 server-side apply field ownership.
+
+### 8. Verify
+
+```bash
+kubectl get pods -n federated-catalogue
+```
+
+All five pods should reach `Running` / `1/1`. Neo4j and fc-service take ~60 s to pass their readiness probes. Neo4j also runs an init container that downloads ~200 MB of plugins from GitHub on first start — allow extra time on cold start.
+
+---
+
+## Service URLs
+
+Replace `<EXTERNAL-IP>` with the configured IP:
+
+| Service        | URL                                                      |
+|----------------|----------------------------------------------------------|
+| fc-service API | `https://fc-server.<EXTERNAL-IP>.sslip.io`               |
+| Keycloak admin | `https://key-server.<EXTERNAL-IP>.sslip.io/auth`         |
+| fc-demo-portal | `https://fc-demo-portal.<EXTERNAL-IP>.sslip.io`          |
+
+TLS certificates are issued automatically by Let's Encrypt via HTTP-01 challenge. Allow a minute after first deploy for certificates to be provisioned.
+
+---
+
+## Upgrading an existing release
+
+```bash
+helm upgrade --install fc-service deployment/helm/fc-service \
+  -n federated-catalogue \
+  -f deployment/helm/fc-service/values.yaml \
+  --server-side=true --force-conflicts
+```
+
+StatefulSet pods (Keycloak, Neo4j, Postgres) do not roll automatically on upgrade — delete them manually if a config change needs to be picked up:
+
+```bash
+kubectl delete pod fc-keycloak-0 fc-postgres-0 -n federated-catalogue
+```
+
+---
+
+## Credentials
+
+Postgres and Keycloak admin credentials are currently in plaintext in `values.yaml`. This is acceptable for development but not for production.
+
+The Keycloak OAuth2 client secret (`fc-keycloak-client-secret`) is intentionally excluded from the chart and never overwritten by Helm upgrades.
+
+---
+
+## Security context
+
+`fc-service` and `fc-demo-portal` run hardened:
+- UID 1000, non-root
+- `readOnlyRootFilesystem: true`
+- All Linux capabilities dropped
+
+`/tmp` (Spring Boot JAR extraction) and `/logs` (Logback) are mounted as `emptyDir` volumes. Both are configurable via `volumes` / `volumeMounts` in `values.yaml`.
+
+PostgreSQL runs as root (`allowPrivilegeEscalation: false` only) — required by the official image's gosu-based initialisation.
