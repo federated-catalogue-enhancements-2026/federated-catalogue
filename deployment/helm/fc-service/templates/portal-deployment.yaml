@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: {{ include "fc-service.portal.fullname" . }}
-          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
           env:
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FC_CLIENT_OIDC_CLIENT_SECRET
