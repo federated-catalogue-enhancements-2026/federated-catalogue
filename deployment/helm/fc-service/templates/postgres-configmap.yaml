@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fc-postgres-init
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.postgres.fullname" . }}-init
   labels:
-    app: fc-postgres
+    {{- include "fc-service.postgres.labels" . | nindent 4 }}
 data:
   01-init.sh: |
     #!/bin/bash

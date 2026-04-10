@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: fc-postgres
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.postgres.fullname" . }}
   labels:
-    app: fc-postgres
+    {{- include "fc-service.postgres.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -13,4 +12,4 @@ spec:
     protocol: TCP
     name: postgres
   selector:
-    app: fc-postgres
+    {{- include "fc-service.postgres.selectorLabels" . | nindent 4 }}

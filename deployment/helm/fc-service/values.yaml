@@ -1,14 +1,14 @@
 # Default values for fc-service.
 #
-# To change the deployment IP, update the three anchor definitions below.
-# All hostnames throughout this file reference these anchors.
+# To change the deployment hostnames, update the hosts section below.
+# Downstream sections (ingress.hosts, keycloak.hostname, keycloak.ingress, etc.)
+# must be kept in sync manually — values.yaml cannot self-reference.
 
-# --- Hostname anchors (single source of truth for the ingress IP) ---
-ingressIP: 82.165.249.107
-fcServiceHost: &fcServiceHost "fc-server.82.165.249.107.sslip.io"
-keycloakHost: &keycloakHost "key-server.82.165.249.107.sslip.io"
-portalHost: &portalHost "fc-demo-portal.82.165.249.107.sslip.io"
-# -------------------------------------------------------------------
+# Hostname configuration (single source of truth for templates)
+hosts:
+  fcService: "fc-server.82.165.249.107.sslip.io"
+  keycloak: "key-server.82.165.249.107.sslip.io"
+  portal: "fc-demo-portal.82.165.249.107.sslip.io"
 
 name: fc-service
 replicaCount: 1
@@ -65,14 +65,14 @@ ingress:
 #          return 403;
 #        }
   hosts:
-    - host: *fcServiceHost
+    - host: "fc-server.82.165.249.107.sslip.io"
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: fc-server-tls
       hosts:
-        - *fcServiceHost
+        - "fc-server.82.165.249.107.sslip.io"
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -90,6 +90,12 @@ probes:
   path: /actuator/health
   initialDelaySeconds: 60
   periodSeconds: 30
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
 
 autoscaling:
   enabled: false
@@ -121,14 +127,12 @@ affinity:
         podAffinityTerm:
           labelSelector:
             matchExpressions:
-              - key: app
+              - key: app.kubernetes.io/name
                 operator: In
                 values:
                   - fc-service
           topologyKey: "kubernetes.io/hostname"
 
-# hostAliases are not needed when using sslip.io for DNS resolution
-# The cluster DNS will automatically resolve *.sslip.io hostnames
 hostAliases: []
 
 storage:
@@ -173,6 +177,7 @@ env:
 #    value: DEBUG
 
 postgresql:
+  fullnameOverride: fc-postgres
   # Using official PostgreSQL image (not Bitnami)
   image:
     repository: postgres
@@ -193,7 +198,7 @@ keycloak:
   # Use official Keycloak image from quay.io
   image:
     repository: quay.io/keycloak/keycloak
-    tag: ""  # Use chart default (26.5.5)
+    tag: "26.5.5"
 
   # Command and arguments for realm import
   command:
@@ -206,9 +211,9 @@ keycloak:
   http:
     enabled: true
 
-  # Hostname configuration
+  # Hostname configuration — keep in sync with hosts.keycloak above
   hostname:
-    hostname: *keycloakHost
+    hostname: "key-server.82.165.249.107.sslip.io"
     strict: false
     strictBackchannel: false
 
@@ -235,7 +240,7 @@ keycloak:
     - name: KC_PROXY_HEADERS
       value: xforwarded
     - name: KC_HOSTNAME
-      value: "{{ .Values.keycloakHost }}"
+      value: "{{ .Values.hostname.hostname }}"
     - name: KC_HOSTNAME_STRICT
       value: "false"
 
@@ -250,7 +255,7 @@ keycloak:
       configMap:
         name: fc-keycloak-realm-configmap
 
-  # Ingress configuration
+  # Ingress configuration — keep in sync with hosts.keycloak above
   ingress:
     enabled: true
     ingressClassName: nginx
@@ -259,13 +264,13 @@ keycloak:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
     rules:
-      - host: *keycloakHost
+      - host: "key-server.82.165.249.107.sslip.io"
         paths:
           - path: /
             pathType: Prefix
     tls:
       - hosts:
-          - *keycloakHost
+          - "key-server.82.165.249.107.sslip.io"
         secretName: keycloak-tls
 
   # Service
@@ -274,21 +279,56 @@ keycloak:
     httpPort: 8080
 
 portal:
+  fullnameOverride: fc-demo-portal
   replicaCount: 1
   image:
     repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal
     tag: "feature-kubernetes"
     pullPolicy: Always
-  host: *portalHost
-  # keycloakIssuerUri is constructed from keycloakHost in portal-deployment.yaml
+  # keycloakIssuerUri is constructed from hosts.keycloak in portal-deployment.yaml
   fcBaseUri: http://fc-service:8081
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  service:
+    port: 8088
   tls:
     secretName: fc-demo-portal-tls
+  ingress:
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/affinity: cookie
+      nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+      nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
   probes:
     path: /actuator/health
     initialDelaySeconds: 60
     periodSeconds: 30
   resources: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  volumeMounts:
+    - name: logs
+      mountPath: /logs
+    - name: tmp
+      mountPath: /tmp
+  volumes:
+    - name: logs
+      emptyDir: {}
+    - name: tmp
+      emptyDir: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 neo4j:
   fullnameOverride: fc-neo4j

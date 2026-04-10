@@ -1,27 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fc-demo-portal
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.portal.fullname" . }}
   labels:
-    app: fc-demo-portal
+    {{- include "fc-service.portal.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.portal.replicaCount }}
   selector:
     matchLabels:
-      app: fc-demo-portal
+      {{- include "fc-service.portal.selectorLabels" . | nindent 6 }}
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    {{- toYaml .Values.portal.strategy | nindent 4 }}
   template:
     metadata:
       labels:
-        app: fc-demo-portal
+        {{- include "fc-service.portal.selectorLabels" . | nindent 8 }}
     spec:
       containers:
-        - name: fc-demo-portal
+        - name: {{ include "fc-service.portal.fullname" . }}
           image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
           imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
           env:
@@ -31,12 +27,12 @@ spec:
                   name: fc-keycloak-client-secret
                   key: keycloak_client_secret
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
-              value: "https://{{ .Values.keycloakHost }}/auth/realms/gaia-x"
+              value: "https://{{ .Values.hosts.keycloak }}/auth/realms/gaia-x"
             - name: FEDERATED_CATALOGUE_BASE_URI
               value: {{ .Values.portal.fcBaseUri }}
           ports:
             - name: http
-              containerPort: 8088
+              containerPort: {{ .Values.portal.service.port }}
           readinessProbe:
             httpGet:
               path: {{ .Values.portal.probes.path }}
@@ -46,12 +42,24 @@ spec:
           resources:
             {{- toYaml .Values.portal.resources | nindent 12 }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          {{- with .Values.volumeMounts }}
+            {{- toYaml .Values.portal.securityContext | nindent 12 }}
+          {{- with .Values.portal.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- with .Values.portal.volumes }}
       volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.portal.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.portal.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.portal.tolerations }}
+      tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

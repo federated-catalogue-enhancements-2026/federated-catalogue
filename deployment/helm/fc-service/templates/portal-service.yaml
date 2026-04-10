@@ -1,15 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: fc-demo-portal
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.portal.fullname" . }}
   labels:
-    app: fc-demo-portal
+    {{- include "fc-service.portal.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
     - name: http
-      port: 8088
-      targetPort: 8088
+      port: {{ .Values.portal.service.port }}
+      targetPort: http
   selector:
-    app: fc-demo-portal
+    {{- include "fc-service.portal.selectorLabels" . | nindent 4 }}

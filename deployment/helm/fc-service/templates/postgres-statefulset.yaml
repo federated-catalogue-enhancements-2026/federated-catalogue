@@ -1,20 +1,19 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: fc-postgres
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.postgres.fullname" . }}
   labels:
-    app: fc-postgres
+    {{- include "fc-service.postgres.labels" . | nindent 4 }}
 spec:
-  serviceName: fc-postgres
+  serviceName: {{ include "fc-service.postgres.fullname" . }}
   replicas: 1
   selector:
     matchLabels:
-      app: fc-postgres
+      {{- include "fc-service.postgres.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: fc-postgres
+        {{- include "fc-service.postgres.selectorLabels" . | nindent 8 }}
     spec:
       containers:
       - name: postgres
@@ -52,7 +51,7 @@ spec:
       volumes:
       - name: init-scripts
         configMap:
-          name: fc-postgres-init
+          name: {{ include "fc-service.postgres.fullname" . }}-init
   volumeClaimTemplates:
   - metadata:
       name: postgres-data

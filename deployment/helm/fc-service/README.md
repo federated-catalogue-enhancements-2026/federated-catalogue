@@ -53,16 +53,18 @@ kubectl get pods -n cert-manager
 
 ### 3. Configure the ingress IP
 
-Edit the three anchor lines at the top of `values.yaml`:
+Edit the `hosts` section at the top of `values.yaml`:
 
 ```yaml
-ingressIP: <EXTERNAL-IP>
-fcServiceHost: &fcServiceHost "fc-server.<EXTERNAL-IP>.sslip.io"
-keycloakHost:  &keycloakHost  "key-server.<EXTERNAL-IP>.sslip.io"
-portalHost:    &portalHost    "fc-demo-portal.<EXTERNAL-IP>.sslip.io"
+hosts:
+  fcService: "fc-server.<EXTERNAL-IP>.sslip.io"
+  keycloak:  "key-server.<EXTERNAL-IP>.sslip.io"
+  portal:    "fc-demo-portal.<EXTERNAL-IP>.sslip.io"
 ```
 
-All other hostname references throughout `values.yaml` and the templates derive from these three lines automatically.
+Templates derive hostnames from `hosts.*`. Also update the matching literal strings in
+`ingress.hosts`, `keycloak.hostname.hostname`, and `keycloak.ingress.rules` — those
+sub-chart values cannot reference `hosts.*` directly and must be kept in sync.
 
 ### 4. Apply the Let's Encrypt ClusterIssuer
 

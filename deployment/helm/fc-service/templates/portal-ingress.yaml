@@ -1,31 +1,29 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: fc-demo-portal-ingress
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "fc-service.portal.fullname" . }}
+  labels:
+    {{- include "fc-service.portal.labels" . | nindent 4 }}
+  {{- with .Values.portal.ingress.annotations }}
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/affinity: cookie
-    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
-    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   ingressClassName: nginx
   {{- if .Values.portal.tls }}
   tls:
     - hosts:
-        - {{ .Values.portal.host }}
+        - {{ .Values.hosts.portal | quote }}
       secretName: {{ .Values.portal.tls.secretName }}
   {{- end }}
   rules:
-    - host: {{ .Values.portal.host }}
+    - host: {{ .Values.hosts.portal | quote }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: fc-demo-portal
+                name: {{ include "fc-service.portal.fullname" . }}
                 port:
-                  number: 8088
+                  number: {{ .Values.portal.service.port }}
