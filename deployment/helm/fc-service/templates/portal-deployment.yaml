@@ -31,7 +31,7 @@ spec:
                   name: fc-keycloak-client-secret
                   key: keycloak_client_secret
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
-              value: {{ .Values.portal.keycloakIssuerUri }}
+              value: "https://{{ .Values.keycloakHost }}/auth/realms/gaia-x"
             - name: FEDERATED_CATALOGUE_BASE_URI
               value: {{ .Values.portal.fcBaseUri }}
           ports:

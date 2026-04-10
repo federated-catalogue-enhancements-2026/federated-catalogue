@@ -1,11 +1,14 @@
 # Default values for fc-service.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+#
+# To change the deployment IP, update the three anchor definitions below.
+# All hostnames throughout this file reference these anchors.
 
-# IMPORTANT: Replace INGRESS_IP with your actual ingress controller IP address
-# Get it with: kubectl get svc -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-# Example: If your ingress IP is 192.168.1.100, replace all instances of INGRESS_IP with 192.168.1.100
-# This configuration uses sslip.io for automatic DNS resolution without local configuration
+# --- Hostname anchors (single source of truth for the ingress IP) ---
+ingressIP: 82.165.249.107
+fcServiceHost: &fcServiceHost "fc-server.82.165.249.107.sslip.io"
+keycloakHost: &keycloakHost "key-server.82.165.249.107.sslip.io"
+portalHost: &portalHost "fc-demo-portal.82.165.249.107.sslip.io"
+# -------------------------------------------------------------------
 
 name: fc-service
 replicaCount: 1
@@ -35,13 +38,12 @@ podSecurityContext: {}
   # fsGroup: 2000
 
 securityContext:
-  allowPrivilegeEscalation: false 
-#  # capabilities:
-#  #   drop:
-#  #   - ALL
-#  # readOnlyRootFilesystem: true
-#  # runAsNonRoot: true
-#  # runAsUser: 1000
+  allowPrivilegeEscalation: false
+#  capabilities:
+#    drop: [ALL]
+#  readOnlyRootFilesystem: true
+#  runAsNonRoot: true
+#  runAsUser: 1000
 
 service:
   type: ClusterIP
@@ -51,10 +53,8 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    # kubernetes.io/tls-acme: "true"
-    kubernetes.io/ingress.allow-http: "true"
-#    cert-manager.io/cluster-issuer: cert-manager-webhook
-    nginx.ingress.kubernetes.io/ssl-redirect: "false" #true"
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
@@ -65,14 +65,14 @@ ingress:
 #          return 403;
 #        }
   hosts:
-    - host: fc-server.82.165.249.107.sslip.io
+    - host: *fcServiceHost
       paths:
         - path: /
           pathType: Prefix
-#  tls:
-#    - secretName: wildcard-gxfs-dev
-#      hosts:
-#        - fc-server.INGRESS_IP.sslip.io
+  tls:
+    - secretName: fc-server-tls
+      hosts:
+        - *fcServiceHost
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -89,7 +89,7 @@ resources: {}
 probes:
   path: /actuator/health
   initialDelaySeconds: 60
-  periodSeconds: 30             
+  periodSeconds: 30
 
 autoscaling:
   enabled: false
@@ -102,7 +102,7 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: 
+affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
@@ -114,13 +114,13 @@ affinity:
                 values:
                   - fc-service
           topologyKey: "kubernetes.io/hostname"
-          
+
 restartPolicy: Always
 
 # hostAliases are not needed when using sslip.io for DNS resolution
 # The cluster DNS will automatically resolve *.sslip.io hostnames
 hostAliases: []
-    
+
 storage:
   enabled: false
   size: 2Gi
@@ -142,7 +142,7 @@ env:
 #    valueFrom:
 #      secretKeyRef:
 #        name: fc-neo4j-secret
-#        key: password   
+#        key: password
   - name: KEYCLOAK_AUTH_SERVER_URL
     value: http://fc-keycloak-headless.federated-catalogue.svc.cluster.local:8080/auth
   - name: KEYCLOAK_CREDENTIALS_SECRET
@@ -159,10 +159,8 @@ env:
       secretKeyRef:
         name: fc-postgres
         key: password
-  - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-    value: http://key-server.82.165.249.107.sslip.io/auth/realms/gaia-x
 #  - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
-#    value: DEBUG  
+#    value: DEBUG
 
 postgresql:
   # Using official PostgreSQL image (not Bitnami)
@@ -173,11 +171,11 @@ postgresql:
     postgresPassword: postgres
     username: keycloak
     password: keycloak
-    database: postgres  # Default database
+    database: postgres
   persistence:
     enabled: true
     size: 10Gi
-  
+
 keycloak:
   fullnameOverride: fc-keycloak
   replicas: 1
@@ -200,7 +198,7 @@ keycloak:
 
   # Hostname configuration
   hostname:
-    hostname: key-server.82.165.249.107.sslip.io
+    hostname: *keycloakHost
     strict: false
     strictBackchannel: false
 
@@ -218,7 +216,7 @@ keycloak:
     existingSecret: fc-postgres
     existingSecretPasswordKey: password
 
-  # Admin credentials and proxy headers (Keycloak 26+ requires KC_PROXY_HEADERS, not KC_PROXY)
+  # extraEnv is processed via tpl by keycloakx, so template syntax is valid here.
   extraEnv: |-
     - name: KEYCLOAK_ADMIN
       value: admin
@@ -227,7 +225,7 @@ keycloak:
     - name: KC_PROXY_HEADERS
       value: xforwarded
     - name: KC_HOSTNAME
-      value: key-server.82.165.249.107.sslip.io
+      value: "{{ .Values.keycloakHost }}"
     - name: KC_HOSTNAME_STRICT
       value: "false"
 
@@ -247,12 +245,18 @@ keycloak:
     enabled: true
     ingressClassName: nginx
     annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
     rules:
-      - host: key-server.82.165.249.107.sslip.io
+      - host: *keycloakHost
         paths:
           - path: /
             pathType: Prefix
+    tls:
+      - hosts:
+          - *keycloakHost
+        secretName: keycloak-tls
 
   # Service
   service:
@@ -263,9 +267,11 @@ portal:
   image:
     repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal
     tag: "feature-kubernetes"
-  host: fc-demo-portal.82.165.249.107.sslip.io
-  keycloakIssuerUri: http://key-server.82.165.249.107.sslip.io/auth/realms/gaia-x
+  host: *portalHost
+  # keycloakIssuerUri is constructed from keycloakHost in portal-deployment.yaml
   fcBaseUri: http://fc-service:8081
+  tls:
+    secretName: fc-demo-portal-tls
 
 neo4j:
   fullnameOverride: fc-neo4j
@@ -277,10 +283,10 @@ neo4j:
       mode: defaultStorageClass
   env:
     NEO4J_PLUGINS: '["apoc", "graph-data-science", "n10s"]'
-  additionalVolumes: 
+  additionalVolumes:
     - name: fc-neo4j-data
       emptyDir: {}
-  additionalVolumeMounts: 
+  additionalVolumeMounts:
     - name: fc-neo4j-data
       mountPath: "/var/lib/neo4j/plugins"
   config:
@@ -294,7 +300,7 @@ neo4j:
         - name: fc-neo4j-data
           mountPath: /var/lib/neo4j/plugins
       securityContext:
-        allowPrivilegeEscalation: false    
+        allowPrivilegeEscalation: false
       command:
         - "/bin/sh"
         - "-c"

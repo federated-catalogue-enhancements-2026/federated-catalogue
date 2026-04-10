@@ -4,14 +4,20 @@ metadata:
   name: fc-demo-portal-ingress
   namespace: {{ .Release.Namespace }}
   annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
     nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
 spec:
   ingressClassName: nginx
+  {{- if .Values.portal.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.portal.host }}
+      secretName: {{ .Values.portal.tls.secretName }}
+  {{- end }}
   rules:
     - host: {{ .Values.portal.host }}
       http:
