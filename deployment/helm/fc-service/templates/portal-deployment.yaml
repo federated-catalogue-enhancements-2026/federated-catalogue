@@ -6,7 +6,7 @@ metadata:
   labels:
     app: fc-demo-portal
 spec:
-  replicas: 1
+  replicas: {{ .Values.portal.replicaCount }}
   selector:
     matchLabels:
       app: fc-demo-portal
@@ -23,7 +23,7 @@ spec:
       containers:
         - name: fc-demo-portal
           image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
           env:
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FC_CLIENT_OIDC_CLIENT_SECRET
               valueFrom:
@@ -39,10 +39,19 @@ spec:
               containerPort: 8088
           readinessProbe:
             httpGet:
-              path: /actuator/health
-              port: 8088
-            initialDelaySeconds: 60
-            periodSeconds: 30
-          resources: {}
+              path: {{ .Values.portal.probes.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.portal.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.portal.probes.periodSeconds }}
+          resources:
+            {{- toYaml .Values.portal.resources | nindent 12 }}
           securityContext:
-            allowPrivilegeEscalation: false
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

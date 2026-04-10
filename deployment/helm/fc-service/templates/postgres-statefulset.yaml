@@ -37,6 +37,11 @@ spec:
           mountPath: /var/lib/postgresql/data
         - name: init-scripts
           mountPath: /docker-entrypoint-initdb.d
+        securityContext:
+          allowPrivilegeEscalation: false
+          # capabilities.drop omitted: postgres entrypoint needs CAP_CHOWN/CAP_FOWNER as root during init
+          # runAsNonRoot/runAsUser omitted: postgres entrypoint uses gosu to drop privileges
+          # and requires root for init; enforcing non-root would break first-time initialisation.
         resources:
           requests:
             cpu: 250m

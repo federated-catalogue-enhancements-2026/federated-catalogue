@@ -39,11 +39,11 @@ podSecurityContext: {}
 
 securityContext:
   allowPrivilegeEscalation: false
-#  capabilities:
-#    drop: [ALL]
-#  readOnlyRootFilesystem: true
-#  runAsNonRoot: true
-#  runAsUser: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
 
 service:
   type: ClusterIP
@@ -97,6 +97,18 @@ autoscaling:
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+
+volumeMounts:
+  - name: logs
+    mountPath: /logs
+  - name: tmp
+    mountPath: /tmp
+
+volumes:
+  - name: logs
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
 
 nodeSelector: {}
 
@@ -262,14 +274,21 @@ keycloak:
     httpPort: 8080
 
 portal:
+  replicaCount: 1
   image:
     repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal
     tag: "feature-kubernetes"
+    pullPolicy: Always
   host: *portalHost
   # keycloakIssuerUri is constructed from keycloakHost in portal-deployment.yaml
   fcBaseUri: http://fc-service:8081
   tls:
     secretName: fc-demo-portal-tls
+  probes:
+    path: /actuator/health
+    initialDelaySeconds: 60
+    periodSeconds: 30
+  resources: {}
 
 neo4j:
   fullnameOverride: fc-neo4j
