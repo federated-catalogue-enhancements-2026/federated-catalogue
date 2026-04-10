@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: fc-service-server-image
-          image: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-service-server:feature-kubernetes
+          image: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/catalogue/fc-service-server:latest
           imagePullPolicy: Always
           env:
             - name: GRAPHSTORE_URI
