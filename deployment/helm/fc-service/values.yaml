@@ -115,8 +115,6 @@ affinity:
                   - fc-service
           topologyKey: "kubernetes.io/hostname"
 
-restartPolicy: Always
-
 # hostAliases are not needed when using sslip.io for DNS resolution
 # The cluster DNS will automatically resolve *.sslip.io hostnames
 hostAliases: []
