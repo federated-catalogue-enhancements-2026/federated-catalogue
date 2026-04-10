@@ -8,9 +8,9 @@ Deploys the full Federated Catalogue stack to Kubernetes.
 |----------------|--------------------------------------------------|------|
 | fc-service     | ghcr.io/eclipse-xfsc/federated-catalogue/fc-service-server | 8081 |
 | fc-demo-portal | ghcr.io/eclipse-xfsc/federated-catalogue/fc-demo-portal    | 8088 |
-| Keycloak 26    | quay.io/keycloak/keycloak (keycloakx 7.1.9)      | 8080 |
-| PostgreSQL 15  | postgres:15.2                                    | 5432 |
-| Fuseki         | docker.io/stain/jena-fuseki                      | 3030 |
+| Keycloak 26    | quay.io/keycloak/keycloak:26.6.0 (keycloakx 7.1.9) | 8080 |
+| PostgreSQL 18  | postgres:18.3                                    | 5432 |
+| Fuseki         | docker.io/stain/jena-fuseki:5.1.0                | 3030 |
 
 Sub-chart dependency: `keycloakx 7.1.9`. All GHCR images are public — no pull secret required.
 

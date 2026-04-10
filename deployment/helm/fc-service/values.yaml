@@ -177,7 +177,7 @@ postgresql:
   # Using official PostgreSQL image (not Bitnami)
   image:
     repository: postgres
-    tag: "15.2"
+    tag: "18.3"
   auth:
     postgresPassword: postgres
     username: keycloak
@@ -194,7 +194,7 @@ keycloak:
   # Use official Keycloak image from quay.io
   image:
     repository: quay.io/keycloak/keycloak
-    tag: "26.5.5"
+    tag: "26.6.0"
 
   # Command and arguments for realm import
   command:
@@ -330,7 +330,7 @@ fuseki:
   fullnameOverride: fc-fuseki
   image:
     repository: docker.io/stain/jena-fuseki
-    tag: "latest"
+    tag: "5.1.0"
   dataset: ds
   adminPassword: admin
   jvmArgs: "-Xmx1g"
