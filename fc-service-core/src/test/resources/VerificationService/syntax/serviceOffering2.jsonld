@@ -9,7 +9,8 @@
   "verifiableCredential": [
     {
       "@context": [
-        "https://www.w3.org/ns/credentials/v2"
+        "https://www.w3.org/ns/credentials/v2",
+        {"gx": "https://w3id.org/gaia-x/2511#", "schema": "https://schema.org/", "xsd": "http://www.w3.org/2001/XMLSchema#"}
       ],
       "@id": "https://www.example.org/SoftwareOffering.json",
       "@type": [
@@ -18,45 +19,21 @@
       "issuer": "http://gaiax.de",
       "validFrom": "2022-10-19T18:48:09Z",
       "credentialSubject": {
-        "@context": {
-          "dcat": "http://www.w3.org/ns/dcat#",
-          "gax-core": "https://w3id.org/gaia-x/core#",
-          "gax-trust-framework": "https://w3id.org/gaia-x/gax-trust-framework#",
-          "xsd": "http://www.w3.org/2001/XMLSchema#"
-        },
         "@id": "https://www.example.org/mySoftwareOffering",
-        "@type": "gax-trust-framework:ServiceOffering",
-        "gax-core:providedBy": {
-          "@id": "gax-participant:Provider1"
+        "@type": "gx:ServiceOffering",
+        "gx:providedBy": {
+          "@id": "http://gaiax.de",
+          "@type": "gx:LegalPerson",
+          "gx:legalAddress": {"@type": "gx:Address", "gx:countryCode": "DE"},
+          "gx:headquartersAddress": {"@type": "gx:Address", "gx:countryCode": "DE"},
+          "gx:registrationNumber": {"@type": "gx:RegistrationNumber", "gx:local": "HRB 12345"}
         },
-        "gax-core:offeredBy": {
-          "@id": "gax-participant:Provider1"
+        "gx:serviceOfferingTermsAndConditions": {
+          "@type": "gx:TermsAndConditions",
+          "gx:url": {"@value": "https://www.example.org/tac", "@type": "xsd:anyURI"},
+          "gx:hash": "sha256-1234"
         },
-        "gax-trust-framework:dataAccountExport": {
-          "@type": "gax-trust-framework:DataAccountExport",
-          "gax-trust-framework:requestType": "API",
-          "gax-trust-framework:accessType": "digital",
-          "gax-trust-framework:formatType": "application/gzip"
-        },
-        "gax-trust-framework:termsAndConditions": {
-          "@type": "gax-trust-framework:TermsAndConditions",
-          "gax-trust-framework:content": {
-            "@type": "xsd:anyURI",
-            "@value": "http://example.org/tac"
-          },
-          "gax-trust-framework:hash": "1234"
-        },
-        "gax-trust-framework:policy": "list of policy",
-        "dcat:keyword": [
-          "Keyword1_1",
-          "Keyword1_2",
-          "Keyword1_3",
-          "Keyword1_4",
-          "Keyword1_5",
-          "Keyword1_6",
-          "Keyword1_7"
-        ],
-        "gax-trust-framework:serviceTitle": "Software Title"
+        "schema:description": "A sample software service offering"
       }
     }
   ]

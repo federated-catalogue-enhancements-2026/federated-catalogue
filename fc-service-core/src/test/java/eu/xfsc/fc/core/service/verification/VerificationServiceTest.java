@@ -252,7 +252,7 @@ public class VerificationServiceTest {
 
   @Test
   void validSyntax_Participant() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     String path = "VerificationService/syntax/participantCredential2.jsonld";
     // verifyVCSigs=false: JWS in fixture was computed over original data; cannot re-sign (external GXDCH key)
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, false, false, false);
@@ -286,7 +286,7 @@ public class VerificationServiceTest {
       assertTrue(vro.getValidatorDids().isEmpty());
       assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
     } finally {
-      verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering");
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/2511#ServiceOffering");
     }
   }
 
@@ -301,7 +301,7 @@ public class VerificationServiceTest {
     assertEquals("https://www.example.org/mySoftwareOffering", vro.getId());
     assertEquals("http://gaiax.de", vro.getIssuer());
     assertNotNull(vro.getClaims());
-    assertEquals(21, vro.getClaims().size()); //!!
+    assertEquals(17, vro.getClaims().size());
     assertTrue(vro.getValidators().isEmpty());
     assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
@@ -327,7 +327,7 @@ public class VerificationServiceTest {
       assertTrue(vrp.getValidatorDids().isEmpty());
       assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
     } finally {
-      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/core#Participant");
+      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/2511#Participant");
     }
   }
 
@@ -343,7 +343,7 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getIssuer());
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
     assertNotNull(vrp.getClaims());
-    assertEquals(26, vrp.getClaims().size()); //!!
+    assertEquals(10, vrp.getClaims().size());
     assertTrue(vrp.getValidators().isEmpty());
     assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
@@ -385,10 +385,10 @@ public class VerificationServiceTest {
     //assertEquals("did:web:compliance.lab.gaia-x.eu", vrr.getIssuer());
     assertEquals(Instant.parse("2024-03-15T12:40:58.486Z"), vrr.getIssuedDateTime());
     assertNotNull(vrr.getClaims());
-    assertEquals(14, vrr.getClaims().size());
-    assertEquals(4, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
-    schemaStore.deleteSchema("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#");
-    assertEquals(3, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
+    assertEquals(10, vrr.getClaims().size());
+    assertEquals(1, schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).size());
+    schemaStore.deleteSchema("https://w3id.org/gaia-x/2511");
+    assertTrue(schemaStore.getSchemaList().get(SchemaType.ONTOLOGY).isEmpty());
     // With gaiax enabled, removing the required ontology schema causes hasClasses() to fail.
     jdbcTemplate.update("UPDATE trust_frameworks SET enabled = true WHERE id = 'gaia-x'");
     try {
@@ -605,7 +605,6 @@ public class VerificationServiceTest {
   void extractClaims_jsonValueCharacterTest() {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/specialCharacters.jsonld");
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.RESOURCE, "https://w3id.org/gaia-x/core#Resource");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
     List<CredentialClaim> actualClaims = result.getClaims();
     Set<CredentialClaim> expectedClaims = new HashSet<>();
@@ -712,7 +711,7 @@ public class VerificationServiceTest {
   @Test
   void schemaValidationEnabled_InvalidCredential_Rejected() {
     verificationService.setVerifySchema(true);
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
     Exception ex = assertThrowsExactly(VerificationException.class, ()
@@ -724,7 +723,7 @@ public class VerificationServiceTest {
   /** With verifySchema=false, a credential that violates SHACL shapes should still be accepted. */
   @Test
   void schemaValidationDisabled_InvalidCredential_Accepted() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
     // verifySchema=false, verifyVCSigs=false: test schema-disabled acceptance, skip JWS (external GXDCH key)
@@ -736,7 +735,7 @@ public class VerificationServiceTest {
   @Test
   void defaultConfig_NoAutomaticSchemaValidation() {
     // verifySchema defaults to false; verifyVCSigs=false: JWS was computed over original fixture content
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
@@ -924,8 +923,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     ContentAccessor content = getAccessor("VerificationService/syntax/serviceOffering1.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    assertTrue(result.getWarnings() == null || result.getWarnings().isEmpty(),
-        "No warnings expected when upload contains no fcmeta triples");
+    assertTrue(result.getWarnings().isEmpty(), "No warnings expected when upload contains no fcmeta triples");
   }
 
   // --- VC 2.0 tests ---
@@ -941,10 +939,10 @@ public class VerificationServiceTest {
     CredentialClaim expectedType = new CredentialClaim(
         "<did:web:participant.example.com>",
         "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
-        "<https://w3id.org/gaia-x/core#Participant>");
+        "<https://w3id.org/gaia-x/2511#LegalPerson>");
     CredentialClaim expectedName = new CredentialClaim(
         "<did:web:participant.example.com>",
-        "<https://w3id.org/gaia-x/core#legalName>",
+        "<https://w3id.org/gaia-x/2511#legalName>",
         "\"Example Corp\"");
     assertTrue(claims.contains(expectedType), "rdf:type triple must be present");
     assertTrue(claims.contains(expectedName), "legalName triple must be present");
@@ -1009,7 +1007,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
 
     assertNotNull(vr);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vr, "VC 2.0 with gaia-x/core#Participant type must be recognized");
+      assertInstanceOf(CredentialVerificationResultParticipant.class, vr, "VC 2.0 with 2511#LegalPerson type must be recognized");
     assertNotNull(vr.getIssuedDateTime(), "issuedDateTime must be non-null for VC 2.0 validFrom");
     assertEquals(Instant.parse("2026-01-30T00:00:00Z"), vr.getIssuedDateTime());
   }

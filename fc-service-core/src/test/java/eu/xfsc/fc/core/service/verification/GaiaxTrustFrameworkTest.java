@@ -117,7 +117,7 @@ public class GaiaxTrustFrameworkTest {
     @BeforeEach
     public void setUp() {
         clearValidatorCache();
-        schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+        schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     }
 
     @AfterEach
