@@ -31,8 +31,7 @@ class FormatDetectorTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final FormatDetector detector = new FormatDetector(OBJECT_MAPPER, List.of(
             new LoireMatcher(),
-            new TagusMatcher(),
-            new DanubeTechFormatMatcher()
+              new DanubeTechFormatMatcher()
     ));
     private static JWSSigner signer;
 
