@@ -13,7 +13,7 @@
 	"id": "http://example.edu/credentials/1872",
 	"type": ["VerifiableCredential", "UniversityDegreeCredential"],
 	"issuer": "https://example.edu/issuers/565049",
-	"validFrom": "2010-01-01T19:73:24Z",
+	"validFrom": "2010-01-01T19:37:24Z",
 	"credentialSubject": {
 		"id": "did:example:ebfeb1f712ebc6f1c276e12ec21",
 		"givenName": "Manu",
