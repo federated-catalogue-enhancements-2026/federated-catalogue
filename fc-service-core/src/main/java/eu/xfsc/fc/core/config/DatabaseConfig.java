@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @EnableTransactionManagement
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "securityAuditorAware")
 @EnableJpaRepositories(basePackages = "eu.xfsc.fc.core.dao")
 @RequiredArgsConstructor
 public class DatabaseConfig {

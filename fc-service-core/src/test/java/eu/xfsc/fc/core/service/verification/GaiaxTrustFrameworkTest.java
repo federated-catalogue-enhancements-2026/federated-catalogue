@@ -25,6 +25,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
+import eu.xfsc.fc.core.config.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
@@ -68,7 +69,7 @@ import lombok.extern.slf4j.Slf4j;
     DocumentLoaderConfig.class, DocumentLoaderProperties.class, VerificationServiceImpl.class,
     SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class,
     DidDocumentResolver.class, ValidatorCacheJpaDao.class,
-    ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+    ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class GaiaxTrustFrameworkTest {
 
