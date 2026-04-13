@@ -38,7 +38,6 @@ import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass;
-import eu.xfsc.fc.core.service.verification.Vc11Processor;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -105,7 +104,6 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
         SchemaStoreImpl.class,
         SchemaValidationServiceImpl.class,
         ValidatorCacheJpaDao.class,
-        Vc11Processor.class,
         Vc2Processor.class,
         VerificationServiceImpl.class,
 })

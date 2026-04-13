@@ -130,12 +130,20 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void verifyCredential_vc11Input_unwrapNeverInvoked() {
-    ContentAccessor vc11 = getAccessor("VerificationService/jsonld/input.vc.jsonld");
+  void verifyCredential_vc11Input_throwsClientException() {
+    // VC 1.1 (Tagus) is no longer supported; should be rejected with ClientException
+    String body = """
+        {
+          "@context": ["https://www.w3.org/2018/credentials/v1"],
+          "type": ["VerifiableCredential"],
+          "proof": { "type": "JsonWebSignature2020" }
+        }
+        """;
+    ContentAccessor vc11 = new ContentAccessorDirect(body);
 
-    verificationService.verifyCredential(vc11, false, true, false, false);
-
-    verify(jwtPreprocessorSpy, never()).unwrap(any());
+    Exception ex = assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(vc11, false, true, false, false));
+    assertTrue(ex.getMessage().contains("Unrecognizable credential format"));
   }
 
   @Test
@@ -1041,18 +1049,6 @@ public class VerificationServiceTest {
         () -> verificationService.verifyCredential(content, true, false, false, false));
     assertTrue(ex.getMessage().contains("validUntil") || ex.getMessage().contains("expirationDate"),
         "Error must mention expired date field, got: " + ex.getMessage());
-  }
-
-  @Test
-  void verifyCredential_vc1WithIssuanceDate_stillPasses() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    ContentAccessor content = getAccessor("VerificationService/syntax/participantCredential2.jsonld");
-
-    // verifySchema=false: schema store is cumulative — legal-personShape.ttl loaded by earlier tests
-    // would reject this credential; schema validation is not the concern of this regression test
-    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
-    assertNotNull(vr, "VC 1.1 with issuanceDate must still pass (regression)");
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
   }
 
   @Test
