@@ -19,6 +19,7 @@ import com.danubetech.keyformats.jose.JWK;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
@@ -330,8 +331,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
 
-        // Reject ambiguous/unrecognizable JWTs — non-JWT payloads fall through to
-        // vc11Processor which provides more specific syntactic error messages.
+        // Reject ambiguous/unrecognizable JWTs — UNKNOWN non-JWT payloads fall through
+        // to parseCredentials() for a more specific type error.
         if (format == CredentialFormat.UNKNOWN && body.startsWith(JWT_PREFIX)) {
             throw new ClientException(
                 "Unrecognizable JWT credential format — JWT does not have recognized "
@@ -355,7 +356,17 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         payload = switch (format) {
             case GAIAX_V2_LOIRE -> loireJwtParser.unwrap(payload);
             case VC2_DANUBETECH -> vc2Processor.preProcess(payload);
-            default -> throw new ClientException("Unrecognizable credential format");
+            default -> {
+                // UNKNOWN non-JWT: distinguish malformed JSON (syntactic error) from
+                // unrecognized-but-valid JSON-LD (fall through to parseCredentials()
+                // for a specific type error).
+                try {
+                    objectMapper.readTree(body);
+                } catch (JsonProcessingException ex) {
+                    throw new ClientException("Syntactic error: " + ex.getMessage(), ex);
+                }
+                yield payload;
+            }
         };
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);

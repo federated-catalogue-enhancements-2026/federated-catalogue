@@ -3,9 +3,14 @@ package eu.xfsc.fc.core.service.verification;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
+import eu.xfsc.fc.core.util.TestUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -17,6 +22,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,9 +36,13 @@ import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.VerificationException;
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 
 @SpringBootTest(properties = {
@@ -64,6 +74,8 @@ public class SignatureVerificationTest {
 	private VerificationServiceImpl verificationService;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@MockitoBean
+	private JwtSignatureVerifier jwtVerifierMock;
 
 	@AfterEach
 	public void storageSelfCleaning() throws IOException {
@@ -82,16 +94,19 @@ public class SignatureVerificationTest {
 
 	@Test
 	void verifyCredential_jwkWithoutX5uAndGaiaxEnabled_throwsVerificationException() {
-	    // This test verifies that when Gaia-X trust framework is ENABLED,
-	    // credentials without x5u (trust anchor URL) in the JWK are rejected.
-	    // Gaia-X enabled state is read from the trust_frameworks DB table.
+	    // Loire credential whose DID document JWK lacks x5c/x5u must be rejected
+	    // when Gaia-X trust framework is ENABLED.
 	    jdbcTemplate.update("UPDATE trust_frameworks SET enabled = true WHERE id = 'gaia-x'");
 	    try {
-	        schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-	        String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
+	        when(jwtVerifierMock.verify(any()))
+	            .thenReturn(new Validator("did:web:example.com#key-1",
+	                "{\"kty\":\"EC\",\"crv\":\"P-256\"}", null));
+	        ContentAccessor content = new ContentAccessorDirect(TestUtil.fakeLoireJwt("did:web:example.com"));
+
 	        Exception ex = assertThrowsExactly(VerificationException.class, ()
-	                -> verificationService.verifyCredential(getAccessor(path), true, true, true, true));
-	        assertEquals("Signatures error; no trust anchor url found", ex.getMessage());
+	                -> verificationService.verifyCredential(content, false, false, false, true));
+	        assertTrue(ex.getMessage().contains("must contain x5c or x5u"),
+	            "Should require trust chain. Got: " + ex.getMessage());
 	    } finally {
 	        jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
 	    }
