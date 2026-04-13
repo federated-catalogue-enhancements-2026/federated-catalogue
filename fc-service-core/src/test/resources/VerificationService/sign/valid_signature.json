@@ -1,6 +1,6 @@
 {
   "@context": [
-    "https://www.w3.org/2018/credentials/v1"
+   "https://www.w3.org/ns/credentials/v2"
   ],
   "type": [
     "VerifiablePresentation"
@@ -9,11 +9,11 @@
   "verifiableCredential": [
     {
       "@context": [
-        "https://www.w3.org/2018/credentials/v1"
+       "https://www.w3.org/ns/credentials/v2"
       ],
       "@id": "https://delta-dao.com/.well-known/participant.json",
       "issuer": "https://www.handelsregister.de/",
-      "issuanceDate": "2010-01-01T19:37:24Z",
+      "validFrom": "2010-01-01T19:37:24Z",
       "type": [
         "VerifiableCredential"
       ],
