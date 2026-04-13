@@ -77,37 +77,29 @@ The Federated Catalogue supports the current Loire (Gaia-X 2511) credential form
 | `fc-service-core/src/main/resources/defaultschema/ontology/gx-2511.ttl` | Stripped from Gaia-X 2511 OWL | Class hierarchy for Loire type resolution (`rdfs:subClassOf` only) |
 | `fc-service-core/src/main/resources/defaultschema/shacl/gx-2511-shapes.ttl` | [Gaia-X Trust Shape Registry](https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#) | SHACL validation shapes for Loire credentials |
 
-Legacy Tagus ontology files (`gax-core_generated.ttl`, `gax-trust-framework_generated.ttl`, `mergedShapesGraph.ttl`) remain loaded alongside the 2511 files to support type resolution for assets already stored under gax-core URIs. New submissions in Tagus credential format are not accepted.
+`mergedShapesGraph.ttl` remains loaded alongside the 2511 shapes to support SHACL validation for assets already stored under Tagus/gax-trust-framework URIs. New submissions in Tagus credential format are not accepted.
 
-### Namespace Configuration
+### Namespace
 
 | Namespace | URI | Usage |
 |-----------|-----|-------|
-| Loire (2511) | `https://w3id.org/gaia-x/2511#` | Loire credential types (`gx:LegalPerson`, `gx:ServiceOffering`, etc.) |
-| Tagus (gax-core) | `https://w3id.org/gaia-x/core#` | Legacy Tagus credential types (`gax-core:Participant`, etc.) |
+| Loire (2511) | `https://w3id.org/gaia-x/2511#` | Credential types (`gx:LegalPerson`, `gx:ServiceOffering`, etc.) |
 
-Configure type resolution in `application.yml`:
+Configure type resolution and document loader in `application.yml`:
 
 ```yaml
 federated-catalogue:
   verification:
     participant:
-      type: "https://w3id.org/gaia-x/2511#Participant"       # Loire
-      legacy-type: "https://w3id.org/gaia-x/core#Participant" # Tagus
+      type: "https://w3id.org/gaia-x/2511#Participant"
     resource:
       type: "https://w3id.org/gaia-x/2511#Resource"
-      legacy-type: "https://w3id.org/gaia-x/core#Resource"
     service-offering:
       type: "https://w3id.org/gaia-x/2511#ServiceOffering"
-      legacy-type: "https://w3id.org/gaia-x/core#ServiceOffering"
     doc-loader:
       additional-context:
         '[https://w3id.org/gaia-x/2511#]': https://registry.lab.gaia-x.eu/development/context/2511
 ```
-
-### Namespace Coexistence
-
-Both ontology sets are loaded simultaneously via `SchemaStoreImpl.addSchemasFromDirectory()`. No namespace conflicts occur because the old (`gax-core:`) and new (`gx:`) files use different URIs. Loire credentials use 2511 URIs for type resolution; assets already stored under gax-core URIs continue to be resolved via the legacy ontology.
 
 To update to a future 2511 release: replace `gx-2511.ttl` (run `fc-tools/extract-ontology-hierarchy.py` against the new OWL file) and `gx-2511-shapes.ttl` (download from the registry), then update the `doc-loader.additional-context` mapping.
 
