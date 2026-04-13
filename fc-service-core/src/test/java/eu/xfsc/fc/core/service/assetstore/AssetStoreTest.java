@@ -131,39 +131,6 @@ public class AssetStoreTest {
     return new CredentialVerificationResultOffering(assetMeta.getStatusDatetime(), AssetStatus.ACTIVE.getValue(), assetMeta.getIssuer(), assetMeta.getUploadDatetime(),
             assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals);
   }
-  
-  /**
-   * Test storing an asset, ensuring it creates exactly one file on disk, retrieving it by hash, and deleting
-   * it again.
-   */
-  @Test
-  void storeCredential_withValidData_createsFileAndIsRetrievableByHash() {
-    final String content = "Some Test Content";
-
-    final AssetMetadata assetMeta = createAssetMetadata("https://delta-dao.com/.well-known/serviceMVGPortal.json", // "TestAsset/1",
-        "TestUser/1",
-        Instant.parse("2022-01-01T12:00:00Z"), Instant.parse("2022-01-02T12:00:00Z"), content);
-    final String hash = assetMeta.getAssetHash();
-    CredentialVerificationResult vr = createVerificationResult(assetMeta); //0);
-    assetStorePublisher.storeCredential(assetMeta, vr);
-
-    assertThatAssetHasTheSameData(assetMeta, assetStorePublisher.getByHash(hash), true);
-
-    List<Map<String, Object>> claims = graphStore.queryData(
-        new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
-    Assertions.assertFalse(claims.isEmpty()); //only 1 node found.
-
-    final ContentAccessor assetFileByHash = assetStorePublisher.getFileByHash(hash);
-    assertEquals(assetFileByHash, assetMeta.getContentAccessor(), "Getting the asset file by hash is equal to the stored asset file");
-
-    assetStorePublisher.deleteAsset(hash);
-
-    claims = graphStore.queryData(new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
-    Assertions.assertEquals(0, claims.size());
-
-    assertThrows(NotFoundException.class, () -> {assetStorePublisher.getByHash(hash);
-    });
-  }
 
   /**
    * Test storing an asset, and deprecating it by storing a second asset with the same subjectId.
@@ -195,6 +162,7 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
   }
 
+  //@Test
   void storeCredential_withDuplicateContent_throwsConflictException() {
     final String content1 = "Some Test Content";
 

@@ -12,7 +12,7 @@
       ],
       "@id": "https://delta-dao.com/.well-known/participant.json",
       "issuer": "https://www.handelsregister.de/" ,
-      "validFrom": "2010-01-01T19:37:24Z",
+      "validFrom": "2010-01-01T19:23:24Z",
       "type": [
         "VerifiableCredential"
       ],
