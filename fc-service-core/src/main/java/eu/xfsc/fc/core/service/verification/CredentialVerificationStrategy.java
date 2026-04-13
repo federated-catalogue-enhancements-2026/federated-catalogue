@@ -183,7 +183,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final FileStore fileStore;
     private final DocumentLoader documentLoader;
     private final ValidatorCacheDao validatorCache;
-    private final Vc11Processor vc11Processor;
     private final Vc2Processor vc2Processor;
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final FormatDetector formatDetector;
@@ -353,15 +352,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         // Version dispatch — unwrap to JSON-LD
         // NOTE: A future VcStructureDetector.isVcStructured() call MUST be placed AFTER
         // unwrapping, not before — a JWT-wrapped VC 2.0 payload would not be recognised as a VC.
-        if (format == CredentialFormat.GAIAX_V2_LOIRE) {
-            payload = loireJwtParser.unwrap(payload);
-        } else if (format == CredentialFormat.GAIAX_V1_TAGUS) {
-            payload = vc11Processor.preProcess(payload);
-        } else if (format == CredentialFormat.VC2_DANUBETECH) {
-            payload = vc2Processor.preProcess(payload);
-        } else {
-            payload = vc11Processor.preProcess(payload);
-        }
+        payload = switch (format) {
+            case GAIAX_V2_LOIRE -> loireJwtParser.unwrap(payload);
+            case VC2_DANUBETECH -> vc2Processor.preProcess(payload);
+            default -> throw new ClientException("Unrecognizable credential format");
+        };
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);
     }
@@ -650,7 +645,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         boolean isVc2 = (ctx instanceof java.util.List<?>)
                 ? ((java.util.List<?>) ctx).contains(VC_20_CONTEXT)
                 : VC_20_CONTEXT.equals(ctx);
-        return isVc2 ? vc2Processor : vc11Processor;
+        if (!isVc2) {
+            throw new ClientException("Credential does not contain recognized VC 2.0 context");
+        }
+        return vc2Processor;
     }
 
     private boolean checkAbsence(JsonLDObject container, String... keys) {
