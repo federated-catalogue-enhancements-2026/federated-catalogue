@@ -67,18 +67,18 @@ import static org.mockito.Mockito.when;
 /**
  * Integration tests for {@link VerificationServiceImpl}.
  *
- * <p><strong>Base class URI pattern (pre-Tagus credentials):</strong>
+ * <p><strong>Base class URI pattern (legacy gax-core credentials):</strong>
  * {@link CredentialVerificationStrategy} is a Spring singleton whose {@code trustFrameworkBaseClassUris}
  * map determines how credential types are matched. Type resolution in
  * {@code ClaimValidator.checkTypeSubClass()} works via exact match or SPARQL {@code rdfs:subClassOf}
- * lookup against the loaded ontology. Pre-Tagus credential types
+ * lookup against the loaded ontology. Legacy gax-core credential types
  * (e.g. {@code http://w3id.org/gaia-x/participant#Participant}) have no {@code rdfs:subClassOf}
  * relationship to {@code gax-core:Participant} in the bundled production ontologies — they are
  * unrelated URIs that only match via exact comparison.
  *
- * <p>Tests for pre-Tagus credentials therefore temporarily override the base URI with
+ * <p>Tests for legacy gax-core credentials therefore temporarily override the base URI with
  * {@code verificationService.setBaseClassUri(...)} inside a {@code try/finally} block.
- * The {@code finally} block restores the configured default ({@code gax-core:Participant}).
+ * The {@code finally} block restores the configured default ({@code 2511#Participant}).
  * Without the {@code try/finally}, a failing assertion would leave the singleton in a
  * mutated state and silently break subsequent tests.
  */
@@ -469,7 +469,7 @@ public class VerificationServiceTest {
     assertNotNull(vr);
   }
 
-  // TODO: fixture @type updated to gaia-x/core#Participant but existing JWS was computed over pre-Tagus gax-participant:LegalPerson.
+  // TODO: fixture @type updated to gaia-x/core#Participant but existing JWS was computed over legacy gax-participant:LegalPerson.
   // Cannot re-sign — private key belongs to did:web:compliance.lab.gaia-x.eu (external GXDCH key). Re-enable once re-signed.
   @Disabled("JWS invalidated by @type migration; needs re-signing with did:web:compliance.lab.gaia-x.eu")
   @Test

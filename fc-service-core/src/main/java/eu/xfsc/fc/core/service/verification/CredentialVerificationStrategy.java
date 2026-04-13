@@ -151,29 +151,12 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     @Value("${federated-catalogue.verification.resource.type}")
     private String resourceType;
 
-    // Legacy Tagus (gax-core) type URIs — used for GAIAX_V1_TAGUS credentials.
-    // Default to the 2511 URI so that legacy-type is optional in config (e.g. test profiles).
-    @Value("${federated-catalogue.verification.participant.legacy-type:${federated-catalogue.verification.participant.type}}")
-    private String legacyParticipantType;
-    @Value("${federated-catalogue.verification.service-offering.legacy-type:${federated-catalogue.verification.service-offering.type}}")
-    private String legacyServiceOfferingType;
-    @Value("${federated-catalogue.verification.resource.legacy-type:${federated-catalogue.verification.resource.type}}")
-    private String legacyResourceType;
-
-    // Additional Loire-only sibling roots for SERVICE_OFFERING (e.g. gx:DigitalServiceOffering).
-    // Tagus / gax-core has no sibling classes so no legacy-additional-types is needed.
+    // Additional sibling roots for SERVICE_OFFERING (e.g. gx:DigitalServiceOffering).
     @Value("${federated-catalogue.verification.service-offering.additional-types:#{T(java.util.Collections).emptyList()}}")
     private List<String> serviceOfferingAdditionalTypes;
 
-    /** Loire (Gaia-X 2511) type URIs — used for GAIAX_V2_LOIRE credentials. */
-    private Map<TrustFrameworkBaseClass, List<String>> loireBaseClassUris;
-    /** Legacy Tagus (gax-core) type URIs — used for GAIAX_V1_TAGUS credentials. */
-    private Map<TrustFrameworkBaseClass, List<String>> legacyBaseClassUris;
-    /**
-     * Alias to {@link #legacyBaseClassUris} kept for backward compatibility with
-     * {@link #setBaseClassUri(TrustFrameworkBaseClass, String)} used in tests.
-     */
-    private Map<TrustFrameworkBaseClass, List<String>> trustFrameworkBaseClassUris;
+    /** Gaia-X 2511 type URIs for credential subject classification. */
+    private Map<TrustFrameworkBaseClass, List<String>> baseClassUris;
 
     private final JwtContentPreprocessor jwtPreprocessor;
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
@@ -208,26 +191,17 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     @PostConstruct
-    private void initializeTrustFrameworkBaseClasses() {
+    private void initialize() {
         rest = restTemplate();
 
         List<String> loireSoRoots = new ArrayList<>();
         loireSoRoots.add(serviceOfferingType);
         loireSoRoots.addAll(serviceOfferingAdditionalTypes);
 
-        loireBaseClassUris = new EnumMap<>(TrustFrameworkBaseClass.class);
-        loireBaseClassUris.put(SERVICE_OFFERING, loireSoRoots);
-        loireBaseClassUris.put(RESOURCE, List.of(resourceType));
-        loireBaseClassUris.put(PARTICIPANT, List.of(participantType));
-
-        legacyBaseClassUris = new EnumMap<>(TrustFrameworkBaseClass.class);
-        legacyBaseClassUris.put(SERVICE_OFFERING, List.of(legacyServiceOfferingType));
-        legacyBaseClassUris.put(RESOURCE, List.of(legacyResourceType));
-        legacyBaseClassUris.put(PARTICIPANT, List.of(legacyParticipantType));
-
-        // trustFrameworkBaseClassUris is an alias to legacyBaseClassUris so that
-        // setBaseClassUri() (called by tests) continues to work as before.
-        trustFrameworkBaseClassUris = legacyBaseClassUris;
+        baseClassUris = new EnumMap<>(TrustFrameworkBaseClass.class);
+        baseClassUris.put(SERVICE_OFFERING, loireSoRoots);
+        baseClassUris.put(RESOURCE, List.of(resourceType));
+        baseClassUris.put(PARTICIPANT, List.of(participantType));
     }
 
     /**
@@ -303,7 +277,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     public void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
-        trustFrameworkBaseClassUris.put(baseClass, List.of(uri));
+        baseClassUris.put(baseClass, List.of(uri));
     }
 
     /**
@@ -813,19 +787,12 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Resolves the Gaia-X base class of a credential using the appropriate type URI set for its format.
-     * <ul>
-     *   <li>GAIAX_V2_LOIRE: uses 2511 type URIs (loireBaseClassUris)</li>
-     *   <li>GAIAX_V1_TAGUS: uses legacy gax-core type URIs (legacyBaseClassUris / trustFrameworkBaseClassUris)</li>
-     *   <li>VC2_DANUBETECH: uses legacy gax-core type URIs (same as TAGUS) — 2511 types are JWT-only</li>
-     * </ul>
+     * Resolves the Gaia-X base class of a credential using the configured 2511 type URI set.
      */
     private TrustFrameworkBaseClass resolveBaseClass(VerifiableCredential credential, CredentialFormat format) {
-        Map<TrustFrameworkBaseClass, List<String>> classUris =
-            format == CredentialFormat.GAIAX_V2_LOIRE ? loireBaseClassUris : trustFrameworkBaseClassUris;
         ContentAccessor ontology = schemaStore.getCompositeSchema(SchemaStore.SchemaType.ONTOLOGY);
         TrustFrameworkBaseClass result = ClaimValidator.getSubjectType(
-                ontology, getStreamManager(), credential.toJson(), classUris);
+                ontology, getStreamManager(), credential.toJson(), baseClassUris);
         if (result == null) {
             result = UNKNOWN;
         }
@@ -1312,7 +1279,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Rejects inline {@code x5c} certificate chains for all credential formats (Loire and Tagus).
+     * Rejects inline {@code x5c} certificate chains for all credential formats.
      *
      * <p>Full x5c trust chain verification (chain building, Trust Anchor Registry lookup,
      * and revocation checking) is not implemented. Accepting x5c with expiry-only checks

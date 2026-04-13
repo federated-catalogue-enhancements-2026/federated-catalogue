@@ -413,10 +413,10 @@ public class SchemaStoreTest {
   @Test
   void testAddDeleteDefaultSchemas() {
     int initialized = schemaStore.initializeDefaultSchemas();
-    assertEquals(3, initialized, "Expected different number of schemas initialized.");
+    assertEquals(2, initialized, "Expected different number of schemas initialized.");
     Map<SchemaType, List<String>> schemaList = schemaStore.getSchemaList();
     assertEquals(1, schemaList.get(SchemaType.ONTOLOGY).size());
-    assertEquals(2, schemaList.get(SchemaType.SHAPE).size());
+    assertEquals(1, schemaList.get(SchemaType.SHAPE).size());
     assertTrue(schemaList.get(SchemaType.ONTOLOGY).contains("https://w3id.org/gaia-x/2511"), "2511 ontology identifier not found in schema list.");
     schemaStore.deleteSchema("https://w3id.org/gaia-x/2511");
     Map<SchemaType, List<String>> schemaListDelete = schemaStore.getSchemaList();
