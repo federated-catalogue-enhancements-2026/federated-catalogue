@@ -66,7 +66,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   RdfContentTypeProperties.class, FileStoreConfig.class, DidDocumentResolver.class, JwtSignatureVerifier.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
-//@Import(EmbeddedNeo4JConfig.class)
 public class AssetStoreTest {
 
   @SpringBootApplication
@@ -80,8 +79,6 @@ public class AssetStoreTest {
   @Autowired
   private AssetStore assetStorePublisher;
 
-  //@Autowired
-  //private Neo4j embeddedDatabaseServer;
 
   @Autowired
   private GraphStore graphStore;
@@ -90,11 +87,6 @@ public class AssetStoreTest {
   public void storageSelfCleaning() throws IOException {
     assetStorePublisher.clear();
   }
-
-  //@AfterAll
-  //void closeNeo4j() {
-  //  embeddedDatabaseServer.close();
-  //}
 
   private static AssetMetadata createAssetMetadata(final String id, final String issuer,
       final Instant sdt, final Instant udt, final String content) {
@@ -144,9 +136,8 @@ public class AssetStoreTest {
    * Test storing an asset, ensuring it creates exactly one file on disk, retrieving it by hash, and deleting
    * it again.
    */
-  //@Test
-  void test01StoreCredential() {
-    log.info("test01StoreCredential");
+  @Test
+  void storeCredential_withValidData_createsFileAndIsRetrievableByHash() {
     final String content = "Some Test Content";
 
     final AssetMetadata assetMeta = createAssetMetadata("https://delta-dao.com/.well-known/serviceMVGPortal.json", // "TestAsset/1",
@@ -160,7 +151,7 @@ public class AssetStoreTest {
 
     List<Map<String, Object>> claims = graphStore.queryData(
         new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
-    Assertions.assertTrue(!claims.isEmpty()); //only 1 node found.
+    Assertions.assertFalse(claims.isEmpty()); //only 1 node found.
 
     final ContentAccessor assetFileByHash = assetStorePublisher.getFileByHash(hash);
     assertEquals(assetFileByHash, assetMeta.getContentAccessor(), "Getting the asset file by hash is equal to the stored asset file");
@@ -178,8 +169,7 @@ public class AssetStoreTest {
    * Test storing an asset, and deprecating it by storing a second asset with the same subjectId.
    */
   @Test
-  void test02StoreAndUpdateCredential() {
-    log.info("test02StoreAndUpdateCredential");
+  void storeCredential_withDuplicateSubjectId_replacesExistingAsset() {
     final String content1 = "Some Test Content 1";
     final String content2 = "Some Test Content 2";
 
@@ -205,9 +195,7 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
   }
 
-  //@Test
-  void test03StoreDuplicateCredential() {
-    log.info("test03StoreDuplicateCredential");
+  void storeCredential_withDuplicateContent_throwsConflictException() {
     final String content1 = "Some Test Content";
 
     final AssetMetadata assetMeta1 = createAssetMetadata("TestAsset/1", "TestUser/1",
@@ -219,7 +207,6 @@ public class AssetStoreTest {
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
         Map.of("graphUri", "TestAsset/1")
     )).getResults();
-    log.debug("test03StoreDuplicateCredential-1; got {} nodes", nodes.size());
     Assertions.assertEquals(3, nodes.size());
 
     final AssetMetadata assetMeta2 = createAssetMetadata("TestAsset/1", "TestUser/1",
@@ -230,7 +217,6 @@ public class AssetStoreTest {
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
         Map.of("graphUri", "TestAsset/1")
     )).getResults();
-    log.debug("test03StoreDuplicateCredential-2; got {} nodes", nodes.size());
     Assertions.assertEquals(3, nodes.size(), "After failed put, node count should not have changed");
 
     final AssetMetadata byHash1 = assetStorePublisher.getByHash(hash1);
@@ -246,8 +232,7 @@ public class AssetStoreTest {
    * Test storing an asset, and updating the status.
    */
   //@Test
-  void test04ChangeAssetStatus() throws Exception {
-    log.info("test04ChangeAssetStatus");
+  void updateAssetStatus_withValidTransition_changesStatus() throws Exception {
     final String content = "Some Test Content";
 
     final AssetMetadata assetMeta = createAssetMetadata("TestAsset/1", "TestUser/1",
@@ -262,7 +247,6 @@ public class AssetStoreTest {
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
         Map.of("graphUri", "TestAsset/1")
     )).getResults();
-    log.debug("test04ChangeAssetStatus-1; got {} nodes", nodes.size());
     Assertions.assertEquals(3, nodes.size());
 
     assetStorePublisher.changeLifeCycleStatus(hash, AssetStatus.REVOKED);
@@ -278,7 +262,6 @@ public class AssetStoreTest {
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
         Map.of("graphUri", "TestAsset/1")
     )).getResults();
-    log.debug("test04ChangeAssetStatus-2; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked asset should not appear in queries");
 
     assertThrows(ConflictException.class, () -> {
@@ -289,7 +272,6 @@ public class AssetStoreTest {
         "MATCH (n) WHERE $graphUri IN n.claimsGraphUri RETURN n",
         Map.of("graphUri", "TestAsset/1")
     )).getResults();
-    log.debug("test04ChangeAssetStatus-3; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked asset should not appear in queries");
 
     assetStorePublisher.deleteAsset(hash);
@@ -301,8 +283,7 @@ public class AssetStoreTest {
    * Test applying an asset filter on matching issuer.
    */
   @Test
-  void test05FilterMatchingIssuer() {
-    log.info("test05FilterMatchingIssuer");
+  void filter_withMatchingIssuer_returnsMatchingAsset() {
     final String id = "TestAsset/1";
     final String issuer = "TestUser/1";
     final String content = "Test: Fetch asset metadata via asset filter, test for matching issuer";
@@ -354,15 +335,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash);
 
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
-    log.info("#### Test 05 succeeded.");
   }
 
   /**
    * Test applying an asset filter on non-matching issuer.
    */
   @Test
-  void test06FilterNonMatchingIssuer() {
-    log.info("test06FilterNonMatchingIssuer");
+  void filter_withNonMatchingIssuer_returnsEmpty() {
     final String id = "TestAsset/1";
     final String issuer = "TestUser/1";
     final String otherIssuer = "TestUser/2";
@@ -383,16 +362,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash);
 
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
-
-    log.info("#### Test 06 succeeded.");
   }
 
   /**
    * Test applying an asset filter on matching status start time.
    */
   @Test
-  void test07FilterMatchingStatusTimeStart() {
-    log.info("test07FilterMatchingStatusTimeStart");
+  void filter_withMatchingStatusStartTime_returnsMatchingAsset() {
     final String id = "TestAsset/1";
     final String issuer = "TestUser/1";
     final String content = "Test: Fetch asset metadata via asset filter, test for matching status time start";
@@ -415,15 +391,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash);
 
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
-    log.info("#### Test 07 succeeded.");
   }
 
   /**
    * Test applying an asset filter on non-matching issuer.
    */
   @Test
-  void test08FilterNonMatchingStatusTimeStart() {
-    log.info("test08FilterNonMatchingStatusTimeStart");
+  void filter_withNonMatchingStatusStartTime_returnsEmpty() {
     final String id = "TestAsset/1";
     final String issuer = "TestUser/1";
     final String content = "Test: Fetch asset metadata via asset filter, test for non-matching issuer";
@@ -439,21 +413,18 @@ public class AssetStoreTest {
     filterParams.setStatusTimeRange(statusTimeStart, statusTimeEnd);
     final PaginatedResults<AssetMetadata> byFilter = assetStorePublisher.getByFilter(filterParams, true, false);
     final int matchCount = byFilter.getResults().size();
-    log.info("filter returned {} match(es)", matchCount);
     assertEquals(0, matchCount, "expected 0 filter matches, but got " + matchCount);
 
     assetStorePublisher.deleteAsset(hash);
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
 
-    log.info("#### Test 08 succeeded.");
   }
 
   /**
    * Test applying an asset filter that matches multiple records.
    */
   @Test
-  void test09FilterMatchingMultipleRecords() {
-    log.info("test09FilterMatchingMultipleRecords");
+  void filter_withMultipleAssets_returnsAllMatching() {
     final String id1 = "TestAsset/1";
     final String id2 = "TestAsset/2";
     final String id3 = "TestAsset/3";
@@ -499,16 +470,13 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
-
-    log.info("#### Test 09 succeeded.");
   }
 
   /**
    * Test applying an empty asset filter for matching all records.
    */
   @Test
-  void test10EmptyFilterMatchingMultipleRecords() {
-    log.info("test10EmptyFilterMatchingAllRecords");
+  void filter_withEmptyFilter_returnsAllAssets() {
     final String id1 = "TestAsset/1";
     final String id2 = "TestAsset/2";
     final String id3 = "TestAsset/3";
@@ -555,16 +523,13 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
-
-    log.info("#### Test 10 succeeded.");
   }
 
   /**
    * Test applying an asset filter on non-matching validator.
    */
   @Test
-  void test11AFilterMatchingValidator() {
-    log.info("test11AFilterMatchingValidator");
+  void filter_withMatchingValidator_returnsMatchingAsset() {
     final String id = "TestAsset/1";
     final String validatorId = "TestAsset/0815";
     final String issuer = "TestUser/1";
@@ -586,16 +551,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash);
 
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
-
-    log.info("#### Test 11A succeeded.");
   }
 
   /**
    * Test applying an asset filter on non-matching validator.
    */
   @Test
-  void test11BFilterNonMatchingValidator() {
-    log.info("test11BFilterNonMatchingValidator");
+  void filter_withNonMatchingValidator_returnsEmpty() {
     final String id = "TestAsset/1";
     final String validatorId = "TestAsset/0815";
     final String issuer = "TestUser/1";
@@ -617,16 +579,13 @@ public class AssetStoreTest {
     assetStorePublisher.deleteAsset(hash);
 
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
-
-    log.info("#### Test 11B succeeded.");
   }
 
   /**
    * Test applying an asset filter with limited number of results.
    */
   @Test
-  void test12FilterLimit() {
-    log.info("test12FilterLimit");
+  void filter_withLimitParameter_returnsLimitedResults() {
     final String id1 = "TestAsset/1";
     final String id2 = "TestAsset/2";
     final String id3 = "TestAsset/3";
@@ -665,7 +624,6 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
-    log.info("#### Test 12 succeeded.");
   }
 
   private CredentialVerificationResult verifyAssetCredential(String id, Instant firstSigInstant) {
@@ -678,8 +636,7 @@ public class AssetStoreTest {
   }
 
   @Test
-  void test13PeriodicValidationOfSignatures() throws IOException {
-    log.info("test13PeriodicValidationOfSignatures");
+  void validateSignatures_periodicExecution_revalidatesExpiredAssets() throws IOException {
     final String id1 = "TestAsset/1";
     final String id2 = "TestAsset/2";
     final String id3 = "TestAsset/3";
@@ -721,15 +678,13 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
-    log.info("#### Test 13 succeeded.");
   }
 
   /**
    * Test applying an asset filter with limited number of results with total asset count number.
    */
   @Test
-  void test13FilterLimitWithTotalCount() {
-    log.info("test12FilterLimit");
+  void filter_withLimitAndTotalCount_returnsCorrectCounts() {
     final String id1 = "TestAsset/1";
     final String id2 = "TestAsset/2";
     final String id3 = "TestAsset/3";
@@ -770,7 +725,6 @@ public class AssetStoreTest {
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash3));
-    log.info("#### Test 13 succeeded.");
   }
 
 }
