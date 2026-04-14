@@ -124,7 +124,7 @@ public class AssetStoreCompositeTest {
   @Test
   void test01StoreCredential() {
     log.info("test01StoreCredential");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
     CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
@@ -160,7 +160,7 @@ public class AssetStoreCompositeTest {
   @Test
   void test02RebuildGraphDb() {
     log.info("test02RebuildGraphDb");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
     CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
@@ -200,7 +200,7 @@ public class AssetStoreCompositeTest {
   @Test
   void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
     log.info("test03RebuildGraphDb_filtersProtectedNamespaceClaims");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     // Skip all verification — we only care about claim storage and rebuild filtering
     CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
