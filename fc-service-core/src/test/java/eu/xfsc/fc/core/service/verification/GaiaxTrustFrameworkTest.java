@@ -48,10 +48,6 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Test class for configurable Gaia-X Trust Framework validation.
  *
- * TODO (CAT-TECH-01): These tests exercise Tagus-era JsonWebSignature2020 LD proof verification.
- * When LD proof support is removed and Loire switches to GXDCH Compliance Service notarization,
- * this test class should be removed or refactored to test the new trust framework model.
- *
  * These tests verify that:
  * - Assets can be uploaded without Gaia-X Compliance validation
  * - Gaia-X validation is configurable via gaiax.enabled property
