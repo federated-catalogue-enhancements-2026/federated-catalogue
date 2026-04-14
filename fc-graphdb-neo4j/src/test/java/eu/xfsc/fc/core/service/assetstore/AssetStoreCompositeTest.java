@@ -123,7 +123,7 @@ public class AssetStoreCompositeTest {
    */
   @Test
   void test01StoreCredential() {
-    log.info("test01StoreCredential");
+
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
@@ -144,10 +144,7 @@ public class AssetStoreCompositeTest {
 
     List<Map<String, Object>> aNodes = graphStore.queryData(
         new GraphQuery("MATCH (n) RETURN labels(n), n", Map.of())).getResults();
-    
-    //final ContentAccessor credentialFileByHash = assetStore.getFileByHash(hash);
-    //assertEquals(credentialFileByHash, assetMeta.getContentAccessor(),
-    //    "Getting the credential file by hash is equal to the stored credential file");
+
     assetStorePublisher.deleteAsset(hash);
 
     claims = graphStore.queryData(
@@ -159,7 +156,7 @@ public class AssetStoreCompositeTest {
 
   @Test
   void test02RebuildGraphDb() {
-    log.info("test02RebuildGraphDb");
+
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
@@ -199,7 +196,7 @@ public class AssetStoreCompositeTest {
 
   @Test
   void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
-    log.info("test03RebuildGraphDb_filtersProtectedNamespaceClaims");
+
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     // Skip all verification — we only care about claim storage and rebuild filtering
@@ -233,8 +230,6 @@ public class AssetStoreCompositeTest {
       Assertions.assertFalse(relType.contains("complianceResult"),
           "Protected namespace relationship should not exist after rebuild: " + relType);
     }
-
     assetStorePublisher.deleteAsset(hash);
   }
-
 }
