@@ -17,7 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.SecurityAuditorAware;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.pubsub.ces.CesTracking;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;

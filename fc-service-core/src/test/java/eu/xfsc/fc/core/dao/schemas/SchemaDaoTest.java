@@ -29,7 +29,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.SecurityAuditorAware;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;

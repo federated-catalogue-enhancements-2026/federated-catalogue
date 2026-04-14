@@ -55,7 +55,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.SecurityAuditorAware;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;

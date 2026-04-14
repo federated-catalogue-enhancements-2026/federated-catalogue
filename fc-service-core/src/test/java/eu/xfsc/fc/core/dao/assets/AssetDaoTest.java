@@ -28,7 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.SecurityAuditorAware;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.PaginatedResults;

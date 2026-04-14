@@ -30,7 +30,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.config.SecurityAuditorAware;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
