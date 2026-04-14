@@ -315,8 +315,8 @@ public class ParticipantsControllerTest {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
     Assets assets = objectMapper.readValue(response, Assets.class);
-    String assetId = assets.getItems().get(0).getMeta().getId();
-    String content = assets.getItems().get(0).getContent();
+    String assetId = assets.getItems().getFirst().getMeta().getId();
+    String content = assets.getItems().getFirst().getContent();
 
     String responseOfCredentialContent = mockMvc
             .perform(MockMvcRequestBuilders.get("/assets/{id}", assetId)

@@ -234,8 +234,8 @@ public class AssetControllerTest {
         assertNotNull(assets);
         assertEquals(1, assets.getItems().size());
         assertEquals(1, assets.getTotalCount());
-        assertNotNull(assets.getItems().get(0).getContent());
-        assertNull(assets.getItems().get(0).getMeta());
+        assertNotNull(assets.getItems().getFirst().getContent());
+        assertNull(assets.getItems().getFirst().getMeta());
 
         result =  mockMvc.perform(MockMvcRequestBuilders.get("/assets")
                 .accept(MediaType.APPLICATION_JSON)
@@ -247,8 +247,8 @@ public class AssetControllerTest {
         assertNotNull(assets);
         assertEquals(1, assets.getItems().size());
         assertEquals(1, assets.getTotalCount());
-        assertNull(assets.getItems().get(0).getContent());
-        assertNotNull(assets.getItems().get(0).getMeta());
+        assertNull(assets.getItems().getFirst().getContent());
+        assertNotNull(assets.getItems().getFirst().getMeta());
     }
 
     @Test
@@ -416,8 +416,8 @@ public class AssetControllerTest {
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
         assertNotNull(asset.getWarnings(), "Warnings should be present when fcmeta triples were filtered");
         assertFalse(asset.getWarnings().isEmpty(), "Warnings list should not be empty when fcmeta triples were filtered");
-        assertTrue(asset.getWarnings().get(0).contains("triple(s)"), "Warning should mention filtered triple count");
-        assertTrue(asset.getWarnings().get(0).contains("federated-catalogue/meta#"), "Warning should contain the reserved namespace URI");
+        assertTrue(asset.getWarnings().getFirst().contains("triple(s)"), "Warning should mention filtered triple count");
+        assertTrue(asset.getWarnings().getFirst().contains("federated-catalogue/meta#"), "Warning should contain the reserved namespace URI");
         assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 

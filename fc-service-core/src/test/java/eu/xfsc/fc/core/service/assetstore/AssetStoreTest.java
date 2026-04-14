@@ -426,7 +426,7 @@ public class AssetStoreTest {
     final int matchCount = byFilter.getResults().size();
     log.info("filter returned {} match(es)", matchCount);
     assertEquals(2, matchCount, "expected 2 filter match, but got " + matchCount);
-    final AssetMetadata filterAssetMeta1 = byFilter.getResults().get(0);
+    final AssetMetadata filterAssetMeta1 = byFilter.getResults().getFirst();
     final AssetMetadata filterAssetMeta2 = byFilter.getResults().get(1);
     assertTrue(assetMeta1.getId().equals(filterAssetMeta1.getId()) || assetMeta1.getId().equals(filterAssetMeta2.getId()), "expected filter match assetMeta1 missing in results");
     assertTrue(assetMeta2.getId().equals(filterAssetMeta1.getId()) || assetMeta2.getId().equals(filterAssetMeta2.getId()), "expected filter match assetMeta2 missing in results");
@@ -475,7 +475,7 @@ public class AssetStoreTest {
     final int matchCount = byFilter.getResults().size();
     log.info("filter returned {} match(es)", matchCount);
     assertEquals(3, matchCount, "expected 3 filter match, but got " + matchCount);
-    final AssetMetadata filterAssetMeta1 = byFilter.getResults().get(0);
+    final AssetMetadata filterAssetMeta1 = byFilter.getResults().getFirst();
     final AssetMetadata filterAssetMeta2 = byFilter.getResults().get(1);
     final AssetMetadata filterAssetMeta3 = byFilter.getResults().get(2);
     assertTrue(assetMeta1.getId().equals(filterAssetMeta1.getId()) || assetMeta1.getId().equals(filterAssetMeta2.getId())

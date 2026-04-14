@@ -510,7 +510,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             if (issuer == null) {
                 issuer = id;
             }
-            String method = validators.isEmpty() ? null : validators.get(0).getDidURI();
+            String method = validators.isEmpty() ? null : validators.getFirst().getDidURI();
             String holder = typedCredentials.getHolder();
             String name = holder == null ? issuer : holder;
             return new CredentialVerificationResultParticipant(now, status, issuer, issuedDate,
