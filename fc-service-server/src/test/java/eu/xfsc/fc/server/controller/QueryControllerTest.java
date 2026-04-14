@@ -101,7 +101,9 @@ public class QueryControllerTest {
   @BeforeAll
   public void setup() throws Exception {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+    // Loads the production ontologies from defaultschema/ontology/ (idempotent — skips if already loaded
+    // by CatalogueServerScheduler). Needed for rdfs:subClassOf type resolution (e.g. LegalPerson → PARTICIPANT).
+    schemaStore.initializeDefaultSchemas();
     initialiseAllDataBaseWithManuallyAddingCredentialsFromRepository();
     mockBackEnd90 = new MockWebServer();
     mockBackEnd90.noClientAuth();

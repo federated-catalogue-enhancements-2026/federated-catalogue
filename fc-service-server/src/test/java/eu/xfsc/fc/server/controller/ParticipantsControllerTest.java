@@ -168,7 +168,9 @@ public class ParticipantsControllerTest {
   @BeforeAll
   public void setup() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+    // Loads the production ontologies from defaultschema/ontology/ (idempotent — skips if already loaded
+    // by CatalogueServerScheduler). Needed for rdfs:subClassOf type resolution (e.g. LegalPerson → PARTICIPANT).
+    schemaStore.initializeDefaultSchemas();
   }
 
   @AfterAll

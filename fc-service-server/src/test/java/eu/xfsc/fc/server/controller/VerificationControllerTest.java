@@ -57,12 +57,9 @@ public class VerificationControllerTest {
   @BeforeAll
   public void setup() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
-  }
-
-  @AfterAll
-  public void storageSelfCleaning() throws IOException {
-    schemaStore.clear();
+    // Loads the production ontologies from defaultschema/ontology/ (idempotent — skips if already loaded
+    // by CatalogueServerScheduler). Needed for rdfs:subClassOf type resolution (e.g. LegalPerson → PARTICIPANT).
+    schemaStore.initializeDefaultSchemas();
   }
 
   @Test
@@ -174,7 +171,7 @@ public class VerificationControllerTest {
       assertTrue(error.getMessage().startsWith("Schema error"), "Expected schema error but got: " + error.getMessage());
     } finally {
       schemaStore.clear();
-      schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+      schemaStore.initializeDefaultSchemas();
     }
   }
 
@@ -195,7 +192,7 @@ public class VerificationControllerTest {
               .andExpect(status().isOk());
     } finally {
       schemaStore.clear();
-      schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+      schemaStore.initializeDefaultSchemas();
     }
   }
 

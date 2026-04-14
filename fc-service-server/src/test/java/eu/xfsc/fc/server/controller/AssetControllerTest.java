@@ -444,7 +444,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = PARTICIPANT_ISSUER)})))
     public void addParicipantReturnCreatedResponse() throws Exception {
-        schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+        schemaStore.initializeDefaultSchemas();
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
                 .content(getMockFileDataAsString("default-participant.json"))
                 .with(csrf())
@@ -455,7 +455,6 @@ public class AssetControllerTest {
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
         assetStorePublisher.deleteAsset(asset.getAssetHash());
-        schemaStore.clear();
     }
     
     /**
@@ -467,7 +466,7 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = PARTICIPANT_ISSUER)})))
     public void addShaclInvalidAssetReturnCreatedResponse() throws Exception {
-        schemaStore.addSchema(getAccessor("mock-data/gax-test-ontology.ttl"));
+        schemaStore.initializeDefaultSchemas();
         schemaStore.addSchema(getAccessor("mock-data/legal-personShape.ttl"));
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
                 .content(getMockFileDataAsString("default-participant.json"))
@@ -479,7 +478,6 @@ public class AssetControllerTest {
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
         assetStorePublisher.deleteAsset(asset.getAssetHash());
-        schemaStore.clear();
     }
 
     @Test

@@ -67,20 +67,9 @@ import static org.mockito.Mockito.when;
 /**
  * Integration tests for {@link VerificationServiceImpl}.
  *
- * <p><strong>Base class URI pattern (legacy gax-core credentials):</strong>
- * {@link CredentialVerificationStrategy} is a Spring singleton whose {@code trustFrameworkBaseClassUris}
- * map determines how credential types are matched. Type resolution in
+ * <p>All test fixtures use Gaia-X 2511 type URIs. Type resolution in
  * {@code ClaimValidator.checkTypeSubClass()} works via exact match or SPARQL {@code rdfs:subClassOf}
- * lookup against the loaded ontology. Legacy gax-core credential types
- * (e.g. {@code http://w3id.org/gaia-x/participant#Participant}) have no {@code rdfs:subClassOf}
- * relationship to {@code gax-core:Participant} in the bundled production ontologies — they are
- * unrelated URIs that only match via exact comparison.
- *
- * <p>Tests for legacy gax-core credentials therefore temporarily override the base URI with
- * {@code verificationService.setBaseClassUri(...)} inside a {@code try/finally} block.
- * The {@code finally} block restores the configured default ({@code 2511#Participant}).
- * Without the {@code try/finally}, a failing assertion would leave the singleton in a
- * mutated state and silently break subsequent tests.
+ * lookup against the bundled 2511 ontology.
  */
 @Slf4j
 @SpringBootTest
@@ -266,29 +255,6 @@ public class VerificationServiceTest {
 
   // validSyntax_ValidCredentialVP removed — coverage provided by validSyntax_LegalParticipantNewSchema
 
-  @Test
-  void validSyntax_ValidServiceOldSchema() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    // Credential uses pre-Tagus gax-service namespace (http://w3id.org/gaia-x/service#)
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
-    try {
-      ContentAccessor content = getAccessor("VerificationService/syntax/serviceOffering1.jsonld");
-      CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-      assertNotNull(vr);
-      assertFalse(vr instanceof CredentialVerificationResultParticipant);
-      assertInstanceOf(CredentialVerificationResultOffering.class, vr);
-      CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
-      assertEquals("https://www.example.org/Service1", vro.getId());
-      assertEquals("http://gaiax.de", vro.getIssuer());
-      assertNotNull(vro.getClaims());
-      assertEquals(19, vro.getClaims().size()); //!!
-      assertTrue(vro.getValidators().isEmpty());
-      assertTrue(vro.getValidatorDids().isEmpty());
-      assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
-    } finally {
-      verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/2511#ServiceOffering");
-    }
-  }
 
   @Test
   void validSyntax_ValidServiceNewSchema() {
@@ -307,29 +273,6 @@ public class VerificationServiceTest {
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
   }
 
-  @Test
-  void validSyntax_ValidPersonOldSchema() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    // Credential uses pre-Tagus gax-participant namespace (http://w3id.org/gaia-x/participant#)
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "http://w3id.org/gaia-x/participant#Participant");
-    try {
-      ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson1.jsonld");
-      CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
-      assertNotNull(vr);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-      CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-      assertEquals("http://gaiax.de", vrp.getId());
-      assertEquals("http://gaiax.de", vrp.getIssuer());
-      assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
-      assertNotNull(vrp.getClaims());
-      assertEquals(26, vrp.getClaims().size()); //!!
-      assertTrue(vrp.getValidators().isEmpty());
-      assertTrue(vrp.getValidatorDids().isEmpty());
-      assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
-    } finally {
-      verificationService.setBaseClassUri(TrustFrameworkBaseClass.PARTICIPANT, "https://w3id.org/gaia-x/2511#Participant");
-    }
-  }
 
   @Test
   void validSyntax_ValidPersonNewSchema() {
@@ -451,23 +394,6 @@ public class VerificationServiceTest {
     assertEquals("Signatures error; VerifiableCredential does not match with proof", ex.getMessage());
   }
 
-  private final static String pkey = """
-	{
-		"kty": "RSA",
-		"e": "AQAB",
-		"alg": "PS256",
-		"n": "0nYZU6EuuzHKBCzkcBZqsMkVZXngYO7VujfLU_4ys7onF4HxTJPP3OGKEjbjbMgmpa7vKaWRomt_XXTjemA3r3f5t8bj0IoqFfvbTIq65GUIIh4y2mVbomdcQLRK2Auf79vDiqiONknTSstoPjAiCg6t6z_KruGFZbDOhYkZwqrjGnmB_LfFSlpeLwkQQ-5dVLhhXkImmWhnACoAo8ECny24Ap7wLbN9i9o1fNSz2uszACj0zxFhl3NGunHFUm3YkGd0URvoToXpK9a4zfihSUxHjeT0_7a9puVF4E3w1AAjSh4nV3pLE0cJyDITVb2M4d3m9tjjz_3XwjYiAAJ1MKVBSKDM27pexRFCJj_Dvb-dr-AImhqBhPDHn_gjdaRZIVoADC4zwBULkpvUaUIKmNFyYOjDYWWTBzTf4Gs9QL5adlVfVyK14MZPBOyq-cqIIymgp6A5_R3hKnCCBP8C_S0-VDidhI6Pr5VJPx9DydI0eB2DiOyOZvbfg7sKVkJXFUEJRiBTMhujyjYqeTtCHjCFHctZVQ8hU279eyk7mpmpDrktfCFJFi-00ZzQWTgtzBoGhke5hj0hjtG1n4jN6BfypdT5oB-DeXl2P1hp_hNC9I5gveWUYHAqN4VKve_52A3ub8vBlISQhEUeZoFUterTiDA3NyK7wsj_V7-KM6U"
-	}""";
-
-  //@Test //TODO: think how to run it with the static key above
-  void validSyntax_ValidSO() {
-    //schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    schemaStore.initializeDefaultSchemas();
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "https://w3id.org/gaia-x/core#ServiceOffering");
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor("Signature-Tests/gxfsSignarure.jsonld"), true, true, true, true);
-    verificationService.setBaseClassUri(TrustFrameworkBaseClass.SERVICE_OFFERING, "http://w3id.org/gaia-x/service#ServiceOffering");
-    assertNotNull(vr);
-  }
 
   // TODO: fixture @type updated to gaia-x/core#Participant but existing JWS was computed over legacy gax-participant:LegalPerson.
   // Cannot re-sign — private key belongs to did:web:compliance.lab.gaia-x.eu (external GXDCH key). Re-enable once re-signed.

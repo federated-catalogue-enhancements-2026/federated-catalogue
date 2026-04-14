@@ -20,13 +20,12 @@
             "validFrom": "2010-01-01T19:23:24Z",
             "credentialSubject": {
                 "@context": {
-                    "gax": "http://w3id.org/gaia-x/participant#",
                     "foaf": "http://xmlns.com/foaf/0.1/",
                     "schema": "http://schema.org/"
                 },
                 "@id": "did:example:credSub",
                 "@type": [
-                    "http://w3id.org/gaia-x/participant#LegalPerson"
+                    "https://w3id.org/gaia-x/2511#LegalPerson"
                 ],
                 "foaf:givenname": "Fredrik",
                 "foaf:family_name": "Str&#246;mberg",
