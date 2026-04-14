@@ -5,10 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -344,77 +342,27 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void invalidProof_InvalidSignatureType(){
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/syntax/input.vp.jsonld";
-    Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(getAccessor(path)));
-    assertEquals("Signatures error; The proof type is not supported yet: Ed25519Signature2018", ex.getMessage());
-  }
-
-  @Test
-  void invalidProof_MissingProofs() {
+  void verifyCredential_ldCredentialWithVpSigsTrue_rejectsLdProof() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
     String path = "VerificationService/sign/hasNoSignature1.json";
 
     Exception ex = assertThrowsExactly(VerificationException.class, ()
             -> verificationService.verifyCredential(getAccessor(path), false, true, true, true));
-    assertEquals("Signatures error; No proof found", ex.getMessage());
-    assertNull(ex.getCause());
+    assertTrue(ex.getMessage().contains("Linked Data proof verification is not supported"),
+        "Should reject LD credential when signature verification is requested. Got: " + ex.getMessage());
   }
 
   @Test
-  void invalidProof_UnknownVerificationMethod() {
+  void verifyCredential_ldCredentialWithDefaultFlags_rejectsLdProof() {
     schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/sign/hasInvalidSignatureType.json";
-
-    Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(getAccessor(path), false, true, true, false));
-    assertEquals("Signatures error; Unknown Verification Method: https://example.edu/issuers/565049#key-1", ex.getMessage());
-    assertNull(ex.getCause());
-  }
-
-  @Test
-  void invalidProof_SignaturesMissing2() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/sign/lacksSomeSignatures.json";
+    String path = "VerificationService/sign/hasNoSignature1.json";
 
     Exception ex = assertThrowsExactly(VerificationException.class, ()
             -> verificationService.verifyCredential(getAccessor(path)));
-    assertEquals("Signatures error; No proof found", ex.getMessage());
-    assertNull(ex.getCause());
+    assertTrue(ex.getMessage().contains("Linked Data proof verification is not supported"),
+        "Should reject LD credential with default flags. Got: " + ex.getMessage());
   }
 
-  @Test
-  void verifySignature_InvalidSignature() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/sign/hasInvalidSignature.json";
-    Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(getAccessor(path)));
-    assertEquals("Signatures error; VerifiableCredential does not match with proof", ex.getMessage());
-  }
-
-
-  // TODO: fixture @type updated to gaia-x/core#Participant but existing JWS was computed over legacy gax-participant:LegalPerson.
-  // Cannot re-sign — private key belongs to did:web:compliance.lab.gaia-x.eu (external GXDCH key). Re-enable once re-signed.
-  @Disabled("JWS invalidated by @type migration; needs re-signing with did:web:compliance.lab.gaia-x.eu")
-  @Test
-  void validCredential() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/sign/valid_signature.json";
-    CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), false, false, true, true);
-    assertEquals(1, result.getValidators().size(), "Incorrect number of validators found");
-  }
-
-  // TODO: see validCredential() — same issue with pre-Tagus JWS in valid_complex_signature.json
-  @Disabled("JWS invalidated by @type migration; needs re-signing with did:web:compliance.lab.gaia-x.eu")
-  @Test
-  void validComplexCredential() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-    String path = "VerificationService/sign/valid_complex_signature.json";
-    CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path));
-    assertEquals(1, result.getValidators().size(), "Incorrect number of validators found");
-  }
 
   @Test
   void validComplexCredentialPartType() {
@@ -747,19 +695,17 @@ public class VerificationServiceTest {
   }
 
   /**
-   * AC 9 (backward compatibility): LD credential with verifyVCSignatures=true goes through the
-   * LD proof path; JwtSignatureVerifier is NOT invoked.
+   * AC 9: LD credential with verifyVCSignatures=true is rejected — LD proof verification
+   * was removed. JwtSignatureVerifier is NOT invoked.
    */
   @Test
-  void verifyCredential_ldCredentialWithVerifyVcSigsTrue_jwtVerifierNotInvoked() {
+  void verifyCredential_ldCredentialWithVerifyVcSigsTrue_rejectsLdProof() {
     ContentAccessor ldContent = getAccessor("VerificationService/jsonld/input.vc.jsonld");
 
-    try {
-      verificationService.verifyCredential(ldContent, false, false, false, true);
-    } catch (VerificationException ex) {
-      // Expected — LD credential has no proof; key assertion is that JWT verifier was not called
-    }
-
+    Exception ex = assertThrowsExactly(VerificationException.class, ()
+        -> verificationService.verifyCredential(ldContent, false, false, false, true));
+    assertTrue(ex.getMessage().contains("Linked Data proof verification is not supported"),
+        "Should reject LD credential. Got: " + ex.getMessage());
     verify(jwtVerifierMock, never()).verify(any());
   }
 

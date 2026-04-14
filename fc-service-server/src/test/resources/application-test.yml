@@ -1,6 +1,11 @@
 federated-catalogue:
   scope: test
   verification:
+    # Signature verification disabled — test fixtures are JSON-LD without proofs.
+    # Tests requiring signature verification must mock JwtSignatureVerifier.
+    # This is a concern of fc-service-core and signature verification coverage is delegated.
+    vp-signature: false
+    vc-signature: false
     # Trust Framework Configuration - disabled by default for tests
     trust-framework:
       gaiax:

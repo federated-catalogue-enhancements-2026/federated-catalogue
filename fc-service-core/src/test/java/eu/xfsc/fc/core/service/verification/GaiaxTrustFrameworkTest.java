@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.verification;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import eu.xfsc.fc.core.util.TestUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +48,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Test class for configurable Gaia-X Trust Framework validation.
  *
+ * TODO (CAT-TECH-01): These tests exercise Tagus-era JsonWebSignature2020 LD proof verification.
+ * When LD proof support is removed and Loire switches to GXDCH Compliance Service notarization,
+ * this test class should be removed or refactored to test the new trust framework model.
+ *
  * These tests verify that:
  * - Assets can be uploaded without Gaia-X Compliance validation
  * - Gaia-X validation is configurable via gaiax.enabled property
@@ -62,7 +65,6 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest(properties = {
     "federated-catalogue.verification.signature-verifier=uni-res",
     "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
-    "federated-catalogue.verification.drop-validators=true",
     // Start with Gaia-X disabled - tests will toggle as needed
     "federated-catalogue.verification.trust-framework.gaiax.enabled=false",
     "federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url=https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
@@ -148,21 +150,20 @@ public class GaiaxTrustFrameworkTest {
     // ==================== Disabled Behavior Tests ====================
 
     @Test
-    @DisplayName("Credential without x5u URL should be ACCEPTED when Gaia-X is disabled")
-    void testCredentialWithoutX5u_AcceptedWhenDisabled() {
+    @DisplayName("Loire JWT without x5u URL should be ACCEPTED when Gaia-X is disabled")
+    void testLoireJwtWithoutX5u_AcceptedWhenDisabled() {
         setGaiaxEnabled(false);
-
-        String path = "VerificationService/sign-unires/participant_jwk_signed.jsonld";
+        ContentAccessor content = loireJwtWithoutTrustChain();
 
         try {
             CredentialVerificationResult result = verificationService.verifyCredential(
-                getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
+                content, SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
             // Success - trust anchor check was skipped
             assertNotNull(result, "Should return result when Gaia-X is disabled");
         } catch (VerificationException e) {
             // Should NOT get trust anchor error when Gaia-X is disabled
-            assertFalse(e.getMessage().contains("no trust anchor url found"),
-                "Should NOT require trust anchor URL when Gaia-X is disabled. Got: " + e.getMessage());
+            assertFalse(e.getMessage().contains("must contain x5c or x5u"),
+                "Should NOT require trust chain when Gaia-X is disabled. Got: " + e.getMessage());
             // Other errors (like DID resolution) are acceptable
             log.info("Got acceptable non-trust-anchor error: {}", e.getMessage());
         }
@@ -280,37 +281,32 @@ public class GaiaxTrustFrameworkTest {
     // ==================== Security Tests ====================
 
     @Test
-    @DisplayName("Invalid signature should still be rejected when Gaia-X is disabled")
-    void testInvalidSignatureRejected_WhenDisabled() {
+    @DisplayName("Loire JWT without trust chain should still be accepted when Gaia-X is disabled")
+    void testLoireJwtWithoutTrustChain_AcceptedWhenDisabled() {
         setGaiaxEnabled(false);
+        ContentAccessor content = loireJwtWithoutTrustChain();
 
-        String path = "VerificationService/sign/hasInvalidSignature.json";
+        try {
+            verificationService.verifyCredential(content,
+                SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
+        } catch (VerificationException e) {
+            assertFalse(e.getMessage().contains("must contain x5c or x5u"),
+                "Should NOT require trust chain when Gaia-X is disabled. Got: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Non-JWT credential with signature verification should be rejected")
+    void testLdCredentialWithSigVerification_Rejected() {
+        setGaiaxEnabled(false);
+        String path = "VerificationService/sign/hasNoSignature1.json";
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
             verificationService.verifyCredential(getAccessor(path),
                 SKIP_SEMANTICS, SKIP_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES));
 
-        // The credential must NOT be accepted. We expect either:
-        // - "does not match with proof" (when DID can be resolved)
-        // - A DID resolution error (when external resolver is unavailable)
-        // Either way, it's NOT a trust anchor error (which would indicate Gaia-X check wasn't disabled)
-        assertFalse(ex.getMessage().contains("no trust anchor url found"),
-            "Should NOT get trust anchor error when Gaia-X is disabled. Got: " + ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Missing proof should still be rejected when Gaia-X is disabled")
-    void testMissingProofRejected_WhenDisabled() {
-        setGaiaxEnabled(false);
-
-        String path = "VerificationService/sign/hasNoSignature1.json";
-
-        Exception ex = assertThrowsExactly(VerificationException.class, () ->
-            verificationService.verifyCredential(getAccessor(path),
-                SKIP_SEMANTICS, VERIFY_SCHEMA, VERIFY_VP_SIGNATURES, VERIFY_VC_SIGNATURES));
-
-        assertEquals("Signatures error; No proof found", ex.getMessage(),
-            "Missing proofs should still be rejected");
+        assertTrue(ex.getMessage().contains("Linked Data proof verification is not supported"),
+            "Should reject LD credential. Got: " + ex.getMessage());
     }
 
     // ==================== Loire JWT Helpers ====================

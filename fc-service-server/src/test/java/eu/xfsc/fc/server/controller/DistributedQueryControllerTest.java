@@ -1,6 +1,5 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.util.TestUtil.getAccessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -106,9 +105,9 @@ public class DistributedQueryControllerTest {
     embeddedDatabaseServer.close();
   }
 
-  private String QUERY_REQUEST_GET = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n LIMIT 1\", \"parameters\": null}";
+  private final String QUERY_REQUEST_GET = "{\"statement\": \"MATCH (n:ServiceOffering) RETURN n LIMIT 1\", \"parameters\": null}";
 
-  private String QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN = "{\"statement\": \"MATCH (n:ServiceOffering) where "
+  private final String QUERY_REQUEST_GET_WITH_PARAMETERS_UNKNOWN = "{\"statement\": \"MATCH (n:ServiceOffering) where "
           + "n.name = $name RETURN n \", \"parameters\": { \"name\": \"notFound\"}}";
 
 

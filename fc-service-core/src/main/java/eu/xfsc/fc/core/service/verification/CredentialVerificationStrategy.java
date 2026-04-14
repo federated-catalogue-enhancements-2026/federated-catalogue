@@ -15,7 +15,6 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.VP_TYPE
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
-import com.danubetech.keyformats.jose.JWK;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
@@ -25,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.trustframework.TrustFramework;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
-import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -44,12 +42,10 @@ import eu.xfsc.fc.core.service.verification.claims.ClaimExtractor;
 import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
 import eu.xfsc.fc.core.service.verification.claims.TitaniumClaimExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
-import eu.xfsc.fc.core.service.verification.signature.SignatureVerifier;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import foundation.identity.jsonld.JsonLDObject;
-import com.danubetech.dataintegrity.DataIntegrityProof;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,7 +58,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
@@ -71,7 +66,6 @@ import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -124,8 +118,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     @Value("${federated-catalogue.verification.require-vp:true}")
     private boolean requireVP;
-    @Value("${federated-catalogue.verification.drop-validators:false}")
-    private boolean dropValidators;
     @Value("${federated-catalogue.verification.trust-framework.gaiax.enabled:false}")
     private boolean gaiaxTrustFrameworkEnabledEnv;
 
@@ -162,11 +154,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
     private final SchemaStore schemaStore;
     private final SchemaValidationService schemaValidationService;
-    private final SignatureVerifier signVerifier;
     @Qualifier("contextCacheFileStore")
     private final FileStore fileStore;
     private final DocumentLoader documentLoader;
-    private final ValidatorCacheDao validatorCache;
     private final Vc2Processor vc2Processor;
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final FormatDetector formatDetector;
@@ -520,7 +510,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             if (issuer == null) {
                 issuer = id;
             }
-            String method = typedCredentials.getProofMethod();
+            String method = validators.isEmpty() ? null : validators.get(0).getDidURI();
             String holder = typedCredentials.getHolder();
             String name = holder == null ? issuer : holder;
             return new CredentialVerificationResultParticipant(now, status, issuer, issuedDate,
@@ -801,30 +791,15 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
 
-    /* Credential signatures verification */
+    /**
+     * Rejects non-JWT credentials that request signature verification.
+     * Linked Data proof verification (JsonWebSignature2020) was removed — Loire uses
+     * GXDCH Compliance Service notarization via JWT/Enveloped Credential format.
+     */
     private List<Validator> checkCryptography(TypedCredentials tcs, boolean verifyVP, boolean verifyVC) {
-        log.debug("checkCryptography.enter;");
-        long timestamp = System.currentTimeMillis();
-
-        Set<Validator> validators = new HashSet<>();
-        try {
-            if (verifyVC) {
-                for (VerifiableCredential credential : tcs.getCredentials()) {
-                    validators.add(checkSignature(credential));
-                }
-            }
-            if (verifyVP) {
-                validators.add(checkSignature(tcs.getPresentation()));
-            }
-        } catch (VerificationException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            log.error("checkCryptography.error", ex);
-            throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
-        }
-        timestamp = System.currentTimeMillis() - timestamp;
-        log.debug("checkCryptography.exit; returning: {}; time taken: {}", validators, timestamp);
-        return new ArrayList<>(validators);
+        throw new VerificationException(
+            "Signatures error; Linked Data proof verification is not supported."
+                + " Use JWT or Enveloped Credential format.");
     }
 
     /**
@@ -892,8 +867,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     /**
      * Verifies inner VC credentials in a VP JWT.
-     * Handles EnvelopedVerifiableCredential (ICAM v24.07), plain compact JWT strings,
-     * and inline JSON-LD VCs with proof fields.
+     * Handles EnvelopedVerifiableCredential (ICAM v24.07) and plain compact JWT strings.
+     * Inline JSON-LD VCs are rejected — LD proof verification was removed.
      */
     private List<Validator> verifyInnerVcCredentials(JsonLDObject ld) {
         Object vcArrayObj = ld.getJsonObject().get(VERIFIABLE_CREDENTIAL_KEY);
@@ -925,12 +900,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     }
                     validators.add(jwtSignatureVerifier.verifyFromDataUrl(idStr));
                 } else {
-                    // Inline JSON-LD VC with proof — existing LD verification path
-                    @SuppressWarnings("unchecked")
-                    VerifiableCredential innerVc = VerifiableCredential.fromMap(
-                            (Map<String, Object>) vcMap);
-                    innerVc.setDocumentLoader(ld.getDocumentLoader());
-                    validators.add(checkSignature(innerVc));
+                    // Inline JSON-LD VC — LD proof verification was removed (Loire uses JWT)
+                    throw new VerificationException(
+                        "Signatures error; Linked Data proof verification is not supported."
+                            + " Use JWT or Enveloped Credential format.");
                 }
             }
         }
@@ -1101,71 +1074,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             throw new ClientException(typeName + ": data: URI payload is empty");
         }
         return jwt;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Validator checkSignature(JsonLDObject payload) {
-        Map<String, Object> proofMap = (Map<String, Object>) payload.getJsonObject().get("proof");
-        if (proofMap == null) {
-            throw new VerificationException("Signatures error; No proof found");
-        }
-
-        DataIntegrityProof proof = DataIntegrityProof.fromMap(proofMap);
-        if (proof.getType() == null) {
-            throw new VerificationException("Signatures error; Proof must have 'type' property");
-        }
-
-        try {
-            return checkProofSignature(payload, proof);
-        } catch (IOException ex) {
-            throw new VerificationException(ex);
-        }
-    }
-
-    private Validator checkProofSignature(JsonLDObject payload, DataIntegrityProof proof) throws IOException {
-        String vmKey = proof.getVerificationMethod().toString();
-        Validator validator = validatorCache.getFromCache(vmKey);
-        if (validator == null) {
-            log.debug("checkSignature; validator not found in cache");
-        } else {
-            log.debug("checkSignature; got validator from cache");
-            JWK jwk = JWK.fromJson(validator.getPublicKey());
-            if (signVerifier.verify(payload, proof, jwk, jwk.getAlg())) {
-                return validator;
-            }
-
-            // validator doesn't verifies any more. let's drop it
-            if (dropValidators) {
-                validatorCache.removeFromCache(vmKey);
-            } else {
-                throw new VerificationException("Signatures error; " + payload.getClass().getSimpleName() + " does not match with proof");
-            }
-        }
-
-        validator = signVerifier.checkSignature(payload, proof);
-        Instant expiration = null;
-        JsonNode jwkNode = objectMapper.readTree(validator.getPublicKey());
-        if (jwkNode.has("x5c") && !jwkNode.get("x5c").isEmpty()) {
-            rejectX5cChain(jwkNode.get("x5c"), proof.getVerificationMethod().toString());
-        }
-        JWK jwk = JWK.fromJson(validator.getPublicKey());
-        String url = jwk.getX5u();
-        if (url == null) {
-            // When Gaia-X trust framework is enabled, x5u URL is required for trust anchor validation
-            if (isGaiaxTrustFrameworkEnabled()) {
-                throw new VerificationException("Signatures error; no trust anchor url found");
-            }
-            log.debug("checkProofSignature; no x5u URL in JWK, skipping trust anchor validation (gaiax.enabled=false)");
-        } else {
-            expiration = hasPEMTrustAnchorAndIsNotExpired(url);
-        }
-        if (expiration == null) {
-            // set default expiration at next midnight
-            expiration = Instant.now().plus(validatorExpiration).truncatedTo(ChronoUnit.DAYS);
-        }
-        validator.setExpirationDate(expiration);
-        validatorCache.addToCache(validator);
-        return validator;
     }
 
     /**

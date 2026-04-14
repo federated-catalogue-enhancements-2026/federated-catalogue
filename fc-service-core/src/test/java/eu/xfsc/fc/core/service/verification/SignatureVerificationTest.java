@@ -1,14 +1,11 @@
 package eu.xfsc.fc.core.service.verification;
 
-import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import eu.xfsc.fc.core.util.TestUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -38,7 +35,6 @@ import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
@@ -48,7 +44,6 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 @SpringBootTest(properties = {
 	"federated-catalogue.verification.signature-verifier=uni-res",
 	"federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
-	"federated-catalogue.verification.drop-validators=true",
 	"federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url=https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -84,14 +79,6 @@ public class SignatureVerificationTest {
 	    schemaStore.clear();
 	}
 	
-	//@Test
-	void verifyCredential_v1SignedParticipant_validatorFound() {
-	    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
-	    String path = "VerificationService/sign-unires/participant_v1_signed.jsonld";
-	    CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path));
-	    assertEquals(1, result.getValidators().size(), "Incorrect number of validators found");
-	}
-
 	@Test
 	void verifyCredential_jwkWithoutX5uAndGaiaxEnabled_throwsVerificationException() {
 	    // Loire credential whose DID document JWK lacks x5c/x5u must be rejected
