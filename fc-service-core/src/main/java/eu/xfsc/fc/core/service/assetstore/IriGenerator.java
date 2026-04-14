@@ -111,7 +111,7 @@ public class IriGenerator {
       if (json.has("credentialSubject")) {
         JsonNode subject = json.get("credentialSubject");
         if (subject.isArray() && subject.size() > 0) {
-          subject = subject.getFirst();
+          subject = subject.get(0);
         }
         if (subject != null && subject.has("id")) {
           String id = subject.get("id").asText();
