@@ -187,7 +187,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("hash-b", results.getResults().get(0).getAssetHash());
+    assertEquals("hash-b", results.getResults().getFirst().getAssetHash());
   }
 
   @Test
@@ -208,7 +208,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("hash-a", results.getResults().get(0).getAssetHash());
+    assertEquals("hash-a", results.getResults().getFirst().getAssetHash());
   }
 
   @Test
@@ -229,7 +229,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("hash-a", results.getResults().get(0).getAssetHash());
+    assertEquals("hash-a", results.getResults().getFirst().getAssetHash());
   }
 
   @Test
@@ -242,7 +242,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("hash-b", results.getResults().get(0).getAssetHash());
+    assertEquals("hash-b", results.getResults().getFirst().getAssetHash());
   }
 
   @Test
@@ -271,7 +271,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("sub/2", results.getResults().get(0).getId());
+    assertEquals("sub/2", results.getResults().getFirst().getId());
   }
 
   @Test
@@ -286,7 +286,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(filter, true, true);
 
     assertEquals(1, results.getTotalCount());
-    assertEquals("hash-b", results.getResults().get(0).getAssetHash());
+    assertEquals("hash-b", results.getResults().getFirst().getAssetHash());
   }
 
   @Test
@@ -296,7 +296,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(new AssetFilter(), false, true);
 
     assertEquals(1, results.getResults().size());
-    AssetRecord result = results.getResults().get(0);
+    AssetRecord result = results.getResults().getFirst();
     assertEquals("hash-a", result.getAssetHash());
     assertNull(result.getId());
     assertNull(result.getIssuer());
@@ -318,7 +318,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(new AssetFilter(), true, false);
 
     assertEquals(1, results.getResults().size());
-    AssetRecord result = results.getResults().get(0);
+    AssetRecord result = results.getResults().getFirst();
     assertEquals("hash-a", result.getAssetHash());
     assertNotNull(result.getId());
     assertNull(result.getContentAccessor());
@@ -351,7 +351,7 @@ class AssetDaoTest {
     PaginatedResults<AssetRecord> results = assetDao.selectByFilter(new AssetFilter(), true, true);
 
     List<AssetRecord> list = results.getResults();
-    assertEquals("hash-b", list.get(0).getAssetHash());
+    assertEquals("hash-b", list.getFirst().getAssetHash());
     assertEquals("hash-c", list.get(1).getAssetHash());
     assertEquals("hash-a", list.get(2).getAssetHash());
   }
@@ -369,7 +369,7 @@ class AssetDaoTest {
 
     assertEquals(2, hashes.size());
     // Ordered ascending by asset_hash
-    assertTrue(hashes.get(0).compareTo(hashes.get(1)) < 0);
+    assertTrue(hashes.getFirst().compareTo(hashes.get(1)) < 0);
   }
 
   @Test
@@ -424,7 +424,7 @@ class AssetDaoTest {
     List<String> expiredHashes = assetDao.selectExpiredHashes();
 
     assertEquals(1, expiredHashes.size());
-    assertEquals("hash-exp", expiredHashes.get(0));
+    assertEquals("hash-exp", expiredHashes.getFirst());
   }
 
   @Test
