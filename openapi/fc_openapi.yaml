@@ -164,6 +164,7 @@ components:
         - issuer #!! Comment on issuer: if available, but still required?? Remove from required -> Julius: required
         - issuedDateTime
         - validatorDids
+        - warnings
     Participant:
       type: object
       properties:
@@ -1238,10 +1239,13 @@ paths:
         description: >-
           The asset content. For JSON-LD credentials, use application/json,
           application/vc+ld+json, or application/vp+ld+json. For JWT-wrapped
-          Gaia-X credentials per ICAM 24.07 (Loire release), use application/vc+ld+json+jwt
-          (VC) or application/vp+ld+json+jwt (VP). For non-RDF assets, use
-          multipart/form-data or application/octet-stream (handled by the
-          server outside the generated delegate pattern).
+          credentials use application/vc+jwt (VC) or application/vp+jwt (VP) —
+          these are IANA-registered types per W3C VC-JOSE-COSE and are issued by
+          the live GXDCH Compliance Service. The ICAM 24.07 variants
+          application/vc+ld+json+jwt and application/vp+ld+json+jwt are also
+          accepted for backward compatibility but are not IANA-registered.
+          For non-RDF assets, use multipart/form-data or application/octet-stream
+          (handled by the server outside the generated delegate pattern).
         content:
           application/json:
             schema:
@@ -1253,6 +1257,12 @@ paths:
             schema:
               type: string
           application/vp+ld+json:
+            schema:
+              type: string
+          application/vc+jwt:
+            schema:
+              type: string
+          application/vp+jwt:
             schema:
               type: string
           application/vc+ld+json+jwt:
@@ -1957,7 +1967,7 @@ paths:
               - xml
         - name: term
           in: query
-          description: 'The URI of the term of the requested schema e.g. `http://w3id.org/gaia-x/service#ServiceOffering`'
+          description: 'The URI of the term of the requested schema e.g. `https://w3id.org/gaia-x/2511#ServiceOffering`'
           required: false
           schema:
             type: string
@@ -2046,12 +2056,36 @@ paths:
             default: true  
       requestBody:
         description: >-
-          JSON-LD document to be verified object to send queries. Use
-          "application/json" for openCypher queries. A Catalogue may also
-          support the other content   types  depending   on   its   supported  
-          query  languages   but   only "application/json" is mandatory.
+          The credential to verify. For JSON-LD credentials, use application/json,
+          application/vc+ld+json, or application/vp+ld+json. For JWT-wrapped
+          credentials use application/vc+jwt (VC) or application/vp+jwt (VP) —
+          these are IANA-registered types per W3C VC-JOSE-COSE and are issued by
+          the live GXDCH Compliance Service. The ICAM 24.07 variants
+          application/vc+ld+json+jwt and application/vp+ld+json+jwt are also
+          accepted for backward compatibility but are not IANA-registered.
         content:
           application/json:
+            schema:
+              type: string
+          application/ld+json:
+            schema:
+              type: string
+          application/vc+ld+json:
+            schema:
+              type: string
+          application/vp+ld+json:
+            schema:
+              type: string
+          application/vc+jwt:
+            schema:
+              type: string
+          application/vp+jwt:
+            schema:
+              type: string
+          application/vc+ld+json+jwt:
+            schema:
+              type: string
+          application/vp+ld+json+jwt:
             schema:
               type: string
       responses:

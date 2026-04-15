@@ -29,6 +29,7 @@ import org.springframework.test.context.ContextConfiguration;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.DidResolverConfig;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
@@ -59,7 +60,8 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {AssetStoreTest.TestApplication.class, AssetStoreImpl.class, AssetJpaDao.class, AssetAuditRepository.class, IriGenerator.class, IriValidator.class,
   AssetStoreTest.class, Neo4jGraphStore.class, DatabaseConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
-  DidResolverConfig.class, HttpDocumentResolver.class, FileStoreConfig.class, RdfContentTypeProperties.class})
+  DidResolverConfig.class, HttpDocumentResolver.class, FileStoreConfig.class, RdfContentTypeProperties.class,
+  SecurityAuditorAware.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
@@ -107,11 +109,11 @@ public class AssetStoreTest {
   }
 
   private static List<CredentialClaim> createClaims(String subject) {
-    final CredentialClaim claim1 = new CredentialClaim(subject, "<https://www.w3id.org/gaia-x/service#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
-    final CredentialClaim claim2 = new CredentialClaim(subject, "<https://www.w3id.org/gaia-x/service#name>", "\"EuProGigant Portal\"");
-    final CredentialClaim claim3 = new CredentialClaim(subject, "<https://www.w3id.org/gaia-x/service#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
-    final CredentialClaim claim4 = new CredentialClaim(subject, "<https://www.w3id.org/gaia-x/service#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
-    final CredentialClaim claim5 = new CredentialClaim(subject, "<https://www.w3id.org/gaia-x/service#TermsAndConditions>", "\"contentHash\"");
+    final CredentialClaim claim1 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
+    final CredentialClaim claim2 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#name>", "\"EuProGigant Portal\"");
+    final CredentialClaim claim3 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
+    final CredentialClaim claim4 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
+    final CredentialClaim claim5 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "\"contentHash\"");
     return List.of(claim1, claim2, claim3, claim4, claim5);
   }
 

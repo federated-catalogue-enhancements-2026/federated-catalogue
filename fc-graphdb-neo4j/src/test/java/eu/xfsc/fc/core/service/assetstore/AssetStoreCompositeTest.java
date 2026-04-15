@@ -30,6 +30,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
@@ -53,7 +54,6 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
-import eu.xfsc.fc.core.service.verification.Vc11Processor;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -73,8 +73,8 @@ import lombok.extern.slf4j.Slf4j;
   SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class,
   Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
   CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
-  AdminConfigRepository.class, SchemaModuleConfigService.class,
-  RdfContentTypeProperties.class, JwtContentPreprocessor.class, Vc11Processor.class, Vc2Processor.class,
+  AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
+  RdfContentTypeProperties.class, JwtContentPreprocessor.class, Vc2Processor.class,
   JwtSignatureVerifier.class, DidDocumentResolver.class,  FormatDetector.class, LoireJwtParser.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
@@ -124,8 +124,8 @@ public class AssetStoreCompositeTest {
    */
   @Test
   void test01StoreCredential() {
-    log.info("test01StoreCredential");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
     CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
@@ -145,10 +145,7 @@ public class AssetStoreCompositeTest {
 
     List<Map<String, Object>> aNodes = graphStore.queryData(
         new GraphQuery("MATCH (n) RETURN labels(n), n", Map.of())).getResults();
-    
-    //final ContentAccessor credentialFileByHash = assetStore.getFileByHash(hash);
-    //assertEquals(credentialFileByHash, assetMeta.getContentAccessor(),
-    //    "Getting the credential file by hash is equal to the stored credential file");
+
     assetStorePublisher.deleteAsset(hash);
 
     claims = graphStore.queryData(
@@ -160,8 +157,8 @@ public class AssetStoreCompositeTest {
 
   @Test
   void test02RebuildGraphDb() {
-    log.info("test02RebuildGraphDb");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     // Only verify semantics, not schema or signatures
     CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
@@ -200,8 +197,8 @@ public class AssetStoreCompositeTest {
 
   @Test
   void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
-    log.info("test03RebuildGraphDb_filtersProtectedNamespaceClaims");
-    schemaStore.addSchema(getAccessor("Schema-Tests/gax-test-ontology.ttl"));
+
+    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     // Skip all verification — we only care about claim storage and rebuild filtering
     CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
@@ -234,8 +231,6 @@ public class AssetStoreCompositeTest {
       Assertions.assertFalse(relType.contains("complianceResult"),
           "Protected namespace relationship should not exist after rebuild: " + relType);
     }
-
     assetStorePublisher.deleteAsset(hash);
   }
-
 }

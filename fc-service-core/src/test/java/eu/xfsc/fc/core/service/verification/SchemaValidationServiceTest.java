@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
+import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
@@ -51,7 +52,8 @@ import lombok.extern.slf4j.Slf4j;
         VerificationServiceImpl.class, CredentialVerificationStrategy.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class,
         DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheJpaDao.class, HttpDocumentResolver.class,
         AdminConfigRepository.class, SchemaModuleConfigService.class,
-        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class})
+        JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        SecurityAuditorAware.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class SchemaValidationServiceTest {
 
@@ -97,11 +99,10 @@ public class SchemaValidationServiceTest {
         assertTrue(result.isConforming(), "Valid payload should conform");
     }
 
-    /** Verifies that an invalid payload fails against the composite schema built from multiple stored shapes. */
+    /** Verifies that an invalid payload fails against the composite schema built from stored shapes. */
     @Test
     void validateInvalidPayloadAgainstCompositeSchema() {
         schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
-        schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
 
         SchemaValidationResult result = schemaValidationService.validateCredentialAgainstCompositeSchema(
                 getAccessor("Validation-Tests/legalPerson_one_VC_Invalid.jsonld"));
@@ -111,10 +112,9 @@ public class SchemaValidationServiceTest {
         assertTrue(result.getValidationReport().contains("Property needs to have at least 1 value"));
     }
 
-    /** Verifies that a valid payload passes against the composite schema built from multiple stored shapes. */
+    /** Verifies that a valid payload passes against the composite schema built from stored shapes. */
     @Test
     void validateValidPayloadAgainstCompositeSchema() {
-        schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
         schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
 
         SchemaValidationResult result = schemaValidationService.validateCredentialAgainstCompositeSchema(
@@ -128,7 +128,6 @@ public class SchemaValidationServiceTest {
     @Test
     void validateAgainstNullSchemaFallsBackToComposite() {
         schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
-        schemaStore.addSchema(getAccessor("Validation-Tests/legal-personShape.ttl"));
 
         SchemaValidationResult resultExplicit = schemaValidationService.validateCredentialAgainstCompositeSchema(
                 getAccessor("Validation-Tests/legalPerson_one_VC_Invalid.jsonld"));
@@ -139,6 +138,45 @@ public class SchemaValidationServiceTest {
         assertNotNull(resultNullSchema);
         assertFalse(resultExplicit.isConforming());
         assertFalse(resultNullSchema.isConforming());
+    }
+
+    // ==================== Loire (Gaia-X 2511) SHACL validation tests ====================
+
+    /** Valid Loire gx:LegalPerson credential conforms to 2511 shapes. */
+    @Test
+    void validateLoire_validLegalPerson_conforms() {
+        SchemaValidationResult result = schemaValidationService.validateCredentialAgainstSchema(
+                getAccessor("Validation-Tests/loire_legalPerson_valid.jsonld"),
+                getAccessor("Schema-Tests/gx-2511-test-shapes.ttl"));
+
+        assertNotNull(result, "Result should not be null");
+        assertTrue(result.isConforming(),
+                "Valid Loire gx:LegalPerson credential should conform to 2511 shapes. Report: "
+                        + result.getValidationReport());
+    }
+
+    /** Loire gx:LegalPerson missing required gx:registrationNumber is rejected. */
+    @Test
+    void validateLoire_missingRequiredProperty_rejected() {
+        SchemaValidationResult result = schemaValidationService.validateCredentialAgainstSchema(
+                getAccessor("Validation-Tests/loire_legalPerson_missing_required.jsonld"),
+                getAccessor("Schema-Tests/gx-2511-test-shapes.ttl"));
+
+        assertNotNull(result, "Result should not be null");
+        assertFalse(result.isConforming(),
+                "Loire credential missing gx:registrationNumber should not conform");
+    }
+
+    /** Loire gx:LegalPerson with unexpected property violates the closed shape. */
+    @Test
+    void validateLoire_unexpectedPropertyOnClosedShape_rejected() {
+        SchemaValidationResult result = schemaValidationService.validateCredentialAgainstSchema(
+                getAccessor("Validation-Tests/loire_legalPerson_closed_violation.jsonld"),
+                getAccessor("Schema-Tests/gx-2511-test-shapes.ttl"));
+
+        assertNotNull(result, "Result should not be null");
+        assertFalse(result.isConforming(),
+                "Loire credential with unexpected property on a closed shape should not conform");
     }
 
 }
