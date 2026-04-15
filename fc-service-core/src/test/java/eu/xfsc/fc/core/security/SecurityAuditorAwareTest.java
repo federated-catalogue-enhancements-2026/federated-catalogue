@@ -1,11 +1,10 @@
-package eu.xfsc.fc.core.config;
+package eu.xfsc.fc.core.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
