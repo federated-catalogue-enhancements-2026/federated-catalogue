@@ -18,19 +18,22 @@ Sub-chart dependency: `keycloakx 7.1.9`. All GHCR images are public — no pull 
 
 ## New cluster setup
 
-### 1. Install nginx ingress controller
+### 1. Install Traefik ingress controller
 
 ```bash
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo add traefik https://traefik.github.io/charts
 helm repo update
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  -n ingress-nginx --create-namespace
+helm install traefik traefik/traefik -n kube-system \
+  --set service.type=LoadBalancer \
+  --set "ports.web.http.redirections.entryPoint.to=websecure" \
+  --set "ports.web.http.redirections.entryPoint.scheme=https" \
+  --set "ports.web.http.redirections.entryPoint.permanent=true"
 ```
 
 Wait until the controller has an external IP:
 
 ```bash
-kubectl get svc ingress-nginx-controller -n ingress-nginx --watch
+kubectl get svc traefik -n kube-system --watch
 ```
 
 Note the `EXTERNAL-IP` — you will need it in step 3.

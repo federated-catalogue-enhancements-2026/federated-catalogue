@@ -1,3 +1,4 @@
+{{- if .Values.portal.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -9,7 +10,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.portal.ingress.className }}
   {{- if .Values.portal.tls }}
   tls:
     - hosts:
@@ -27,3 +28,5 @@ spec:
                 name: {{ include "fc-service.portal.fullname" . }}
                 port:
                   number: {{ .Values.portal.service.port }}
+{{- end }}
+

@@ -51,14 +51,12 @@ service:
 
 ingress:
   enabled: true
-  className: nginx
+  className: traefik
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/affinity: cookie
-    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
-    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: "SERVERID"
 #    nginx.ingress.kubernetes.io/server-snippet: |
 #        location /actuator {
 #          deny all;
@@ -254,11 +252,10 @@ keycloak:
   # Ingress configuration — keep in sync with hosts.keycloak above
   ingress:
     enabled: true
-    ingressClassName: nginx
+    ingressClassName: traefik
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
     rules:
       - host: "key-server.<EXTERNAL-IP>.sslip.io"
         paths:
@@ -293,13 +290,13 @@ portal:
   tls:
     secretName: fc-demo-portal-tls
   ingress:
+    enabled: true
+    className: traefik
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/affinity: cookie
-      nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
-      nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
-      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.name: "SERVERID"
   probes:
     path: /actuator/health
     initialDelaySeconds: 60
