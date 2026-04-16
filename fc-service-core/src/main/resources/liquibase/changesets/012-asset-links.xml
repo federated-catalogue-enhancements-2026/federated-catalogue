@@ -35,6 +35,22 @@
             constraintName="uq_asset_link"/>
     </changeSet>
 
+    <changeSet author="saackef" id="2026-04-16-asset-links-created-by-type">
+        <modifyDataType tableName="asset_links" columnName="created_by" newDataType="VARCHAR(255)"/>
+    </changeSet>
+
+    <changeSet author="saackef" id="2026-04-16-asset-links-modified-by">
+        <addColumn tableName="asset_links">
+            <column name="modified_by" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet author="saackef" id="2026-04-16-asset-links-last-modified-at">
+        <addColumn tableName="asset_links">
+            <column name="last_modified_at" type="TIMESTAMPTZ"/>
+        </addColumn>
+    </changeSet>
+
     <changeSet author="saackef" id="2026-04-16-asset-links-source-index">
         <createIndex tableName="asset_links" indexName="idx_asset_links_source">
             <column name="source_id"/>

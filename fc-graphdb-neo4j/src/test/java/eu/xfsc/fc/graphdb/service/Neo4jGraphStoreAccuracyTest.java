@@ -40,7 +40,6 @@ import eu.xfsc.fc.graphdb.config.GraphDbConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import org.junit.jupiter.api.AfterAll;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -76,7 +75,7 @@ import java.util.Map;
 	CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 	AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
 	JwtContentPreprocessor.class, Vc2Processor.class, JwtSignatureVerifier.class, DidDocumentResolver.class,
-        FormatDetector.class, LoireJwtParser.class})
+    FormatDetector.class, LoireJwtParser.class, AssetLinkService.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class Neo4jGraphStoreAccuracyTest {
@@ -103,9 +102,6 @@ public class Neo4jGraphStoreAccuracyTest {
   private AssetStoreImpl assetStore;
   @Autowired
   private VerificationServiceImpl verificationService;
-
-  @MockBean
-  private AssetLinkService assetLinkService;
 
   
   @BeforeAll

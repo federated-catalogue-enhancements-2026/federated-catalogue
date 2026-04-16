@@ -55,7 +55,6 @@ import org.springframework.web.util.UriUtils;
 
 import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
 import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
-import static eu.xfsc.fc.server.util.SessionUtils.getSessionParticipantId;
 
 /**
  * Implementation of the {@link eu.xfsc.fc.server.generated.controller.AssetsApiDelegate} interface.
@@ -431,8 +430,7 @@ public class AssetService implements AssetsApiDelegate {
     final AssetMetadata hrMetadata = assetUploadService.processUpload(
         content, contentType, safeFilename);
 
-    final String createdBy = getSessionParticipantId();
-    assetLinkService.createLink(decodedId, hrMetadata.getId(), AssetLinkType.HAS_HUMAN_READABLE, createdBy);
+    assetLinkService.createLink(decodedId, hrMetadata.getId(), AssetLinkType.HAS_HUMAN_READABLE);
 
     log.debug("uploadHumanReadable.exit; linked {} -> {}", decodedId, hrMetadata.getId());
 

@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.dao.assetlinks;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +14,11 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * JPA entity for the {@code asset_links} table.
@@ -24,6 +29,7 @@ import org.hibernate.annotations.CreationTimestamp;
  */
 @Entity
 @Table(name = "asset_links")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -51,12 +57,23 @@ public class AssetLink {
   @Column(name = "link_type", nullable = false, length = 50)
   private AssetLinkType linkType;
 
-  /** Timestamp when the link was created. Populated automatically on insert. */
-  @CreationTimestamp
+  /** Timestamp when the link was created. Populated automatically by the auditing listener. */
+  @CreatedDate
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-  /** DID of the user who created the link; may be null for system-generated links. */
-  @Column(name = "created_by", columnDefinition = "TEXT")
+  /** JWT subject of the user who created the link; populated automatically by the auditing listener. */
+  @CreatedBy
+  @Column(name = "created_by", updatable = false)
   private String createdBy;
+
+  /** JWT subject of the user who last modified the link; populated automatically by the auditing listener. */
+  @LastModifiedBy
+  @Column(name = "modified_by")
+  private String modifiedBy;
+
+  /** Timestamp of the last modification; populated automatically by the auditing listener. */
+  @LastModifiedDate
+  @Column(name = "last_modified_at")
+  private Instant lastModifiedAt;
 }

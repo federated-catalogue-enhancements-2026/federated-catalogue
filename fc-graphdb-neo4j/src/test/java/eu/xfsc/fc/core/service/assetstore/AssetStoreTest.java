@@ -10,6 +10,7 @@ import java.util.Map;
 
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -48,13 +49,11 @@ import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -63,7 +62,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 @ContextConfiguration(classes = {AssetStoreTest.TestApplication.class, AssetStoreImpl.class, AssetJpaDao.class, AssetAuditRepository.class, IriGenerator.class, IriValidator.class,
   AssetStoreTest.class, Neo4jGraphStore.class, DatabaseConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
   DidResolverConfig.class, HttpDocumentResolver.class, FileStoreConfig.class, RdfContentTypeProperties.class,
-  SecurityAuditorAware.class})
+  SecurityAuditorAware.class, AssetLinkService.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
@@ -85,9 +84,6 @@ public class AssetStoreTest {
 
   @Autowired
   private GraphStore graphStore;
-
-  @MockBean
-  private AssetLinkService assetLinkService;
 
   @AfterEach
   public void storageSelfCleaning() {

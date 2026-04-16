@@ -1,8 +1,8 @@
 package eu.xfsc.fc.core.service.assetlink;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +48,6 @@ class AssetLinkServiceTest {
 
   private static final String MR_IRI = "urn:uuid:machine-readable-001";
   private static final String HR_IRI = "urn:uuid:human-readable-001";
-  private static final String CREATOR_DID = "did:example:creator";
   private static final String OTHER_HR_IRI = "urn:uuid:human-readable-002";
 
   @Configuration
@@ -71,7 +70,7 @@ class AssetLinkServiceTest {
 
   @Test
   void createLink_newBidirectionalLink_insertsTwoRows() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
     final var forwardLink = assetLinkRepository.findBySourceIdAndLinkType(
         MR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
@@ -86,21 +85,22 @@ class AssetLinkServiceTest {
   }
 
   @Test
-  void createLink_newLink_setsCreatedBy() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+  void createLink_noAuthContext_createdByIsNull() {
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
     final var link = assetLinkRepository.findBySourceIdAndLinkType(
         MR_IRI, AssetLinkType.HAS_HUMAN_READABLE).orElseThrow();
 
-    assertEquals(CREATOR_DID, link.getCreatedBy());
+    // SecurityAuditorAware returns empty when there is no JWT context (tests, background jobs)
+    assertNull(link.getCreatedBy());
   }
 
   @Test
   void createLink_duplicateLinkType_throwsConflict() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
     assertThrows(ConflictException.class,
-        () -> assetLinkService.createLink(MR_IRI, OTHER_HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID),
+        () -> assetLinkService.createLink(MR_IRI, OTHER_HR_IRI, AssetLinkType.HAS_HUMAN_READABLE),
         "Second HAS_HUMAN_READABLE link for the same MR asset should be rejected");
   }
 
@@ -108,7 +108,7 @@ class AssetLinkServiceTest {
 
   @Test
   void getLinkedAsset_existingLink_returnsTargetIri() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
     final var result = assetLinkService.getLinkedAsset(MR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
@@ -118,7 +118,7 @@ class AssetLinkServiceTest {
 
   @Test
   void getLinkedAsset_reverseDirection_resolvesMachineReadable() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
 
     final var result = assetLinkService.getLinkedAsset(HR_IRI, AssetLinkType.HAS_MACHINE_READABLE);
 
@@ -137,7 +137,7 @@ class AssetLinkServiceTest {
 
   @Test
   void deleteLinksForAsset_existingBidirectionalLinks_removesBothRows() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
     assertEquals(2, assetLinkRepository.count());
 
     assetLinkService.deleteLinksForAsset(MR_IRI);
@@ -147,10 +147,10 @@ class AssetLinkServiceTest {
 
   @Test
   void deleteLinksForAsset_deletingHrAsset_removesLinks_leavesOtherLinksIntact() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
     final var otherMr = "urn:uuid:machine-readable-002";
     final var otherHr = "urn:uuid:human-readable-099";
-    assetLinkService.createLink(otherMr, otherHr, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(otherMr, otherHr, AssetLinkType.HAS_HUMAN_READABLE);
     assertEquals(4, assetLinkRepository.count());
 
     assetLinkService.deleteLinksForAsset(HR_IRI);
@@ -172,10 +172,10 @@ class AssetLinkServiceTest {
 
   @Test
   void getHumanReadableLinks_multipleLinks_returnsForwardRowsOnly() {
-    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
     final var otherMr = "urn:uuid:machine-readable-003";
     final var otherHr = "urn:uuid:human-readable-003";
-    assetLinkService.createLink(otherMr, otherHr, AssetLinkType.HAS_HUMAN_READABLE, CREATOR_DID);
+    assetLinkService.createLink(otherMr, otherHr, AssetLinkType.HAS_HUMAN_READABLE);
 
     final var hrLinks = assetLinkService.getHumanReadableLinks();
 

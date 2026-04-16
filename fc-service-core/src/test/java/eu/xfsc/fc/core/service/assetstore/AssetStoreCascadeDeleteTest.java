@@ -83,7 +83,7 @@ class AssetStoreCascadeDeleteTest {
     final var mrMeta = storeNonRdfAsset(MR_ID, "mr content");
     final var hrMeta = storeNonRdfAsset(null, "hr content");
 
-    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE, TEST_ISSUER);
+    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE);
 
     assetStore.deleteAsset(mrMeta.getAssetHash());
 
@@ -102,7 +102,7 @@ class AssetStoreCascadeDeleteTest {
     final var mrMeta = storeNonRdfAsset(MR_ID, "mr content v2");
     final var hrMeta = storeNonRdfAsset(null, "hr content v2");
 
-    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE, TEST_ISSUER);
+    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE);
 
     assetStore.deleteAsset(hrMeta.getAssetHash());
 

@@ -50,21 +50,20 @@ public class AssetLinkService {
    * {@code uq_asset_link} on {@code (source_id, target_id, link_type)} prevents
    * concurrent duplicate inserts from producing orphan rows.</p>
    *
-   * @param sourceId  IRI of the source asset (machine-readable)
-   * @param targetId  IRI of the target asset (human-readable)
-   * @param linkType  direction of the forward link
-   * @param createdBy DID of the user creating the link
+   * @param sourceId IRI of the source asset (machine-readable)
+   * @param targetId IRI of the target asset (human-readable)
+   * @param linkType direction of the forward link
    * @throws ConflictException if the source asset already has a link of the given type
    */
   @Transactional
-  public void createLink(String sourceId, String targetId, AssetLinkType linkType, String createdBy) {
+  public void createLink(String sourceId, String targetId, AssetLinkType linkType) {
     if (assetLinkRepository.findBySourceIdAndLinkType(sourceId, linkType).isPresent()) {
       throw new ConflictException(
           String.format("Asset '%s' already has a %s link", sourceId, linkType));
     }
 
-    final var forward = buildLink(sourceId, targetId, linkType, createdBy);
-    final var reverse = buildLink(targetId, sourceId, invertLinkType(linkType), createdBy);
+    final var forward = buildLink(sourceId, targetId, linkType);
+    final var reverse = buildLink(targetId, sourceId, invertLinkType(linkType));
     assetLinkRepository.saveAll(List.of(forward, reverse));
 
     try {
@@ -159,12 +158,11 @@ public class AssetLinkService {
 
   // --- Private helpers ---
 
-  private AssetLink buildLink(String sourceId, String targetId, AssetLinkType linkType, String createdBy) {
+  private AssetLink buildLink(String sourceId, String targetId, AssetLinkType linkType) {
     final var link = new AssetLink();
     link.setSourceId(sourceId);
     link.setTargetId(targetId);
     link.setLinkType(linkType);
-    link.setCreatedBy(createdBy);
     return link;
   }
 
