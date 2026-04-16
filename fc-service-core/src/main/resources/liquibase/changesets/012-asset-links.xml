@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
     <changeSet author="saackef" id="2026-04-16-asset-links-sequence">
         <createSequence sequenceName="asset_links_id_seq" startValue="1" incrementBy="50"/>
@@ -22,33 +22,17 @@
             <column name="link_type" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMPTZ" defaultValueComputed="NOW()">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMPTZ"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="modified_by" type="VARCHAR(255)"/>
+            <column name="last_modified_at" type="TIMESTAMPTZ"/>
         </createTable>
     </changeSet>
 
     <changeSet author="saackef" id="2026-04-16-asset-links-unique-constraint">
         <addUniqueConstraint tableName="asset_links"
-            columnNames="source_id, target_id, link_type"
-            constraintName="uq_asset_link"/>
-    </changeSet>
-
-    <changeSet author="saackef" id="2026-04-16-asset-links-created-by-type">
-        <modifyDataType tableName="asset_links" columnName="created_by" newDataType="VARCHAR(255)"/>
-    </changeSet>
-
-    <changeSet author="saackef" id="2026-04-16-asset-links-modified-by">
-        <addColumn tableName="asset_links">
-            <column name="modified_by" type="VARCHAR(255)"/>
-        </addColumn>
-    </changeSet>
-
-    <changeSet author="saackef" id="2026-04-16-asset-links-last-modified-at">
-        <addColumn tableName="asset_links">
-            <column name="last_modified_at" type="TIMESTAMPTZ"/>
-        </addColumn>
+                             columnNames="source_id, target_id, link_type"
+                             constraintName="uq_asset_link"/>
     </changeSet>
 
     <changeSet author="saackef" id="2026-04-16-asset-links-source-index">
