@@ -24,11 +24,8 @@ import com.apicatalog.jsonld.JsonLd;
 import com.apicatalog.jsonld.JsonLdEmbed;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
-import com.apicatalog.rdf.RdfDataset;
-import com.apicatalog.rdf.RdfGraph;
-import com.apicatalog.rdf.RdfNQuad;
-import com.apicatalog.rdf.RdfTriple;
-import com.apicatalog.rdf.RdfValue;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFParser;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.validation.Validation;
 //import com.github.jsonldjava.core.JsonLdOptions;
@@ -167,15 +164,16 @@ public class VerificationDirectTest {
                 for (JsonValue cs: css) {
                     log.debug("extractClaims; CS: {}", cs);
                     idxCS++;
-                    Document csDoc = JsonDocument.of(cs.asJsonObject());
-                    RdfDataset rdf = JsonLd.toRdf(csDoc).produceGeneralizedRdf(true).get();
-                    RdfGraph rdfGraph = rdf.getDefaultGraph();
-                    List<RdfTriple> triples = rdfGraph.toList();
-                    for (RdfTriple triple: triples) {
-                        //log.debug("extractClaims; got triple: {}", triple);
-                        String suffix = idxVC + "." + idxCS;
-                        CredentialClaim claim = new CredentialClaim(rdf2String(triple.getSubject(), subMap, suffix), 
-                                rdf2String(triple.getPredicate(), subMap, suffix), rdf2String(triple.getObject(), subMap, suffix));
+                    String suffix = idxVC + "." + idxCS;
+                    Model model = ModelFactory.createDefaultModel();
+                    RDFParser.fromString(cs.asJsonObject().toString()).lang(Lang.JSONLD).parse(model);
+                    StmtIterator it = model.listStatements();
+                    while (it.hasNext()) {
+                        Statement stmt = it.nextStatement();
+                        CredentialClaim claim = new CredentialClaim(
+                                rdf2String(stmt.getSubject(), subMap, suffix),
+                                rdf2String(stmt.getPredicate(), subMap, suffix),
+                                rdf2String(stmt.getObject(), subMap, suffix));
                         claims.add(claim);
                         log.debug("extractClaims; claim: {}", claim);
                     }
@@ -212,23 +210,25 @@ public class VerificationDirectTest {
             List<JsonValue> css = val.getValueType() == ValueType.OBJECT ? List.of(val) : val.asJsonArray();
             for (JsonValue csv: css) {
                 JsonObject cs = csv.asJsonObject();
-                Document csDoc = JsonDocument.of(cs);
-                RdfDataset rdf = JsonLd.toRdf(csDoc).get(); // .produceGeneralizedRdf(true).get();
-                List<RdfNQuad> quads = rdf.toList();
-                for (RdfNQuad quad: quads) {
-                    log.debug("extractClaims; got triple: {}", quad);
+                Model model = ModelFactory.createDefaultModel();
+                RDFParser.fromString(cs.toString()).lang(Lang.JSONLD).parse(model);
+                StmtIterator it = model.listStatements();
+                while (it.hasNext()) {
+                    log.debug("extractClaims; got triple: {}", it.nextStatement());
                 }
             }
         }
     }
     
-    private String rdf2String(RdfValue rdf, Map<String, String> subMap, String suffix) {
-        if (rdf.isBlankNode()) {
-            return subMap.computeIfAbsent(rdf.getValue(), k -> k + "." + suffix);
+    private String rdf2String(RDFNode node, Map<String, String> subMap, String suffix) {
+        if (node.isAnon()) {
+            return subMap.computeIfAbsent(node.asResource().getId().getLabelString(), k -> k + "." + suffix);
         }
-        if (rdf.isLiteral()) return "\"" + rdf.getValue() + "\"";
-        // rdf is IRI. here we could try to make it absolute..
-        return "<" + rdf.getValue() + ">";
+        if (node.isLiteral()) {
+            return "\"" + node.asLiteral().getLexicalForm() + "\"";
+        }
+        // node is IRI
+        return "<" + node.asResource().getURI() + ">";
     }    
     
     @Test
