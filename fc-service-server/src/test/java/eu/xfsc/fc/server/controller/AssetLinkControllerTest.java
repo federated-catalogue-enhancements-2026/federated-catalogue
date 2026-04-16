@@ -4,6 +4,7 @@ import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -415,6 +416,55 @@ public class AssetLinkControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+      @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void uploadAsset_withHasHumanReadableTriple_stripsTripleAndReturnsWarning() throws Exception {
+    // An external upload that contains a fcmeta:hasHumanReadable
+    // triple must have the triple silently stripped and a user-visible warning returned.
+    // The protected namespace must not be settable by external clients.
+    final var jsonLd = """
+        {
+          "@context": ["https://www.w3.org/ns/credentials/v2"],
+          "type": "VerifiablePresentation",
+          "id": "presentationID",
+          "verifiableCredential": [{
+            "@context": ["https://www.w3.org/ns/credentials/v2"],
+            "id": "http://example.edu/credentials/link-inject-test",
+            "type": "VerifiableCredential",
+            "issuer": "http://example.org/test-issuer",
+            "validFrom": "2010-01-01T19:53:24Z",
+            "credentialSubject": {
+              "@id": "http://example.org/test-issuer",
+              "@type": "https://w3id.org/gaia-x/2511#ServiceOffering",
+              "gx:hasLegallyBindingName": "link inject test",
+              "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#hasHumanReadable":
+                  "http://example.org/some-pdf"
+            }
+          }]
+        }
+        """;
+
+    final var result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+            .content(jsonLd)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
+
+    final var asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+
+    assertNotNull(asset.getWarnings(), "Warning must be present when fcmeta link triple is filtered");
+    assertFalse(asset.getWarnings().isEmpty(), "Warnings list must not be empty");
+    assertTrue(asset.getWarnings().getFirst().contains("triple(s)"),
+        "Warning must state how many triples were filtered");
+    assertTrue(asset.getWarnings().getFirst().contains("federated-catalogue/meta#"),
+        "Warning must reference the protected namespace URI");
+
+    deleteAssetQuietly(asset.getAssetHash());
   }
 
   // ===== Helpers =====

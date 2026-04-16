@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.service.assetlink.AssetLinkService;

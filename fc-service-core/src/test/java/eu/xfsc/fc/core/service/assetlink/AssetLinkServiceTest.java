@@ -14,7 +14,7 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assetlinks.AssetLink;
 import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.exception.ConflictException;

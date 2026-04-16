@@ -3,14 +3,15 @@ package eu.xfsc.fc.core.service.assetlink;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assetlinks.AssetLink;
 import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AssetLinkService {
+
+  /** MIME types accepted as human-readable representations. */
+  public static final Set<String> ACCEPTED_HR_CONTENT_TYPES = Set.of(
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/html",
+      "text/plain"
+  );
+
+  private static final String ACCEPTED_TYPES_MESSAGE =
+      String.join(", ", new java.util.TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
 
   private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
   private static final String PREDICATE_HAS_MACHINE_READABLE = "hasMachineReadable";
@@ -69,7 +81,7 @@ public class AssetLinkService {
     try {
       writeLinkTriples(sourceId, targetId);
     } catch (Exception ex) {
-      log.warn("createLink; graph triple write failed for {}->{} (non-fatal): {}", sourceId, targetId, ex.getMessage());
+      log.warn("createLink; graph triple write failed for {}->{} (non-fatal)", sourceId, targetId, ex);
     }
   }
 
@@ -95,12 +107,14 @@ public class AssetLinkService {
   @Transactional
   public void deleteLinksForAsset(String assetId) {
     log.debug("deleteLinksForAsset; removing link rows for asset: {}", assetId);
+    // Delete PostgreSQL rows first (inside the transaction) — PostgreSQL is the source of truth.
+    // Graph cleanup is non-fatal best-effort and runs after the durable delete.
+    assetLinkRepository.deleteBySourceIdOrTargetId(assetId, assetId);
     try {
       graphDb.deleteClaims(assetId);
     } catch (Exception ex) {
-      log.warn("deleteLinksForAsset; graph triple deletion failed for {} (non-fatal): {}", assetId, ex.getMessage());
+      log.warn("deleteLinksForAsset; graph triple deletion failed for {} (non-fatal)", assetId, ex);
     }
-    assetLinkRepository.deleteBySourceIdOrTargetId(assetId, assetId);
   }
 
   /**
@@ -140,6 +154,7 @@ public class AssetLinkService {
    * @param mrIri IRI of the machine-readable asset
    * @param hrIri IRI of the human-readable asset
    */
+  @Transactional
   public void writeLinkTriples(String mrIri, String hrIri) {
     final var ns = namespaceProperties.getNamespace();
 
@@ -154,6 +169,19 @@ public class AssetLinkService {
 
     graphDb.addClaims(List.of(hasHumanReadable), mrIri);
     graphDb.addClaims(List.of(hasMachineReadable), hrIri);
+  }
+
+  /**
+   * Validate that the given MIME type is an accepted human-readable content type.
+   *
+   * @param contentType the MIME type to validate
+   * @throws ClientException if the type is not in {@link #ACCEPTED_HR_CONTENT_TYPES}
+   */
+  public void validateHumanReadableContentType(String contentType) {
+    if (!ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
+      throw new ClientException(String.format(
+          "Unsupported content type '%s'. Accepted types: %s", contentType, ACCEPTED_TYPES_MESSAGE));
+    }
   }
 
   // --- Private helpers ---

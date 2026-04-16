@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.assetstore;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -17,7 +17,6 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
@@ -38,21 +37,21 @@ import java.util.List;
 @Transactional
 public class AssetStoreImpl implements AssetStore {
 
-  @Autowired
-  private AssetDao dao;
+  private final AssetDao dao;
+  private final GraphStore graphDb;
+  private final FileStore fileStore;
+  private final IriGenerator iriGenerator;
+  private final AssetLinkService assetLinkService;
 
-  @Autowired
-  private GraphStore graphDb;
-
-  @Autowired
-  @Qualifier("assetFileStore")
-  private FileStore fileStore;
-
-  @Autowired
-  private IriGenerator iriGenerator;
-
-  @Autowired
-  private AssetLinkService assetLinkService;
+  public AssetStoreImpl(AssetDao dao, GraphStore graphDb,
+      @Qualifier("assetFileStore") FileStore fileStore,
+      IriGenerator iriGenerator, AssetLinkService assetLinkService) {
+    this.dao = dao;
+    this.graphDb = graphDb;
+    this.fileStore = fileStore;
+    this.iriGenerator = iriGenerator;
+    this.assetLinkService = assetLinkService;
+  }
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {

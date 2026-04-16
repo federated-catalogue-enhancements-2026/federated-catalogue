@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.assetlinks;
 
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

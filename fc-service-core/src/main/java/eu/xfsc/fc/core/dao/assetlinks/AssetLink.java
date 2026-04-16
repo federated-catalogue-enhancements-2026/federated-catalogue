@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.assetlinks;
 
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

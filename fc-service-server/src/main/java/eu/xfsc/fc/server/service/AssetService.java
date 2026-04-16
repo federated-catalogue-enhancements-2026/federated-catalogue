@@ -8,7 +8,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,17 +61,6 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
 @Service
 @RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
-
-  /** MIME types accepted as human-readable representations. */
-  static final Set<String> ACCEPTED_HR_CONTENT_TYPES = Set.of(
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/html",
-      "text/plain"
-  );
-
-  private static final String ACCEPTED_TYPES_MESSAGE =
-      String.join(", ", new TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
 
@@ -403,22 +390,11 @@ public class AssetService implements AssetsApiDelegate {
         ? file.getContentType()
         : MediaType.APPLICATION_OCTET_STREAM_VALUE;
 
-    if (!ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
-      throw new ClientException(String.format(
-          "Unsupported content type '%s'. Accepted types: %s", contentType, ACCEPTED_TYPES_MESSAGE));
-    }
+    assetLinkService.validateHumanReadableContentType(contentType);
 
     // Verify the machine-readable parent asset exists (throws NotFoundException -> 404)
     final AssetMetadata parentMeta = assetStorePublisher.getById(decodedId);
     checkParticipantAccess(parentMeta.getIssuer());
-
-    // Check for an existing HAS_HUMAN_READABLE link (throws ConflictException -> 409)
-    assetLinkService.getLinkedAsset(decodedId, AssetLinkType.HAS_HUMAN_READABLE)
-        .ifPresent(existingHrIri -> {
-          throw new ConflictException(
-              String.format("Asset '%s' already has a human-readable representation: '%s'",
-                  decodedId, existingHrIri));
-        });
 
     final byte[] content;
     try {

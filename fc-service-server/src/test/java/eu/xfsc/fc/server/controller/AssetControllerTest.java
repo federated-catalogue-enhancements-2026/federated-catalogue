@@ -278,7 +278,7 @@ public class AssetControllerTest {
 
     @Test
     @WithMockUser(roles = {ASSET_READ})
-    public void readNonRdfAssetById_returnBadRequestResponse() throws Exception {
+    public void readNonRdfAssetById_returnsOkWithMetadata() throws Exception {
         byte[] pdfBytes = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
         String hash = HashUtils.calculateSha256AsHex(pdfBytes);
         Instant now = Instant.now();

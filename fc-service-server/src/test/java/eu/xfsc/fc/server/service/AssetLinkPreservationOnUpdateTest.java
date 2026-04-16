@@ -3,6 +3,7 @@ package eu.xfsc.fc.server.service;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_UPDATE_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -22,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -117,6 +118,45 @@ public class AssetLinkPreservationOnUpdateTest {
         "HAS_HUMAN_READABLE link must still point from MR to HR IRI");
 
     deleteAssetQuietly(hrAsset.getAssetHash());
+  }
+
+  /**
+   * AC-4.3: The human-readable representation can be updated (replaced) separately
+   * without changing the machine-readable asset.
+   *
+   * <p>Steps: upload MR + HR v1 → delete HR v1 → upload HR v2 linked to same MR →
+   * assert MR is unchanged and link now points to HR v2.</p>
+   */
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX},
+      claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+          @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void replaceHumanReadableAsset_machineReadableAssetUnchanged() throws Exception {
+    storeMrVersion("MR content for AC-4.3");
+
+    final var hrV1 = uploadHumanReadable(MR_IRI, "HR v1 content", "text/plain", "hr-v1.txt");
+    assertEquals(2, assetLinkRepository.count(),
+        "Both bidirectional link rows must exist after initial upload");
+
+    // Delete HR v1 — this must remove link rows but leave the MR asset intact
+    deleteAssetQuietly(hrV1.getAssetHash());
+    assertEquals(0, assetLinkRepository.count(), "Link rows must be removed after HR deletion");
+
+    // Upload HR v2 linked to the same MR
+    final var hrV2 = uploadHumanReadable(MR_IRI, "HR v2 content", "text/plain", "hr-v2.txt");
+
+    // MR asset must still exist and be unchanged
+    final var mrMeta = assetStore.getById(MR_IRI);
+    assertNotNull(mrMeta, "MR asset must still exist after replacing the HR asset");
+    assertEquals(TEST_ISSUER, mrMeta.getIssuer(), "MR asset issuer must be unchanged");
+
+    // Link must now point to HR v2
+    final var linkedHrIri = assetLinkService.getLinkedAsset(MR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
+    assertTrue(linkedHrIri.isPresent(), "A new HAS_HUMAN_READABLE link must exist after re-upload");
+    assertEquals(hrV2.getId(), linkedHrIri.get(),
+        "Link must point to HR v2, not the deleted HR v1");
+
+    deleteAssetQuietly(hrV2.getAssetHash());
   }
 
   // ===== helpers =====

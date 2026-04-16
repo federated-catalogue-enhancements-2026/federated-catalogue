@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
+import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
