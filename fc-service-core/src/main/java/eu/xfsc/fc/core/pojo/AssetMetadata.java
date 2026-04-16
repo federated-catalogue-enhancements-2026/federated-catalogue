@@ -49,7 +49,7 @@ public class AssetMetadata extends Asset {
   public AssetMetadata(String id, String issuer, List<Validator> validators, ContentAccessor contentAccessor) {
     super(calculateSha256AsHex(contentAccessor.getContentAsString()), id, AssetStatus.ACTIVE, issuer,
         validators != null ? validators.stream().map(Validator::getDidURI).collect(Collectors.toList()) : null, Instant.now(), Instant.now(),
-        null, null, null); // null: contentType, fileSize, warnings
+        null, null, null, null, null); // null: contentType, fileSize, warnings, humanReadableId, machineReadableId
     this.contentAccessor = contentAccessor;
   }
 
@@ -62,7 +62,7 @@ public class AssetMetadata extends Asset {
   public AssetMetadata(ContentAccessor contentAccessor, CredentialVerificationResult verificationResult) {
     super(calculateSha256AsHex(contentAccessor.getContentAsString()), verificationResult.getId(), AssetStatus.ACTIVE,
             verificationResult.getIssuer(), verificationResult.getValidatorDids(), verificationResult.getIssuedDateTime(),
-            verificationResult.getVerificationTimestamp(), null, null, null); // null: contentType, fileSize, warnings
+            verificationResult.getVerificationTimestamp(), null, null, null, null, null); // null: contentType, fileSize, warnings, humanReadableId, machineReadableId
     this.contentAccessor = contentAccessor;
   }
 
@@ -81,7 +81,7 @@ public class AssetMetadata extends Asset {
   public AssetMetadata(String assetHash, String id, AssetStatus status, String issuer,
       List<String> validatorDids, Instant uploadTime, Instant statusTime,
       ContentAccessor contentAccessor) {
-    super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, null, null, null); // null: contentType, fileSize, warnings
+    super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, null, null, null, null, null); // null: contentType, fileSize, warnings, humanReadableId, machineReadableId
     this.contentAccessor = contentAccessor;
   }
   

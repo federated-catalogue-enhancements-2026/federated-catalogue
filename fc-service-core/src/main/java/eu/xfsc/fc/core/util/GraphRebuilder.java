@@ -1,7 +1,9 @@
 package eu.xfsc.fc.core.util;
 
+import eu.xfsc.fc.core.dao.assetlinks.AssetLink;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
@@ -38,6 +40,7 @@ public class GraphRebuilder {
   private final GraphStore graphStore;
   private final VerificationService verificationService;
   private final ProtectedNamespaceFilter protectedNamespaceFilter;
+  private final AssetLinkService assetLinkService;
 
   /**
    * Starts rebuilding the graphDb, blocking until finished or interrupted.
@@ -110,6 +113,31 @@ public class GraphRebuilder {
     }
 
     ProcessorUtils.shutdownProcessors(executorService, taskQueue, 10, TimeUnit.MINUTES);
+
+    // Separate pass: restore link triples from PostgreSQL.
+    // This must NOT be merged into addAssetToGraph() because non-RDF (human-readable) assets
+    // have contentAccessor = null; calling extractClaims(null) would throw a NullPointerException.
+    rebuildLinkTriples();
+  }
+
+  /**
+   * Restores {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
+   * from the {@code asset_links} PostgreSQL table.
+   *
+   * <p>Only MR→HR rows are fetched from the DB. One row is sufficient to reconstruct both
+   * directions because {@link AssetLinkService#writeLinkTriples} writes both triples.</p>
+   */
+  private void rebuildLinkTriples() {
+    final List<AssetLink> hrLinks = assetLinkService.getHumanReadableLinks();
+    log.info("rebuildLinkTriples; restoring triples for {} MR→HR link rows", hrLinks.size());
+    for (AssetLink link : hrLinks) {
+      try {
+        assetLinkService.writeLinkTriples(link.getSourceId(), link.getTargetId());
+      } catch (Exception ex) {
+        log.error("rebuildLinkTriples; failed to write triple for link {}->{}: {}",
+            link.getSourceId(), link.getTargetId(), ex.getMessage(), ex);
+      }
+    }
   }
 
   private void sleepForQueue() {

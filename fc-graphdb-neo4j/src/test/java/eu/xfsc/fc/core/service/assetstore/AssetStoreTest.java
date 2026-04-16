@@ -48,11 +48,13 @@ import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -83,6 +85,9 @@ public class AssetStoreTest {
 
   @Autowired
   private GraphStore graphStore;
+
+  @MockBean
+  private AssetLinkService assetLinkService;
 
   @AfterEach
   public void storageSelfCleaning() {

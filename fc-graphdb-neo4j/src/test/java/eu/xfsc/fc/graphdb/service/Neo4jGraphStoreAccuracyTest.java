@@ -18,6 +18,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.assetstore.AssetStoreImpl;
 import eu.xfsc.fc.core.service.assetstore.IriGenerator;
 import eu.xfsc.fc.core.service.assetstore.IriValidator;
@@ -39,6 +40,7 @@ import eu.xfsc.fc.graphdb.config.GraphDbConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import org.junit.jupiter.api.AfterAll;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -101,6 +103,9 @@ public class Neo4jGraphStoreAccuracyTest {
   private AssetStoreImpl assetStore;
   @Autowired
   private VerificationServiceImpl verificationService;
+
+  @MockBean
+  private AssetLinkService assetLinkService;
 
   
   @BeforeAll

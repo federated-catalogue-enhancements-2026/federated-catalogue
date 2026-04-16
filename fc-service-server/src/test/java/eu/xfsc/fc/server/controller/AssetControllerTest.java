@@ -291,7 +291,7 @@ public class AssetControllerTest {
 
         mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", nonRdfMeta.getId())
                 .with(csrf()))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isOk());
 
         assetStorePublisher.deleteAsset(nonRdfMeta.getAssetHash());
     }

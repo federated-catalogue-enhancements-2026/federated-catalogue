@@ -1,45 +1,61 @@
 package eu.xfsc.fc.server.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetResult;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
+import eu.xfsc.fc.core.dao.assetlinks.AssetLinkType;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.NotFoundException;
+import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ValidationException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.UriUtils;
-
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
 import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
+import static eu.xfsc.fc.server.util.SessionUtils.getSessionParticipantId;
 
 /**
  * Implementation of the {@link eu.xfsc.fc.server.generated.controller.AssetsApiDelegate} interface.
@@ -49,11 +65,28 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
 @RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
 
+  /** MIME types accepted as human-readable representations. */
+  static final Set<String> ACCEPTED_HR_CONTENT_TYPES = Set.of(
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/html",
+      "text/plain"
+  );
+
+  private static final String ACCEPTED_TYPES_MESSAGE =
+      String.join(", ", new TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
+
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
 
   private final VerificationService verificationService;
   private final AssetStore assetStorePublisher;
   private final HttpServletRequest httpServletRequest;
+  private final AssetLinkService assetLinkService;
+  private final ObjectMapper objectMapper;
+  private final AssetUploadService assetUploadService;
+
+  @Qualifier("assetFileStore")
+  private final FileStore assetFileStore;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -102,14 +135,16 @@ public class AssetService implements AssetsApiDelegate {
     if (withMeta) {
         if (withContent) {
             results = assets.getResults().stream().map((AssetMetadata asset) ->
-                new AssetResult(asset, asset.getContentAccessor().getContentAsString())).collect(Collectors.toList());
+                new AssetResult(asset, asset.getContentAccessor() != null
+                    ? asset.getContentAccessor().getContentAsString() : null)).collect(Collectors.toList());
         } else {
             results = assets.getResults().stream().map((AssetMetadata asset) ->
                 new AssetResult(asset, null)).collect(Collectors.toList());
         }
     } else if (withContent) {
         results = assets.getResults().stream().map((AssetMetadata asset) ->
-            new AssetResult(null, asset.getContentAccessor().getContentAsString())).collect(Collectors.toList());
+            new AssetResult(null, asset.getContentAccessor() != null
+                ? asset.getContentAccessor().getContentAsString() : null)).collect(Collectors.toList());
     }
     return ResponseEntity.ok(new Assets((int) assets.getTotalCount(), results));
   }
@@ -127,22 +162,58 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   public ResponseEntity<String> readAssetById(String id, Integer version) {
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     AssetMetadata assetMetadata = version != null
-        ? assetStorePublisher.getByIdAndVersion(id, version)
-        : assetStorePublisher.getById(id);
+        ? assetStorePublisher.getByIdAndVersion(decodedId, version)
+        : assetStorePublisher.getById(decodedId);
 
-    // Only RDF assets have content in DB. Non-RDF assets (PDF, binary) are in FileStore
-    // and require a dedicated download endpoint
     ContentAccessor content = assetMetadata.getContentAccessor();
     if (content == null) {
-      throw new ClientException("Asset " + id + " (hash: " + assetMetadata.getAssetHash()
-          + ") is a non-RDF asset (content-type: " + assetMetadata.getContentType()
-          + "). Raw content download is not supported via this endpoint.");
+      // Non-RDF: raw content in FileStore; return metadata enriched with link fields.
+      log.debug("readAssetById; non-RDF asset — returning metadata for id: {}", decodedId);
+      return ResponseEntity.ok(serializeAssetMetadata(decodedId, assetMetadata));
     }
 
-    log.debug("readAssetById.exit; returning asset by hash: {}", id);
-    return ResponseEntity.ok()
-        .body(content.getContentAsString());
+    // JSON-LD: return enriched metadata when links exist so callers can discover HR/MR.
+    final Map<AssetLinkType, String> links = assetLinkService.getLinkedAssets(decodedId);
+    if (!links.isEmpty()) {
+      log.debug("readAssetById; JSON-LD asset has links — returning metadata for id: {}", decodedId);
+      Optional.ofNullable(links.get(AssetLinkType.HAS_HUMAN_READABLE)).ifPresent(assetMetadata::setHumanReadableId);
+      Optional.ofNullable(links.get(AssetLinkType.HAS_MACHINE_READABLE)).ifPresent(assetMetadata::setMachineReadableId);
+      try {
+        return ResponseEntity.ok(objectMapper.writeValueAsString(assetMetadata));
+      } catch (JsonProcessingException ex) {
+        throw new ServerException("Failed to serialize asset metadata for id: " + decodedId, ex);
+      }
+    }
+
+    log.debug("readAssetById.exit; returning raw JSON-LD for id: {}", decodedId);
+    return ResponseEntity.ok().body(content.getContentAsString());
+  }
+
+  /**
+   * Serialize an asset's metadata as a JSON string, populating link fields
+   * ({@code humanReadableId}, {@code machineReadableId}) when links exist.
+   *
+   * <p>{@link AssetMetadata} extends {@link Asset}, so it can be serialized directly.
+   * The {@code contentAccessor} and {@code changeComment} fields are {@code @JsonIgnore}d.</p>
+   *
+   * @param id            asset IRI
+   * @param assetMetadata metadata loaded from the store
+   * @return JSON string of the {@link Asset} model
+   */
+  private String serializeAssetMetadata(String id, AssetMetadata assetMetadata) {
+    final Map<AssetLinkType, String> links = assetLinkService.getLinkedAssets(id);
+    Optional.ofNullable(links.get(AssetLinkType.HAS_HUMAN_READABLE))
+        .ifPresent(assetMetadata::setHumanReadableId);
+    Optional.ofNullable(links.get(AssetLinkType.HAS_MACHINE_READABLE))
+        .ifPresent(assetMetadata::setMachineReadableId);
+
+    try {
+      return objectMapper.writeValueAsString(assetMetadata);
+    } catch (JsonProcessingException ex) {
+      throw new ServerException("Failed to serialize asset metadata for id: " + id, ex);
+    }
   }
 
   /**
@@ -309,6 +380,158 @@ public class AssetService implements AssetsApiDelegate {
 
     log.debug("revokeAssetVersion.exit; revoked version {} of asset {}", version, id);
     return ResponseEntity.ok(av);
+  }
+
+  /**
+   * POST /assets/{id}/human-readable — upload and link a human-readable representation.
+   *
+   * @param id   URL-decoded IRI of the machine-readable parent asset
+   * @param file the human-readable document
+   * @return 201 Created with the new human-readable asset metadata
+   */
+  @Override
+  public ResponseEntity<Asset> uploadHumanReadable(String id, MultipartFile file) {
+    if (file == null) {
+      throw new ClientException("No file was provided in the upload request");
+    }
+
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    final String safeFilename = sanitizeFilename(file.getOriginalFilename());
+    log.debug("uploadHumanReadable.enter; parentId: {}, filename: {}, contentType: {}",
+        decodedId, safeFilename, file.getContentType());
+
+    final String contentType = file.getContentType() != null
+        ? file.getContentType()
+        : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+
+    if (!ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
+      throw new ClientException(String.format(
+          "Unsupported content type '%s'. Accepted types: %s", contentType, ACCEPTED_TYPES_MESSAGE));
+    }
+
+    // Verify the machine-readable parent asset exists (throws NotFoundException -> 404)
+    final AssetMetadata parentMeta = assetStorePublisher.getById(decodedId);
+    checkParticipantAccess(parentMeta.getIssuer());
+
+    // Check for an existing HAS_HUMAN_READABLE link (throws ConflictException -> 409)
+    assetLinkService.getLinkedAsset(decodedId, AssetLinkType.HAS_HUMAN_READABLE)
+        .ifPresent(existingHrIri -> {
+          throw new ConflictException(
+              String.format("Asset '%s' already has a human-readable representation: '%s'",
+                  decodedId, existingHrIri));
+        });
+
+    final byte[] content;
+    try {
+      content = file.getBytes();
+    } catch (IOException ex) {
+      throw new ServerException("Failed to read uploaded file", ex);
+    }
+
+    final AssetMetadata hrMetadata = assetUploadService.processUpload(
+        content, contentType, safeFilename);
+
+    final String createdBy = getSessionParticipantId();
+    assetLinkService.createLink(decodedId, hrMetadata.getId(), AssetLinkType.HAS_HUMAN_READABLE, createdBy);
+
+    log.debug("uploadHumanReadable.exit; linked {} -> {}", decodedId, hrMetadata.getId());
+
+    final String encodedId = UriUtils.encodePathSegment(hrMetadata.getId(), StandardCharsets.UTF_8);
+    return ResponseEntity
+        .created(URI.create("/assets/" + encodedId))
+        .body(hrMetadata);
+  }
+
+  /**
+   * GET /assets/{id}/human-readable — return the linked human-readable document.
+   *
+   * @param id URL-decoded IRI of the machine-readable asset
+   * @return 200 with binary content and correct Content-Type, or 404 if no link exists
+   */
+  @Override
+  public ResponseEntity<org.springframework.core.io.Resource> getHumanReadable(String id) {
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    log.debug("getHumanReadable.enter; id: {}", decodedId);
+
+    final String hrIri = assetLinkService.getLinkedAsset(decodedId, AssetLinkType.HAS_HUMAN_READABLE)
+        .orElseThrow(() -> new NotFoundException(
+            String.format("No human-readable representation linked to asset '%s'", decodedId)));
+
+    return streamAssetContent(hrIri);
+  }
+
+  /**
+   * GET /assets/{id}/machine-readable — return the linked machine-readable asset.
+   *
+   * @param id URL-decoded IRI of the human-readable asset
+   * @return 200 with binary content and correct Content-Type, or 404 if no link exists
+   */
+  @Override
+  public ResponseEntity<org.springframework.core.io.Resource> getMachineReadable(String id) {
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    log.debug("getMachineReadable.enter; id: {}", decodedId);
+
+    final String mrIri = assetLinkService.getLinkedAsset(decodedId, AssetLinkType.HAS_MACHINE_READABLE)
+        .orElseThrow(() -> new NotFoundException(
+            String.format("No machine-readable asset linked to human-readable asset '%s'", decodedId)));
+
+    return streamAssetContent(mrIri);
+  }
+
+  /**
+   * Load asset file content by IRI from the FileStore and stream it with the stored MIME type.
+   *
+   * @param assetIri IRI of the asset to stream
+   * @return response entity with binary body and Content-Type header
+   */
+  private ResponseEntity<org.springframework.core.io.Resource> streamAssetContent(String assetIri) {
+    final AssetMetadata meta = assetStorePublisher.getById(assetIri);
+
+    final ContentAccessor content;
+    try {
+      content = assetFileStore.readFile(meta.getAssetHash());
+    } catch (IOException ex) {
+      throw new ServerException("Failed to read asset file for IRI: " + assetIri, ex);
+    }
+
+    final MediaType mediaType = resolveMediaType(meta.getContentType(), assetIri);
+    final byte[] bytes = content.getContentAsBytes();
+    final HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(mediaType);
+    headers.setContentLength(bytes.length);
+    return ResponseEntity.ok().headers(headers).body(new ByteArrayResource(bytes));
+  }
+
+  private MediaType resolveMediaType(String contentType, String assetIri) {
+    if (contentType == null) {
+      return MediaType.APPLICATION_OCTET_STREAM;
+    }
+    try {
+      return MediaType.parseMediaType(contentType);
+    } catch (IllegalArgumentException ex) {
+      log.warn("streamAssetContent; unparseable content-type '{}' for asset {}, using octet-stream",
+          contentType, assetIri);
+      return MediaType.APPLICATION_OCTET_STREAM;
+    }
+  }
+
+  /**
+   * Sanitize an untrusted filename from a multipart upload.
+   *
+   * <p>Strips path separators ({@code /} and {@code \}) to prevent path traversal,
+   * removes ASCII control characters that could enable log injection,
+   * and truncates to a safe maximum length of 255 characters.</p>
+   *
+   * @param filename raw value from {@link MultipartFile#getOriginalFilename()}
+   * @return sanitized filename, or {@code null} if input is null
+   */
+  static String sanitizeFilename(String filename) {
+    if (filename == null) {
+      return null;
+    }
+    // Strip path separators and control characters
+    String name = filename.replaceAll("[/\\\\]", "").replaceAll("[\\x00-\\x1F\\x7F]", "");
+    return name.length() > 255 ? name.substring(0, 255) : name;
   }
 
   /**

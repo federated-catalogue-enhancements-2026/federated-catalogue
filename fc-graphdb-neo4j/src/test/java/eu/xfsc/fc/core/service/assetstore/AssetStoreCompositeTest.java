@@ -57,12 +57,15 @@ import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
+import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.mockito.Mockito;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -106,6 +109,9 @@ public class AssetStoreCompositeTest {
 
   @Autowired
   private ProtectedNamespaceFilter protectedNamespaceFilter;
+
+  @MockBean
+  private AssetLinkService assetLinkService;
 
   @AfterEach
   public void storageSelfCleaning() {
@@ -179,7 +185,7 @@ public class AssetStoreCompositeTest {
         new GraphQuery("MATCH (n) RETURN n", null)).getResults();
     Assertions.assertEquals(1, claims.size());
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter);
+    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, Mockito.mock(AssetLinkService.class));
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     claims = graphStore.queryData(
@@ -220,7 +226,7 @@ public class AssetStoreCompositeTest {
     // Delete graph claims, then rebuild — simulates a graph rebuild from stored raw credentials
     graphStore.deleteClaims(assetId);
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter);
+    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, Mockito.mock(AssetLinkService.class));
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     // Verify fcmeta claims are still filtered after rebuild

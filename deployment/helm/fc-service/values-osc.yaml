@@ -1,0 +1,281 @@
+# OSC cluster values — no ingress controller, no cert-manager.
+# Services are exposed via LoadBalancer (OSC cloud LB).
+#
+# Two-phase deploy:
+#   Phase 1: helm upgrade --install without portal (--set portal.replicaCount=0)
+#             to obtain Keycloak external IP.
+#   Phase 2: fill in hosts.* with real IPs, then full deploy.
+#
+# To change the deployment hostnames, update the hosts section below.
+# keycloak.hostname.hostname and keycloak.extraEnv KC_HOSTNAME must be kept
+# in sync manually — sub-chart values cannot reference hosts.* directly.
+
+# Hostname configuration (single source of truth for templates)
+hosts:
+  fcService: "fc-server.160.44.13.164.sslip.io"
+  keycloak: "key-server.160.44.13.163.sslip.io"
+  portal: "fc-demo-portal.160.44.13.154.sslip.io"
+
+name: fc-service
+replicaCount: 1
+
+image:
+  repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-service-server
+  pullPolicy: Always
+  tag: "feature-kubernetes"
+
+fullnameOverride: "fc-service"
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+service:
+  type: LoadBalancer
+  port: 8081
+
+ingress:
+  enabled: false
+
+resources: {}
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 60
+  periodSeconds: 30
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+volumeMounts:
+  - name: logs
+    mountPath: /logs
+  - name: tmp
+    mountPath: /tmp
+
+volumes:
+  - name: logs
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
+
+nodeSelector: {}
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - fc-service
+          topologyKey: "kubernetes.io/hostname"
+
+hostAliases: []
+
+storage:
+  enabled: false
+  size: 2Gi
+  path: /mnt/data/postgresql
+
+env:
+  - name: DATASTORE_FILE_PATH
+    value: /var/lib/fc-service/filestore
+  - name: FEDERATED_CATALOGUE_VERIFICATION_SIGNATURES
+    value: "true"
+  - name: GRAPHSTORE_IMPL
+    value: fuseki
+  - name: GRAPHSTORE_URI
+    value: http://fc-fuseki:3030/ds
+  - name: GRAPHSTORE_USER
+    value: admin
+  - name: GRAPHSTORE_PASSWORD
+    value: admin
+  - name: MANAGEMENT_HEALTH_NEO4J_ENABLED
+    value: "false"
+  - name: KEYCLOAK_AUTH_SERVER_URL
+    value: http://fc-keycloak-headless:8080/auth
+  - name: KEYCLOAK_CREDENTIALS_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: fc-keycloak-client-secret
+        key: keycloak_client_secret
+  - name: SPRING_DATASOURCE_URL
+    value: jdbc:postgresql://fc-postgres:5432/postgres
+  - name: SPRING_DATASOURCE_USERNAME
+    value: keycloak
+  - name: SPRING_DATASOURCE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: fc-postgres
+        key: password
+
+postgresql:
+  fullnameOverride: fc-postgres
+  image:
+    repository: postgres
+    tag: "18.3"
+  auth:
+    postgresPassword: postgres
+    username: keycloak
+    password: keycloak
+    database: postgres
+  persistence:
+    enabled: true
+    size: 10Gi
+
+keycloak:
+  fullnameOverride: fc-keycloak
+  replicas: 1
+
+  serviceAccount:
+    create: false
+
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.6.0"
+
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+  args:
+    - "start"
+    - "--import-realm"
+
+  http:
+    enabled: true
+
+  # Keep in sync with hosts.keycloak above
+  hostname:
+    hostname: "key-server.160.44.13.163.sslip.io"
+    strict: false
+    strictBackchannel: false
+
+  proxy:
+    enabled: false
+
+  database:
+    vendor: postgres
+    hostname: fc-postgres
+    port: 5432
+    database: keycloak
+    username: keycloak
+    existingSecret: fc-postgres
+    existingSecretPasswordKey: password
+
+  # No KC_PROXY_HEADERS — direct LoadBalancer, no reverse proxy in front
+  extraEnv: |-
+    - name: KEYCLOAK_ADMIN
+      value: admin
+    - name: KEYCLOAK_ADMIN_PASSWORD
+      value: admin
+    - name: KC_HOSTNAME
+      value: "key-server.160.44.13.163.sslip.io"
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
+
+  extraVolumeMounts: |-
+    - name: realm-config
+      mountPath: "/opt/keycloak/data/import"
+      readOnly: true
+
+  extraVolumes: |-
+    - name: realm-config
+      configMap:
+        name: fc-keycloak-realm-configmap
+
+  ingress:
+    enabled: false
+
+  service:
+    type: LoadBalancer
+    httpPort: 8080
+
+portal:
+  fullnameOverride: fc-demo-portal
+  replicaCount: 1
+  image:
+    repository: ghcr.io/federated-catalogue-enhancements-2026/federated-catalogue/fc-demo-portal
+    tag: "feature-kubernetes"
+    pullPolicy: Always
+  fcBaseUri: http://fc-service:8081
+  keycloak:
+    scheme: http
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  service:
+    type: LoadBalancer
+    port: 8088
+  ingress:
+    enabled: false
+  probes:
+    path: /actuator/health
+    initialDelaySeconds: 60
+    periodSeconds: 30
+  resources: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  volumeMounts:
+    - name: logs
+      mountPath: /logs
+    - name: tmp
+      mountPath: /tmp
+  volumes:
+    - name: logs
+      emptyDir: {}
+    - name: tmp
+      emptyDir: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+fuseki:
+  fullnameOverride: fc-fuseki
+  image:
+    repository: docker.io/stain/jena-fuseki
+    tag: "5.1.0"
+  dataset: ds
+  adminPassword: admin
+  jvmArgs: "-Xmx1g"
+  persistence:
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
