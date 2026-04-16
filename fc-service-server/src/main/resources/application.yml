@@ -29,7 +29,7 @@ spring:
   application:
     name: federated-catalogue-service
   datasource:
-    url: jdbc:postgresql://localhost:5433/postgres
+    url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: postgres
     platform: postgresql
