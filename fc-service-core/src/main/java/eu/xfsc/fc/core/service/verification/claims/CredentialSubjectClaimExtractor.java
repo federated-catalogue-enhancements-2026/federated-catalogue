@@ -7,6 +7,7 @@ import com.apicatalog.jsonld.JsonLd;
 import com.apicatalog.jsonld.JsonLdError;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
+import com.apicatalog.rdf.api.RdfQuadConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.AnonId;
@@ -43,13 +44,13 @@ public class CredentialSubjectClaimExtractor implements ClaimExtractor {
     log.debug("extractClaims.enter; got content: {}", content);
     List<CredentialClaim> claims = new ArrayList<>();
     Document document = JsonDocument.of(content.getContentAsStream());
-    JsonArray arr = JsonLd.expand(document).get();
-    log.trace("extractClaims; expanded: {}", arr);
-    JsonObject ld = arr.get(0).asJsonObject();
-    if (ld.containsKey(VERIFIABLE_CREDENTIAL_URI)) {
-      List<JsonValue> vcs = ld.get(VERIFIABLE_CREDENTIAL_URI).asJsonArray();
-      for (JsonValue vcv : vcs) {
-        JsonObject vc = vcv.asJsonObject();
+    JsonArray jsonLdArray = JsonLd.expand(document).get();
+    log.trace("extractClaims; expanded: {}", jsonLdArray);
+    JsonObject jsonLdObject = jsonLdArray.getFirst().asJsonObject();
+    if (jsonLdObject.containsKey(VERIFIABLE_CREDENTIAL_URI)) {
+      List<JsonValue> verifiableCredential = jsonLdObject.get(VERIFIABLE_CREDENTIAL_URI).asJsonArray();
+      for (JsonValue vcValue : verifiableCredential) {
+        JsonObject vc = vcValue.asJsonObject();
         JsonArray graph = vc.get("@graph").asJsonArray();
         for (JsonValue val : graph) {
           addClaims(claims, val.asJsonObject());
@@ -57,51 +58,46 @@ public class CredentialSubjectClaimExtractor implements ClaimExtractor {
       }
     } else {
       // content contains just single VC
-      addClaims(claims, ld);
+      addClaims(claims, jsonLdObject);
     }
     log.debug("extractClaims.exit; returning claims: {}", claims.size());
     return claims;
   }
 
   private void addClaims(List<CredentialClaim> claims, JsonObject vc) throws JsonLdError {
-    JsonArray css = vc.getJsonArray(CREDENTIAL_SUBJECT_URI);
-    for (JsonValue cs : css) {
-      Document csDoc = JsonDocument.of(cs.asJsonObject());
-      // var avoids explicit deprecated RdfDataset/RdfGraph/RdfTriple/RdfValue imports;
-      // method calls on inferred types require no import
-      var rdf = JsonLd.toRdf(csDoc).produceGeneralizedRdf(true).get();
+    JsonArray credentialSubjects = vc.getJsonArray(CREDENTIAL_SUBJECT_URI);
+    for (JsonValue credentialSubject : credentialSubjects) {
+      Document credentialSubjectDocument = JsonDocument.of(credentialSubject.asJsonObject());
       Model model = ModelFactory.createDefaultModel();
-      for (var triple : rdf.getDefaultGraph().toList()) {
-        log.trace("extractClaims; got triple: {}", triple);
-        var subject = triple.getSubject();
-        Resource subjectRes = subject.isBlankNode()
-            ? model.createResource(new AnonId(subject.getValue()))
-            : model.createResource(subject.getValue());
-        Property property = model.createProperty(triple.getPredicate().getValue());
-        var object = triple.getObject();
-        RDFNode objectNode;
-        if (object.isBlankNode()) {
-          objectNode = model.createResource(new AnonId(object.getValue()));
-        } else if (object.isLiteral()) {
-          var literal = object.asLiteral();
-          String dtype = literal.getDatatype();
-          if (dtype != null) {
-            objectNode = model.createTypedLiteral(literal.getValue(),
-                TypeMapper.getInstance().getSafeTypeByName(dtype));
-          } else {
-            String lang = literal.getLanguage().orElse(null);
-            objectNode = lang != null
-                ? model.createLiteral(literal.getValue(), lang)
-                : model.createLiteral(literal.getValue());
+      JsonLd.toRdf(credentialSubjectDocument).produceGeneralizedRdf(true).provide(
+        // using anonymous class to return this for chaining, as required by the RdfQuadConsumer interface
+        new RdfQuadConsumer() {
+          @Override
+          public RdfQuadConsumer quad(String subject, String predicate, String object,
+              String datatype, String language, String direction, String graph)
+          {
+            log.trace("extractClaims; got triple: {} {} {}", subject, predicate, object);
+            Resource subjectResource = RdfQuadConsumer.isBlank(subject)
+                ? model.createResource(new AnonId(subject))
+                : model.createResource(subject);
+            Property property = model.createProperty(predicate);
+            RDFNode objectNode;
+            if (language != null || direction != null) {
+              objectNode = model.createLiteral(object, language);
+            } else if (datatype != null) {
+              objectNode = model.createTypedLiteral(object,
+                  TypeMapper.getInstance().getSafeTypeByName(datatype));
+            } else if (RdfQuadConsumer.isBlank(object)) {
+              objectNode = model.createResource(new AnonId(object));
+            } else {
+              objectNode = model.createResource(object);
+            }
+            Statement stmt = model.createStatement(subjectResource, property, objectNode);
+            model.add(stmt);
+            claims.add(new CredentialClaim(stmt, objectMapper));
+            return this;
           }
-        } else {
-          objectNode = model.createResource(object.getValue());
-        }
-        Statement stmt = model.createStatement(subjectRes, property, objectNode);
-        model.add(stmt);
-        claims.add(new CredentialClaim(stmt, objectMapper));
-      }
+        });
     }
   }
-
 }
