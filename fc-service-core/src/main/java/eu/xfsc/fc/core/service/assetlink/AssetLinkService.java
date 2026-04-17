@@ -178,7 +178,7 @@ public class AssetLinkService {
    * @throws ClientException if the type is not in {@link #ACCEPTED_HR_CONTENT_TYPES}
    */
   public void validateHumanReadableContentType(String contentType) {
-    if (!ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
+    if (contentType == null || !ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
       throw new ClientException(String.format(
           "Unsupported content type '%s'. Accepted types: %s", contentType, ACCEPTED_TYPES_MESSAGE));
     }
