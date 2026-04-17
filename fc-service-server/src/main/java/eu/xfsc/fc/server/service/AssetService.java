@@ -37,10 +37,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,7 +59,6 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
@@ -70,9 +69,25 @@ public class AssetService implements AssetsApiDelegate {
   private final AssetLinkService assetLinkService;
   private final ObjectMapper objectMapper;
   private final AssetUploadService assetUploadService;
-
-  @Qualifier("assetFileStore")
   private final FileStore assetFileStore;
+
+  @Autowired
+  public AssetService(
+      VerificationService verificationService,
+      AssetStore assetStorePublisher,
+      HttpServletRequest httpServletRequest,
+      AssetLinkService assetLinkService,
+      ObjectMapper objectMapper,
+      AssetUploadService assetUploadService,
+      @Qualifier("assetFileStore") FileStore assetFileStore) {
+    this.verificationService = verificationService;
+    this.assetStorePublisher = assetStorePublisher;
+    this.httpServletRequest = httpServletRequest;
+    this.assetLinkService = assetLinkService;
+    this.objectMapper = objectMapper;
+    this.assetUploadService = assetUploadService;
+    this.assetFileStore = assetFileStore;
+  }
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -154,27 +169,13 @@ public class AssetService implements AssetsApiDelegate {
         : assetStorePublisher.getById(decodedId);
 
     ContentAccessor content = assetMetadata.getContentAccessor();
-    if (content == null) {
-      // Non-RDF: raw content in FileStore; return metadata enriched with link fields.
-      log.debug("readAssetById; non-RDF asset — returning metadata for id: {}", decodedId);
-      return ResponseEntity.ok(serializeAssetMetadata(decodedId, assetMetadata));
+    if (content != null) {
+      // RDF asset: embed raw JSON-LD in rawContent field so all paths return AssetMetadata.
+      assetMetadata.setRawContent(content.getContentAsString());
     }
 
-    // JSON-LD: return enriched metadata when links exist so callers can discover HR/MR.
-    final Map<AssetLinkType, String> links = assetLinkService.getLinkedAssets(decodedId);
-    if (!links.isEmpty()) {
-      log.debug("readAssetById; JSON-LD asset has links — returning metadata for id: {}", decodedId);
-      Optional.ofNullable(links.get(AssetLinkType.HAS_HUMAN_READABLE)).ifPresent(assetMetadata::setHumanReadableId);
-      Optional.ofNullable(links.get(AssetLinkType.HAS_MACHINE_READABLE)).ifPresent(assetMetadata::setMachineReadableId);
-      try {
-        return ResponseEntity.ok(objectMapper.writeValueAsString(assetMetadata));
-      } catch (JsonProcessingException ex) {
-        throw new ServerException("Failed to serialize asset metadata for id: " + decodedId, ex);
-      }
-    }
-
-    log.debug("readAssetById.exit; returning raw JSON-LD for id: {}", decodedId);
-    return ResponseEntity.ok().body(content.getContentAsString());
+    log.debug("readAssetById; returning metadata for id: {}", decodedId);
+    return ResponseEntity.ok(serializeAssetMetadata(decodedId, assetMetadata));
   }
 
   /**
@@ -469,11 +470,9 @@ public class AssetService implements AssetsApiDelegate {
     }
 
     final MediaType mediaType = resolveMediaType(meta.getContentType(), assetIri);
-    final byte[] bytes = content.getContentAsBytes();
     final HttpHeaders headers = new HttpHeaders();
     headers.setContentType(mediaType);
-    headers.setContentLength(bytes.length);
-    return ResponseEntity.ok().headers(headers).body(new ByteArrayResource(bytes));
+    return ResponseEntity.ok().headers(headers).body(new InputStreamResource(content.getContentAsStream()));
   }
 
   private MediaType resolveMediaType(String contentType, String assetIri) {

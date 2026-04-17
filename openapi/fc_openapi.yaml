@@ -1310,16 +1310,14 @@ paths:
         - Assets
       summary: Read an asset by its IRI.
       description: >
-        Returns the content or metadata of an asset identified by its IRI.
+        Returns a JSON-serialized Asset metadata object for any asset identified by its IRI.
 
-        For RDF (JSON-LD) assets without links, the raw JSON-LD content string is returned.
+        For RDF (JSON-LD) assets, the rawContent field is populated with the raw JSON-LD string.
 
         For any asset (RDF or non-RDF) that has bidirectional links to another representation,
-        a JSON-serialized Asset metadata object is returned, enriched with
-        humanReadableId or machineReadableId fields.
+        the humanReadableId or machineReadableId fields are populated.
 
-        For non-RDF assets (PDF, images, binary files) without links, a JSON-serialized
-        Asset metadata object is returned. The file content can be retrieved via
+        For non-RDF assets (PDF, images, binary files), the file content can be retrieved via
         GET /assets/{id}/human-readable or GET /assets/{id}/machine-readable.
       operationId: readAssetById
       parameters:
@@ -1351,17 +1349,13 @@ paths:
       responses:
         '200':
           description: >
-            The asset content or metadata. One of:
-            - Raw JSON-LD string (RDF asset with no links)
-            - JSON-serialized Asset object with humanReadableId/machineReadableId populated (any asset with links)
-            - JSON-serialized Asset metadata object (non-RDF asset without links)
+            The asset metadata as a JSON-serialized Asset object.
+            For RDF (JSON-LD) assets, the rawContent field is populated with the raw JSON-LD string.
+            For any asset with bidirectional links, humanReadableId or machineReadableId fields are populated.
           content:
             application/json:
               schema:
-                type: string
-                description: >
-                  Raw JSON-LD content string, or a JSON-serialized Asset metadata object.
-                  See endpoint description for the full response-type rules.
+                $ref: '#/components/schemas/Asset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
