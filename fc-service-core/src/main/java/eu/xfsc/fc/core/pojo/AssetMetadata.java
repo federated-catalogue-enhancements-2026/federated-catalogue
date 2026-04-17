@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import lombok.AllArgsConstructor;
@@ -37,6 +38,12 @@ public class AssetMetadata extends Asset {
   @Setter
   @JsonIgnore
   private String changeComment;
+
+  /** Raw JSON-LD content string, populated only for RDF assets returned by GET /assets/{id}. */
+  @Getter
+  @Setter
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String rawContent;
 
   /**
    * Creates asset metadata from explicit fields; computes the SHA-256 hash from content.
