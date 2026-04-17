@@ -1,6 +1,5 @@
 package eu.xfsc.fc.server.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetResult;
@@ -145,7 +144,7 @@ public class AssetService implements AssetsApiDelegate {
    *         Must not outline any information about the internal structure of the server. (status code 500)
    */
   @Override
-  public ResponseEntity<String> readAssetById(String id, Integer version) {
+  public ResponseEntity<Asset> readAssetById(String id, Integer version) {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     AssetMetadata assetMetadata = version != null
         ? assetStorePublisher.getByIdAndVersion(decodedId, version)
@@ -157,33 +156,24 @@ public class AssetService implements AssetsApiDelegate {
       assetMetadata.setRawContent(content.getContentAsString());
     }
 
+    populateLinkFields(decodedId, assetMetadata);
     log.debug("readAssetById; returning metadata for id: {}", decodedId);
-    return ResponseEntity.ok(serializeAssetMetadata(decodedId, assetMetadata));
+    return ResponseEntity.ok(assetMetadata);
   }
 
   /**
-   * Serialize an asset's metadata as a JSON string, populating link fields
-   * ({@code humanReadableId}, {@code machineReadableId}) when links exist.
-   *
-   * <p>{@link AssetMetadata} extends {@link Asset}, so it can be serialized directly.
-   * The {@code contentAccessor} and {@code changeComment} fields are {@code @JsonIgnore}d.</p>
+   * Populate link fields ({@code humanReadableId}, {@code machineReadableId}) on the given metadata
+   * from the asset link store.
    *
    * @param id            asset IRI
-   * @param assetMetadata metadata loaded from the store
-   * @return JSON string of the {@link Asset} model
+   * @param assetMetadata metadata object to populate in place
    */
-  private String serializeAssetMetadata(String id, AssetMetadata assetMetadata) {
+  private void populateLinkFields(String id, AssetMetadata assetMetadata) {
     final Map<AssetLinkType, String> links = assetLinkService.getLinkedAssets(id);
     Optional.ofNullable(links.get(AssetLinkType.HAS_HUMAN_READABLE))
         .ifPresent(assetMetadata::setHumanReadableId);
     Optional.ofNullable(links.get(AssetLinkType.HAS_MACHINE_READABLE))
         .ifPresent(assetMetadata::setMachineReadableId);
-
-    try {
-      return objectMapper.writeValueAsString(assetMetadata);
-    } catch (JsonProcessingException ex) {
-      throw new ServerException("Failed to serialize asset metadata for id: " + id, ex);
-    }
   }
 
   /**
