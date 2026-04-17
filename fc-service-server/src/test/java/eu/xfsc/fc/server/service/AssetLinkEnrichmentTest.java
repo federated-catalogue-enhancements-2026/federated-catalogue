@@ -1,5 +1,6 @@
 package eu.xfsc.fc.server.service;
 
+import static eu.xfsc.fc.server.helper.FileReaderHelper.getMockFileDataAsString;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import java.util.Map;
 
 import com.c4_soft.springaddons.security.oauth2.test.annotations.Claims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.OpenIdClaims;
@@ -149,7 +151,71 @@ public class AssetLinkEnrichmentTest {
     deleteAssetQuietly(mrAsset.getAssetHash());
   }
 
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_READ_WITH_PREFIX},
+      claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+          @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void getAssetById_jsonLdAssetWithLinkedHr_returnsEnrichedMetadataWithRawContent() throws Exception {
+    final var jsonLdAsset = uploadJsonLdAsset(getMockFileDataAsString("default-credential.json"));
+    final var hrAsset = uploadHumanReadable(jsonLdAsset.getId(), "pdf content for jsonld test", "application/pdf", "jsonld-doc.pdf");
+
+    final var result = mockMvc.perform(MockMvcRequestBuilders
+            .get("/assets/" + encode(jsonLdAsset.getId()))
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> returned = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
+    assertNotNull(returned.get("humanReadableId"),
+        "GET /assets/{jsonLdId} must include humanReadableId when a link exists");
+    assertEquals(hrAsset.getId(), returned.get("humanReadableId"));
+    assertNotNull(returned.get("rawContent"),
+        "GET /assets/{jsonLdId} must include rawContent for JSON-LD assets (requires API-B1 fix)");
+
+    deleteAssetQuietly(hrAsset.getAssetHash());
+    deleteAssetQuietly(jsonLdAsset.getAssetHash());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_READ_WITH_PREFIX},
+      claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+          @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void getAssetById_jsonLdAssetWithoutLinks_returnsMetadataWithRawContent() throws Exception {
+    final String originalContent = getMockFileDataAsString("default-credential.json");
+    final var jsonLdAsset = uploadJsonLdAsset(originalContent);
+
+    final var result = mockMvc.perform(MockMvcRequestBuilders
+            .get("/assets/" + encode(jsonLdAsset.getId()))
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    @SuppressWarnings("unchecked")
+    final Map<String, Object> returned = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
+    assertNull(returned.get("humanReadableId"),
+        "Unlinked JSON-LD asset must have no humanReadableId");
+    assertNotNull(returned.get("rawContent"),
+        "GET /assets/{jsonLdId} must include rawContent for JSON-LD assets (requires API-B1 fix)");
+
+    deleteAssetQuietly(jsonLdAsset.getAssetHash());
+  }
+
   // ===== helpers =====
+
+  private Asset uploadJsonLdAsset(String content) throws Exception {
+    final var result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
+            .content(content)
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
+
+    return objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+  }
 
   private Asset uploadNonRdfAsset(String text, String contentType, String filename) throws Exception {
     final var content = text.getBytes(StandardCharsets.UTF_8);
