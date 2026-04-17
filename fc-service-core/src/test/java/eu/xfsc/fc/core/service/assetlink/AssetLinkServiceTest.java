@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.assetlink;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -7,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
@@ -17,6 +19,7 @@ import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
 import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
@@ -204,5 +207,77 @@ class AssetLinkServiceTest {
     // writeLinkTriples must wrap IRIs in angle brackets before passing to CredentialClaim.
     // Verify indirectly: no exception means the wrapping logic executed without NPE.
     assetLinkService.writeLinkTriples("urn:example:mr", "urn:example:hr");
+  }
+
+  // ===== getLinkedAssets =====
+
+  @Test
+  void getLinkedAssets_noLinksExist_returnsEmptyMap() {
+    final Map<AssetLinkType, String> result = assetLinkService.getLinkedAssets("urn:uuid:unlinked");
+
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void getLinkedAssets_bothDirections_returnsBothEntries() {
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
+
+    // MR_IRI is source for both forward (HAS_HUMAN_READABLE) and has no reverse row;
+    // HR_IRI is source for the reverse (HAS_MACHINE_READABLE) row.
+    // Query from MR_IRI: only one row (forward). Query from HR_IRI: only one row (reverse).
+    // To get both link types in one map, query the repository directly for both rows.
+    final Map<AssetLinkType, String> fromMr = assetLinkService.getLinkedAssets(MR_IRI);
+    final Map<AssetLinkType, String> fromHr = assetLinkService.getLinkedAssets(HR_IRI);
+
+    assertEquals(1, fromMr.size());
+    assertEquals(HR_IRI, fromMr.get(AssetLinkType.HAS_HUMAN_READABLE));
+
+    assertEquals(1, fromHr.size());
+    assertEquals(MR_IRI, fromHr.get(AssetLinkType.HAS_MACHINE_READABLE));
+  }
+
+  @Test
+  void getLinkedAssets_onlyForwardLink_returnsSingleEntry() {
+    assetLinkService.createLink(MR_IRI, HR_IRI, AssetLinkType.HAS_HUMAN_READABLE);
+
+    final Map<AssetLinkType, String> result = assetLinkService.getLinkedAssets(MR_IRI);
+
+    assertEquals(1, result.size());
+    assertEquals(HR_IRI, result.get(AssetLinkType.HAS_HUMAN_READABLE));
+  }
+
+  // ===== validateHumanReadableContentType =====
+
+  @Test
+  void validateHumanReadableContentType_pdf_doesNotThrow() {
+    assertDoesNotThrow(() -> assetLinkService.validateHumanReadableContentType("application/pdf"));
+  }
+
+  @Test
+  void validateHumanReadableContentType_docx_doesNotThrow() {
+    assertDoesNotThrow(() -> assetLinkService.validateHumanReadableContentType(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+  }
+
+  @Test
+  void validateHumanReadableContentType_html_doesNotThrow() {
+    assertDoesNotThrow(() -> assetLinkService.validateHumanReadableContentType("text/html"));
+  }
+
+  @Test
+  void validateHumanReadableContentType_txt_doesNotThrow() {
+    assertDoesNotThrow(() -> assetLinkService.validateHumanReadableContentType("text/plain"));
+  }
+
+  @Test
+  void validateHumanReadableContentType_unsupportedType_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> assetLinkService.validateHumanReadableContentType("application/javascript"));
+  }
+
+  @Test
+  void validateHumanReadableContentType_nullContentType_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> assetLinkService.validateHumanReadableContentType(null));
   }
 }
