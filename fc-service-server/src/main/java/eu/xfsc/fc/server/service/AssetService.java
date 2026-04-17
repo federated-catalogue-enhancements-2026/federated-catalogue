@@ -37,8 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -59,6 +59,7 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
@@ -69,25 +70,7 @@ public class AssetService implements AssetsApiDelegate {
   private final AssetLinkService assetLinkService;
   private final ObjectMapper objectMapper;
   private final AssetUploadService assetUploadService;
-  private final FileStore assetFileStore;
-
-  @Autowired
-  public AssetService(
-      VerificationService verificationService,
-      AssetStore assetStorePublisher,
-      HttpServletRequest httpServletRequest,
-      AssetLinkService assetLinkService,
-      ObjectMapper objectMapper,
-      AssetUploadService assetUploadService,
-      @Qualifier("assetFileStore") FileStore assetFileStore) {
-    this.verificationService = verificationService;
-    this.assetStorePublisher = assetStorePublisher;
-    this.httpServletRequest = httpServletRequest;
-    this.assetLinkService = assetLinkService;
-    this.objectMapper = objectMapper;
-    this.assetUploadService = assetUploadService;
-    this.assetFileStore = assetFileStore;
-  }
+  @Qualifier("assetFileStore") private final FileStore assetFileStore;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
