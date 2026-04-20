@@ -47,7 +47,7 @@ public interface AssetRepository
   @Query("SELECT a FROM Asset a LEFT JOIN FETCH a.linkedAsset WHERE a.assetHash = :hash")
   Optional<Asset> findByAssetHashWithLinkedAsset(@Param("hash") String hash);
 
-  @Query("SELECT a FROM Asset a WHERE a.assetType = :type AND a.linkedAsset IS NOT NULL")
+  @Query("SELECT a FROM Asset a JOIN FETCH a.linkedAsset WHERE a.assetType = :type")
   List<Asset> findByAssetTypeWithLink(@Param("type") AssetType type);
 
   @Modifying
