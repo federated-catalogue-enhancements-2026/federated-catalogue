@@ -241,13 +241,12 @@ public class AssetLinkControllerTest {
   @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
       @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-  void uploadHumanReadable_secondLinkForSameAsset_returnsConflict() throws Exception {
+  void uploadHumanReadable_reupload_differentContent_returnsCreated() throws Exception {
     final var mrAsset = uploadMachineReadableAsset();
     mrIri = mrAsset.getId();
     mrHash = mrAsset.getAssetHash();
 
     final var file = new MockMultipartFile("file", "doc.pdf", "application/pdf", PDF_CONTENT);
-
     final var firstResult = mockMvc.perform(MockMvcRequestBuilders
             .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
             .file(file)
@@ -255,12 +254,43 @@ public class AssetLinkControllerTest {
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isCreated())
         .andReturn();
-
-    final var hrAsset = objectMapper.readValue(firstResult.getResponse().getContentAsString(), Asset.class);
+    final var hrV1 = objectMapper.readValue(firstResult.getResponse().getContentAsString(), Asset.class);
 
     final var file2 = new MockMultipartFile("file", "doc2.pdf", "application/pdf",
         "different content".getBytes(StandardCharsets.UTF_8));
+    final var secondResult = mockMvc.perform(MockMvcRequestBuilders
+            .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
+            .file(file2)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
+    final var hrV2 = objectMapper.readValue(secondResult.getResponse().getContentAsString(), Asset.class);
 
+    assertEquals(hrV1.getId(), hrV2.getId(), "Re-upload must reuse the same HR IRI");
+
+    deleteAssetQuietly(hrV2.getAssetHash());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+      @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void uploadHumanReadable_reupload_sameContent_returnsConflict() throws Exception {
+    final var mrAsset = uploadMachineReadableAsset();
+    mrIri = mrAsset.getId();
+    mrHash = mrAsset.getAssetHash();
+
+    final var file = new MockMultipartFile("file", "doc.pdf", "application/pdf", PDF_CONTENT);
+    final var firstResult = mockMvc.perform(MockMvcRequestBuilders
+            .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
+    final var hrAsset = objectMapper.readValue(firstResult.getResponse().getContentAsString(), Asset.class);
+
+    final var file2 = new MockMultipartFile("file", "doc.pdf", "application/pdf", PDF_CONTENT);
     mockMvc.perform(MockMvcRequestBuilders
             .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
             .file(file2)

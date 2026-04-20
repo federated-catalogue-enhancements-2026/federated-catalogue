@@ -405,9 +405,10 @@ public class AssetService implements AssetsApiDelegate {
     final eu.xfsc.fc.core.dao.assets.Asset mrAsset =
         assetRepository.findBySubjectId(decodedId)
             .orElseThrow(() -> new NotFoundException("Asset not found: " + decodedId));
-    if (mrAsset.getLinkedAsset() != null) {
-      throw new ConflictException("Asset '" + decodedId + "' already has a linked representation");
-    }
+
+    final String existingHrId = mrAsset.getLinkedAsset() != null
+        ? mrAsset.getLinkedAsset().getSubjectId()
+        : null;
 
     final byte[] content;
     try {
@@ -416,13 +417,11 @@ public class AssetService implements AssetsApiDelegate {
       throw new ServerException("Failed to read uploaded file", ex);
     }
 
-    final AssetMetadata hrMetadata = assetUploadService.processUpload(
-        content, contentType, safeFilename);
+    final AssetMetadata hrMetadata = assetUploadService.processUpload(content, contentType, safeFilename, existingHrId);
 
     final eu.xfsc.fc.core.dao.assets.Asset hrAsset =
         assetRepository.findBySubjectId(hrMetadata.getId())
             .orElseThrow(() -> new NotFoundException("Stored HR asset not found: " + hrMetadata.getId()));
-
     mrAsset.setAssetType(AssetType.MACHINE_READABLE);
     mrAsset.setLinkedAsset(hrAsset);
     hrAsset.setAssetType(AssetType.HUMAN_READABLE);
@@ -430,7 +429,7 @@ public class AssetService implements AssetsApiDelegate {
     assetRepository.saveAll(List.of(mrAsset, hrAsset));
 
     try {
-      writeLinkTriples(mrAsset.getSubjectId(), hrAsset.getSubjectId());
+      writeLinkTriples(mrAsset.getSubjectId(), hrMetadata.getId());
     } catch (Exception ex) {
       log.warn("uploadHumanReadable; graph triple write failed (non-fatal)", ex);
     }
