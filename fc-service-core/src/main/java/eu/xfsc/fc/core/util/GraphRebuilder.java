@@ -1,7 +1,5 @@
 package eu.xfsc.fc.core.util;
 
-import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.assets.Asset;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
@@ -21,7 +19,6 @@ import java.util.function.BiConsumer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -37,16 +34,11 @@ public class GraphRebuilder {
    */
   private static final int QUEUE_CLEAR_WAIT_INTERVAL = 100;
 
-  private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
-  private static final String PREDICATE_HAS_MACHINE_READABLE = "hasMachineReadable";
-
-  @Autowired
-  private AssetStore assetStore;
+  private final AssetStore assetStore;
   private final GraphStore graphStore;
   private final VerificationService verificationService;
   private final ProtectedNamespaceFilter protectedNamespaceFilter;
   private final AssetRepository assetRepository;
-  private final ProtectedNamespaceProperties namespaceProperties;
 
   /**
    * Starts rebuilding the graphDb, blocking until finished or interrupted.
@@ -134,37 +126,16 @@ public class GraphRebuilder {
    * reconstruct both directions because {@link #writeLinkTriples} writes both triples.</p>
    */
   private void rebuildLinkTriples() {
-    final List<Asset> mrAssets = assetRepository.findByAssetTypeWithLink(AssetType.MACHINE_READABLE);
+    final var mrAssets = assetRepository.findByAssetTypeWithLink(AssetType.MACHINE_READABLE);
     log.info("rebuildLinkTriples; restoring triples for {} MR→HR asset pairs", mrAssets.size());
-    for (Asset mr : mrAssets) {
+    for (var mr : mrAssets) {
       try {
-        writeLinkTriples(mr.getSubjectId(), mr.getLinkedAsset().getSubjectId());
+        assetStore.writeAssetLinkTriples(mr.getSubjectId(), mr.getLinkedAsset().getSubjectId());
       } catch (Exception ex) {
         log.error("rebuildLinkTriples; failed to write triple for link {}->{}: {}",
             mr.getSubjectId(), mr.getLinkedAsset().getSubjectId(), ex.getMessage(), ex);
       }
     }
-  }
-
-  /**
-   * Write {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
-   * to the graph DB for the given MR–HR pair.
-   *
-   * @param mrIri IRI of the machine-readable asset
-   * @param hrIri IRI of the human-readable asset
-   */
-  void writeLinkTriples(String mrIri, String hrIri) {
-    final var ns = namespaceProperties.getNamespace();
-    final var hasHumanReadable = new CredentialClaim(
-        "<" + mrIri + ">",
-        "<" + ns + PREDICATE_HAS_HUMAN_READABLE + ">",
-        "<" + hrIri + ">");
-    final var hasMachineReadable = new CredentialClaim(
-        "<" + hrIri + ">",
-        "<" + ns + PREDICATE_HAS_MACHINE_READABLE + ">",
-        "<" + mrIri + ">");
-    graphStore.addClaims(List.of(hasHumanReadable), mrIri);
-    graphStore.addClaims(List.of(hasMachineReadable), hrIri);
   }
 
   private void sleepForQueue() {

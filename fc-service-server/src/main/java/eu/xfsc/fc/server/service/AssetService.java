@@ -6,8 +6,6 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
-import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -17,18 +15,16 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.assetstore.LinkedAssetRef;
 import eu.xfsc.fc.core.service.filestore.FileStore;
-import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ValidationException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.InputStreamResource;
@@ -50,6 +46,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
@@ -60,7 +57,6 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
@@ -74,19 +70,25 @@ public class AssetService implements AssetsApiDelegate {
   );
 
   private static final String ACCEPTED_TYPES_MESSAGE =
-      String.join(", ", new java.util.TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
-
-  private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
-  private static final String PREDICATE_HAS_MACHINE_READABLE = "hasMachineReadable";
+      String.join(", ", new TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
 
   private final VerificationService verificationService;
   private final AssetStore assetStorePublisher;
   private final HttpServletRequest httpServletRequest;
-  private final AssetRepository assetRepository;
   private final AssetUploadService assetUploadService;
-  private final GraphStore graphDb;
-  private final ProtectedNamespaceProperties namespaceProperties;
-  @Qualifier("assetFileStore") private final FileStore assetFileStore;
+  private final FileStore assetFileStore;
+
+  AssetService(VerificationService verificationService,
+      AssetStore assetStorePublisher,
+      HttpServletRequest httpServletRequest,
+      AssetUploadService assetUploadService,
+      @Qualifier("assetFileStore") FileStore assetFileStore) {
+    this.verificationService = verificationService;
+    this.assetStorePublisher = assetStorePublisher;
+    this.httpServletRequest = httpServletRequest;
+    this.assetUploadService = assetUploadService;
+    this.assetFileStore = assetFileStore;
+  }
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -179,21 +181,17 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * Populate link fields ({@code humanReadableId}, {@code machineReadableId}) on the given metadata
-   * from the asset's own fields.
+   * Populate link fields ({@code humanReadableId}, {@code machineReadableId}) on the given metadata.
    *
    * @param id            asset IRI
    * @param assetMetadata metadata object to populate in place
    */
   private void populateLinkFields(String id, AssetMetadata assetMetadata) {
-    assetRepository.findBySubjectIdWithLinkedAsset(id).ifPresent(asset -> {
-      if (asset.getLinkedAsset() != null) {
-        final String linkedIri = asset.getLinkedAsset().getSubjectId();
-        if (asset.getAssetType() == AssetType.MACHINE_READABLE) {
-          assetMetadata.setHumanReadableId(linkedIri);
-        } else {
-          assetMetadata.setMachineReadableId(linkedIri);
-        }
+    assetStorePublisher.findLink(id).ifPresent(ref -> {
+      if (ref.ownType() == AssetType.MACHINE_READABLE) {
+        assetMetadata.setHumanReadableId(ref.linkedIri());
+      } else {
+        assetMetadata.setMachineReadableId(ref.linkedIri());
       }
     });
   }
@@ -216,18 +214,7 @@ public class AssetService implements AssetsApiDelegate {
   @Transactional
   public ResponseEntity<Void> deleteAsset(String assetHash) {
     AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
-
     checkParticipantAccess(assetMetadata.getIssuer());
-
-    assetRepository.findBySubjectIdWithLinkedAsset(assetMetadata.getId()).ifPresent(asset -> {
-      if (asset.getLinkedAsset() != null) {
-        final eu.xfsc.fc.core.dao.assets.Asset peer = asset.getLinkedAsset();
-        peer.setLinkedAsset(null);
-        peer.setAssetType(null);
-        assetRepository.save(peer);
-      }
-    });
-
     assetStorePublisher.deleteAsset(assetHash);
     return new ResponseEntity<>(HttpStatus.OK);
   }
@@ -402,13 +389,10 @@ public class AssetService implements AssetsApiDelegate {
     final AssetMetadata parentMeta = assetStorePublisher.getById(decodedId);
     checkParticipantAccess(parentMeta.getIssuer());
 
-    final eu.xfsc.fc.core.dao.assets.Asset mrAsset =
-        assetRepository.findBySubjectId(decodedId)
-            .orElseThrow(() -> new NotFoundException("Asset not found: " + decodedId));
-
-    final String existingHrId = mrAsset.getLinkedAsset() != null
-        ? mrAsset.getLinkedAsset().getSubjectId()
-        : null;
+    final String existingHrId = assetStorePublisher.findLink(decodedId)
+        .filter(ref -> ref.ownType() == AssetType.MACHINE_READABLE)
+        .map(LinkedAssetRef::linkedIri)
+        .orElse(null);
 
     final byte[] content;
     try {
@@ -418,18 +402,9 @@ public class AssetService implements AssetsApiDelegate {
     }
 
     final AssetMetadata hrMetadata = assetUploadService.processUpload(content, contentType, safeFilename, existingHrId);
-
-    final eu.xfsc.fc.core.dao.assets.Asset hrAsset =
-        assetRepository.findBySubjectId(hrMetadata.getId())
-            .orElseThrow(() -> new NotFoundException("Stored HR asset not found: " + hrMetadata.getId()));
-    mrAsset.setAssetType(AssetType.MACHINE_READABLE);
-    mrAsset.setLinkedAsset(hrAsset);
-    hrAsset.setAssetType(AssetType.HUMAN_READABLE);
-    hrAsset.setLinkedAsset(mrAsset);
-    assetRepository.saveAll(List.of(mrAsset, hrAsset));
-
+    assetStorePublisher.linkAssets(decodedId, hrMetadata.getId());
     try {
-      writeLinkTriples(mrAsset.getSubjectId(), hrMetadata.getId());
+      assetStorePublisher.writeAssetLinkTriples(decodedId, hrMetadata.getId());
     } catch (Exception ex) {
       log.warn("uploadHumanReadable; graph triple write failed (non-fatal)", ex);
     }
@@ -453,16 +428,12 @@ public class AssetService implements AssetsApiDelegate {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getHumanReadable.enter; id: {}", decodedId);
 
-    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectIdWithLinkedAsset(decodedId)
+    final LinkedAssetRef link = assetStorePublisher.findLink(decodedId)
+        .filter(ref -> ref.ownType() == AssetType.MACHINE_READABLE)
         .orElseThrow(() -> new NotFoundException(
             String.format("No human-readable representation linked to asset '%s'", decodedId)));
-    if (asset.getLinkedAsset() == null || asset.getAssetType() != AssetType.MACHINE_READABLE) {
-      throw new NotFoundException(
-          String.format("No human-readable representation linked to asset '%s'", decodedId));
-    }
-    final String hrIri = asset.getLinkedAsset().getSubjectId();
 
-    return streamAssetContent(hrIri);
+    return streamAssetContent(link.linkedIri());
   }
 
   /**
@@ -476,16 +447,12 @@ public class AssetService implements AssetsApiDelegate {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getMachineReadable.enter; id: {}", decodedId);
 
-    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectIdWithLinkedAsset(decodedId)
+    final LinkedAssetRef link = assetStorePublisher.findLink(decodedId)
+        .filter(ref -> ref.ownType() == AssetType.HUMAN_READABLE)
         .orElseThrow(() -> new NotFoundException(
             String.format("No machine-readable asset linked to human-readable asset '%s'", decodedId)));
-    if (asset.getLinkedAsset() == null || asset.getAssetType() != AssetType.HUMAN_READABLE) {
-      throw new NotFoundException(
-          String.format("No machine-readable asset linked to human-readable asset '%s'", decodedId));
-    }
-    final String mrIri = asset.getLinkedAsset().getSubjectId();
 
-    return streamAssetContent(mrIri);
+    return streamAssetContent(link.linkedIri());
   }
 
   /**
@@ -521,33 +488,6 @@ public class AssetService implements AssetsApiDelegate {
           contentType, assetIri);
       return MediaType.APPLICATION_OCTET_STREAM;
     }
-  }
-
-  /**
-   * Write {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
-   * to the graph DB for the given MR–HR pair.
-   *
-   * <p><strong>Angle-bracket format:</strong> {@link CredentialClaim#getSubjectValue()}
-   * strips the surrounding {@code <} and {@code >} unconditionally. All IRIs passed
-   * to {@code CredentialClaim} must therefore be wrapped: {@code "<" + iri + ">"}.</p>
-   *
-   * @param mrIri IRI of the machine-readable asset
-   * @param hrIri IRI of the human-readable asset
-   */
-  void writeLinkTriples(String mrIri, String hrIri) {
-    final var ns = namespaceProperties.getNamespace();
-
-    final var hasHumanReadable = new CredentialClaim(
-        "<" + mrIri + ">",
-        "<" + ns + PREDICATE_HAS_HUMAN_READABLE + ">",
-        "<" + hrIri + ">");
-    final var hasMachineReadable = new CredentialClaim(
-        "<" + hrIri + ">",
-        "<" + ns + PREDICATE_HAS_MACHINE_READABLE + ">",
-        "<" + mrIri + ">");
-
-    graphDb.addClaims(List.of(hasHumanReadable), mrIri);
-    graphDb.addClaims(List.of(hasMachineReadable), hrIri);
   }
 
   /**

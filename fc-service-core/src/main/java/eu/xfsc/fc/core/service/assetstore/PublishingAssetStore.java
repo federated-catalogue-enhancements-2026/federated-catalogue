@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.assetstore;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -15,8 +16,9 @@ public class PublishingAssetStore extends AssetStoreImpl {
   private final AssetPublisher assetPublisher;
 
   public PublishingAssetStore(AssetDao dao, GraphStore graphDb, FileStore fileStore,
-      IriGenerator iriGenerator, AssetRepository assetRepository, AssetPublisher assetPublisher) {
-    super(dao, graphDb, fileStore, iriGenerator, assetRepository);
+      IriGenerator iriGenerator, AssetRepository assetRepository,
+      ProtectedNamespaceProperties namespaceProperties, AssetPublisher assetPublisher) {
+    super(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties);
     this.assetPublisher = assetPublisher;
   }
 

@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.assetstore;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.exception.ConflictException;
@@ -10,6 +11,7 @@ import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -39,20 +41,26 @@ import java.util.Optional;
 @Transactional
 public class AssetStoreImpl implements AssetStore {
 
+  private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
+  private static final String PREDICATE_HAS_MACHINE_READABLE = "hasMachineReadable";
+
   private final AssetDao dao;
   private final GraphStore graphDb;
   private final FileStore fileStore;
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
+  private final ProtectedNamespaceProperties namespaceProperties;
 
   public AssetStoreImpl(AssetDao dao, GraphStore graphDb,
       @Qualifier("assetFileStore") FileStore fileStore,
-      IriGenerator iriGenerator, AssetRepository assetRepository) {
+      IriGenerator iriGenerator, AssetRepository assetRepository,
+      ProtectedNamespaceProperties namespaceProperties) {
     this.dao = dao;
     this.graphDb = graphDb;
     this.fileStore = fileStore;
     this.iriGenerator = iriGenerator;
     this.assetRepository = assetRepository;
+    this.namespaceProperties = namespaceProperties;
   }
 
   @Override
@@ -190,18 +198,18 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public void deleteAsset(final String hash) {
-    // Look up linked HR IRI before deletion: after dao.delete() the asset row is gone.
-    // Only cascade from MR → HR; deleting an HR directly must NOT delete its MR parent.
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
-    final String hrIriToCascade = assetOpt
+    final String hrHashToCascade = assetOpt
         .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
-        .map(a -> a.getLinkedAsset().getSubjectId())
+        .map(a -> a.getLinkedAsset().getAssetHash())
         .orElse(null);
 
-    // The JOIN FETCH loads both entities into the session. Clear the peer's back-reference
-    // so Hibernate's cascade check doesn't see a persistent entity referencing the entity
-    // being removed, which would throw TransientObjectException on flush.
-    assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> a.getLinkedAsset().setLinkedAsset(null));
+    assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> {
+      final Asset peer = a.getLinkedAsset();
+      peer.setLinkedAsset(null);
+      peer.setAssetType(null);
+      assetRepository.save(peer);
+    });
 
     SubjectStatusRecord ssr = dao.delete(hash);
     log.debug("deleteAsset; delete result: {}", ssr);
@@ -218,11 +226,11 @@ public class AssetStoreImpl implements AssetStore {
       log.debug("deleteAsset; file store cleanup skipped for hash {}: {}", hash, ex.getMessage());
     }
 
-    if (hrIriToCascade != null) {
+    if (hrHashToCascade != null) {
       try {
-        deleteAsset(getById(hrIriToCascade).getAssetHash());
+        deleteAsset(hrHashToCascade);
       } catch (NotFoundException ex) {
-        log.debug("deleteAsset; HR asset {} already gone, skipping cascade", hrIriToCascade);
+        log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }
     }
   }
@@ -294,6 +302,46 @@ public class AssetStoreImpl implements AssetStore {
       throw new NotFoundException("no asset found for id %s".formatted(id));
     }
     return count;
+  }
+
+  @Override
+  public void linkAssets(String mrIri, String hrIri) {
+    Asset mrAsset = assetRepository.findBySubjectId(mrIri)
+        .orElseThrow(() -> new NotFoundException(String.format("no active asset found for id %s", mrIri)));
+    Asset hrAsset = assetRepository.findBySubjectId(hrIri)
+        .orElseThrow(() -> new NotFoundException(String.format("no active asset found for id %s", hrIri)));
+    mrAsset.setAssetType(AssetType.MACHINE_READABLE);
+    mrAsset.setLinkedAsset(hrAsset);
+    hrAsset.setAssetType(AssetType.HUMAN_READABLE);
+    hrAsset.setLinkedAsset(mrAsset);
+    assetRepository.saveAll(List.of(mrAsset, hrAsset));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<LinkedAssetRef> findLink(String assetIri) {
+    return assetRepository.findBySubjectIdWithLinkedAsset(assetIri)
+        .filter(a -> a.getLinkedAsset() != null)
+        .map(a -> new LinkedAssetRef(a.getLinkedAsset().getSubjectId(), a.getAssetType()));
+  }
+
+  @Override
+  public void writeAssetLinkTriples(String mrIri, String hrIri) {
+    writeLinkTriples(mrIri, hrIri);
+  }
+
+  private void writeLinkTriples(String mrIri, String hrIri) {
+    final var ns = namespaceProperties.getNamespace();
+    final var hasHumanReadable = new CredentialClaim(
+        "<" + mrIri + ">",
+        "<" + ns + PREDICATE_HAS_HUMAN_READABLE + ">",
+        "<" + hrIri + ">");
+    final var hasMachineReadable = new CredentialClaim(
+        "<" + hrIri + ">",
+        "<" + ns + PREDICATE_HAS_MACHINE_READABLE + ">",
+        "<" + mrIri + ">");
+    graphDb.addClaims(List.of(hasHumanReadable), mrIri);
+    graphDb.addClaims(List.of(hasMachineReadable), hrIri);
   }
 
 }

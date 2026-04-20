@@ -33,4 +33,10 @@
         </createIndex>
     </changeSet>
 
+    <changeSet author="saackef" id="2026-04-16-asset-type-index">
+        <createIndex tableName="assets" indexName="idx_assets_asset_type">
+            <column name="asset_type"/>
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

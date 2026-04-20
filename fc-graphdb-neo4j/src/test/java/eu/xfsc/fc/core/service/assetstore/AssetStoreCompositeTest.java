@@ -111,9 +111,6 @@ public class AssetStoreCompositeTest {
   @Autowired
   private AssetRepository assetRepository;
 
-  @Autowired
-  private ProtectedNamespaceProperties namespaceProperties;
-
   @AfterEach
   public void storageSelfCleaning() {
     schemaStore.clear();
@@ -186,7 +183,7 @@ public class AssetStoreCompositeTest {
         new GraphQuery("MATCH (n) RETURN n", null)).getResults();
     Assertions.assertEquals(1, claims.size());
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, assetRepository, namespaceProperties);
+    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, assetRepository);
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     claims = graphStore.queryData(
@@ -227,7 +224,7 @@ public class AssetStoreCompositeTest {
     // Delete graph claims, then rebuild — simulates a graph rebuild from stored raw credentials
     graphStore.deleteClaims(assetId);
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, assetRepository, namespaceProperties);
+    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter, assetRepository);
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     // Verify fcmeta claims are still filtered after rebuild
