@@ -148,6 +148,9 @@ public class GraphRebuilder {
 
   private void addAssetToGraph(String hash) {
     AssetMetadata assetMetaData = assetStore.getByHash(hash);
+    if (assetMetaData.getContentAccessor() == null) {
+      return;
+    }
     List<CredentialClaim> claims = verificationService.extractClaims(assetMetaData.getContentAccessor());
     claims = protectedNamespaceFilter.filterClaims(claims, "graph rebuild").claims();
     graphStore.addClaims(claims, assetMetaData.getId());
