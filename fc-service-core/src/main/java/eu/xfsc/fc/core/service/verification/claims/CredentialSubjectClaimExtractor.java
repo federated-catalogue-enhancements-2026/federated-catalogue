@@ -37,7 +37,7 @@ public class CredentialSubjectClaimExtractor implements ClaimExtractor {
   private static final String VERIFIABLE_CREDENTIAL_URI =
       "https://www.w3.org/2018/credentials#verifiableCredential";
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
   public List<CredentialClaim> extractClaims(ContentAccessor content) throws Exception {
@@ -57,15 +57,15 @@ public class CredentialSubjectClaimExtractor implements ClaimExtractor {
         }
       }
     } else {
-      // content contains just single VC
+      // content contains just single verifiable credential
       addClaims(claims, jsonLdObject);
     }
     log.debug("extractClaims.exit; returning claims: {}", claims.size());
     return claims;
   }
 
-  private void addClaims(List<CredentialClaim> claims, JsonObject vc) throws JsonLdError {
-    JsonArray credentialSubjects = vc.getJsonArray(CREDENTIAL_SUBJECT_URI);
+  private void addClaims(List<CredentialClaim> claims, JsonObject verifiableCredential) throws JsonLdError {
+    JsonArray credentialSubjects = verifiableCredential.getJsonArray(CREDENTIAL_SUBJECT_URI);
     for (JsonValue credentialSubject : credentialSubjects) {
       Document credentialSubjectDocument = JsonDocument.of(credentialSubject.asJsonObject());
       Model model = ModelFactory.createDefaultModel();
