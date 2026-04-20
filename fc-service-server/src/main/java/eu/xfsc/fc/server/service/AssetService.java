@@ -186,7 +186,7 @@ public class AssetService implements AssetsApiDelegate {
    * @param assetMetadata metadata object to populate in place
    */
   private void populateLinkFields(String id, AssetMetadata assetMetadata) {
-    assetRepository.findBySubjectId(id).ifPresent(asset -> {
+    assetRepository.findBySubjectIdWithLinkedAsset(id).ifPresent(asset -> {
       if (asset.getLinkedAsset() != null) {
         final String linkedIri = asset.getLinkedAsset().getSubjectId();
         if (asset.getAssetType() == AssetType.MACHINE_READABLE) {
@@ -453,7 +453,7 @@ public class AssetService implements AssetsApiDelegate {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getHumanReadable.enter; id: {}", decodedId);
 
-    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectId(decodedId)
+    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectIdWithLinkedAsset(decodedId)
         .orElseThrow(() -> new NotFoundException(
             String.format("No human-readable representation linked to asset '%s'", decodedId)));
     if (asset.getLinkedAsset() == null || asset.getAssetType() != AssetType.MACHINE_READABLE) {
@@ -476,7 +476,7 @@ public class AssetService implements AssetsApiDelegate {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getMachineReadable.enter; id: {}", decodedId);
 
-    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectId(decodedId)
+    final eu.xfsc.fc.core.dao.assets.Asset asset = assetRepository.findBySubjectIdWithLinkedAsset(decodedId)
         .orElseThrow(() -> new NotFoundException(
             String.format("No machine-readable asset linked to human-readable asset '%s'", decodedId)));
     if (asset.getLinkedAsset() == null || asset.getAssetType() != AssetType.HUMAN_READABLE) {

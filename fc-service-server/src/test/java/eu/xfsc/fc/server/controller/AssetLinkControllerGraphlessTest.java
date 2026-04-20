@@ -42,7 +42,7 @@ import org.springframework.web.context.WebApplicationContext;
  * Integration tests verifying that GET /assets/{id}/human-readable and
  * GET /assets/{id}/machine-readable work correctly when the graph store is disabled
  * ({@code graphstore.impl=none}). These endpoints read from PostgreSQL and FileStore only
- * and must not depend on a running graph DB (AC-5.4).
+ * and must not depend on a running graph DB.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -84,9 +84,6 @@ public class AssetLinkControllerGraphlessTest {
     }
   }
 
-  /**
-   * AC-5.4: GET /assets/{id}/human-readable returns 200 when graphstore.impl=none.
-   */
   @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_READ_WITH_PREFIX},
       claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
@@ -116,9 +113,6 @@ public class AssetLinkControllerGraphlessTest {
     deleteAssetQuietly(hrAsset.getAssetHash());
   }
 
-  /**
-   * AC-5.4: GET /assets/{id}/machine-readable returns 200 when graphstore.impl=none.
-   */
   @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_READ_WITH_PREFIX},
       claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {

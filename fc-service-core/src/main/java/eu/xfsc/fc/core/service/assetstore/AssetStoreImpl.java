@@ -22,9 +22,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import eu.xfsc.fc.core.dao.assets.Asset;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * File system based implementation of the asset store interface.
@@ -190,10 +192,16 @@ public class AssetStoreImpl implements AssetStore {
   public void deleteAsset(final String hash) {
     // Look up linked HR IRI before deletion: after dao.delete() the asset row is gone.
     // Only cascade from MR → HR; deleting an HR directly must NOT delete its MR parent.
-    final String hrIriToCascade = assetRepository.findByAssetHashWithLinkedAsset(hash)
+    final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
+    final String hrIriToCascade = assetOpt
         .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
         .map(a -> a.getLinkedAsset().getSubjectId())
         .orElse(null);
+
+    // The JOIN FETCH loads both entities into the session. Clear the peer's back-reference
+    // so Hibernate's cascade check doesn't see a persistent entity referencing the entity
+    // being removed, which would throw TransientObjectException on flush.
+    assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> a.getLinkedAsset().setLinkedAsset(null));
 
     SubjectStatusRecord ssr = dao.delete(hash);
     log.debug("deleteAsset; delete result: {}", ssr);

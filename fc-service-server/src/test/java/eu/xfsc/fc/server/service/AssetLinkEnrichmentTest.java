@@ -43,7 +43,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 /**
  * Integration tests verifying that GET /assets/{id} response includes link information
- * (humanReadableId / machineReadableId) when links exist (AC-2.1, AC-2.2, AC-3.1).
+ * (humanReadableId / machineReadableId) when links exist.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

@@ -49,7 +49,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 /**
  * Integration tests verifying that asset links are preserved after operations
- * that do not explicitly remove them (AC-4.2, AC-4.3).
+ * that do not explicitly remove them.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
