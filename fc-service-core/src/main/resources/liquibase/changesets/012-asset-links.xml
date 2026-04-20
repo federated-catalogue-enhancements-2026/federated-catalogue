@@ -4,46 +4,32 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <changeSet author="saackef" id="2026-04-16-asset-links-sequence">
-        <createSequence sequenceName="asset_links_id_seq" startValue="1" incrementBy="50"/>
+    <changeSet author="saackef" id="2026-04-16-asset-type-column">
+        <addColumn tableName="assets">
+            <column name="asset_type" type="VARCHAR(50)"/>
+        </addColumn>
+        <addColumn tableName="assets_aud">
+            <column name="asset_type" type="VARCHAR(50)"/>
+        </addColumn>
     </changeSet>
 
-    <changeSet author="saackef" id="2026-04-16-asset-links-table">
-        <createTable tableName="asset_links">
-            <column name="id" type="BIGINT" defaultValueSequenceNext="asset_links_id_seq">
-                <constraints primaryKey="true" primaryKeyName="pk_asset_links" nullable="false"/>
-            </column>
-            <column name="source_id" type="TEXT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="target_id" type="TEXT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="link_type" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_at" type="TIMESTAMPTZ"/>
-            <column name="created_by" type="VARCHAR(255)"/>
-            <column name="modified_by" type="VARCHAR(255)"/>
-            <column name="last_modified_at" type="TIMESTAMPTZ"/>
-        </createTable>
+    <changeSet author="saackef" id="2026-04-16-linked-asset-id-column">
+        <addColumn tableName="assets">
+            <column name="linked_asset_id" type="BIGINT"/>
+        </addColumn>
+        <addColumn tableName="assets_aud">
+            <column name="linked_asset_id" type="BIGINT"/>
+        </addColumn>
+        <addForeignKeyConstraint
+            baseTableName="assets" baseColumnNames="linked_asset_id"
+            constraintName="fk_assets_linked_asset"
+            referencedTableName="assets" referencedColumnNames="id"
+            onDelete="SET NULL"/>
     </changeSet>
 
-    <changeSet author="saackef" id="2026-04-16-asset-links-unique-constraint">
-        <addUniqueConstraint tableName="asset_links"
-                             columnNames="source_id, target_id, link_type"
-                             constraintName="uq_asset_link"/>
-    </changeSet>
-
-    <changeSet author="saackef" id="2026-04-16-asset-links-source-index">
-        <createIndex tableName="asset_links" indexName="idx_asset_links_source">
-            <column name="source_id"/>
-        </createIndex>
-    </changeSet>
-
-    <changeSet author="saackef" id="2026-04-16-asset-links-target-index">
-        <createIndex tableName="asset_links" indexName="idx_asset_links_target">
-            <column name="target_id"/>
+    <changeSet author="saackef" id="2026-04-16-linked-asset-unique-index">
+        <createIndex tableName="assets" indexName="idx_assets_linked_asset_id" unique="true">
+            <column name="linked_asset_id"/>
         </createIndex>
     </changeSet>
 

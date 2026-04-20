@@ -1,9 +1,11 @@
 package eu.xfsc.fc.core.util;
 
-import eu.xfsc.fc.core.dao.assetlinks.AssetLink;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.dao.assets.Asset;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
@@ -35,12 +37,16 @@ public class GraphRebuilder {
    */
   private static final int QUEUE_CLEAR_WAIT_INTERVAL = 100;
 
+  private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
+  private static final String PREDICATE_HAS_MACHINE_READABLE = "hasMachineReadable";
+
   @Autowired
   private AssetStore assetStore;
   private final GraphStore graphStore;
   private final VerificationService verificationService;
   private final ProtectedNamespaceFilter protectedNamespaceFilter;
-  private final AssetLinkService assetLinkService;
+  private final AssetRepository assetRepository;
+  private final ProtectedNamespaceProperties namespaceProperties;
 
   /**
    * Starts rebuilding the graphDb, blocking until finished or interrupted.
@@ -122,22 +128,43 @@ public class GraphRebuilder {
 
   /**
    * Restores {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
-   * from the {@code asset_links} PostgreSQL table.
+   * from the {@code assets} PostgreSQL table.
    *
-   * <p>Only MR→HR rows are fetched from the DB. One row is sufficient to reconstruct both
-   * directions because {@link AssetLinkService#writeLinkTriples} writes both triples.</p>
+   * <p>Only machine-readable assets with a linked asset are fetched. One row is sufficient to
+   * reconstruct both directions because {@link #writeLinkTriples} writes both triples.</p>
    */
   private void rebuildLinkTriples() {
-    final List<AssetLink> hrLinks = assetLinkService.getHumanReadableLinks();
-    log.info("rebuildLinkTriples; restoring triples for {} MR→HR link rows", hrLinks.size());
-    for (AssetLink link : hrLinks) {
+    final List<Asset> mrAssets = assetRepository.findByAssetTypeWithLink(AssetType.MACHINE_READABLE);
+    log.info("rebuildLinkTriples; restoring triples for {} MR→HR asset pairs", mrAssets.size());
+    for (Asset mr : mrAssets) {
       try {
-        assetLinkService.writeLinkTriples(link.getSourceId(), link.getTargetId());
+        writeLinkTriples(mr.getSubjectId(), mr.getLinkedAsset().getSubjectId());
       } catch (Exception ex) {
         log.error("rebuildLinkTriples; failed to write triple for link {}->{}: {}",
-            link.getSourceId(), link.getTargetId(), ex.getMessage(), ex);
+            mr.getSubjectId(), mr.getLinkedAsset().getSubjectId(), ex.getMessage(), ex);
       }
     }
+  }
+
+  /**
+   * Write {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
+   * to the graph DB for the given MR–HR pair.
+   *
+   * @param mrIri IRI of the machine-readable asset
+   * @param hrIri IRI of the human-readable asset
+   */
+  void writeLinkTriples(String mrIri, String hrIri) {
+    final var ns = namespaceProperties.getNamespace();
+    final var hasHumanReadable = new CredentialClaim(
+        "<" + mrIri + ">",
+        "<" + ns + PREDICATE_HAS_HUMAN_READABLE + ">",
+        "<" + hrIri + ">");
+    final var hasMachineReadable = new CredentialClaim(
+        "<" + hrIri + ">",
+        "<" + ns + PREDICATE_HAS_MACHINE_READABLE + ">",
+        "<" + mrIri + ">");
+    graphStore.addClaims(List.of(hasHumanReadable), mrIri);
+    graphStore.addClaims(List.of(hasMachineReadable), hrIri);
   }
 
   private void sleepForQueue() {

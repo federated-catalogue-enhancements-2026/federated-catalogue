@@ -11,7 +11,6 @@ import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetFilter;
@@ -67,7 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ContextConfiguration(classes = {AssetStoreTest.TestApplication.class, AssetStoreImpl.class, AssetJpaDao.class, AssetAuditRepository.class, AssetStoreTest.class,
   DummyGraphStore.class, DatabaseConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, DidResolverConfig.class, HttpDocumentResolver.class,
   RdfContentTypeProperties.class, FileStoreConfig.class, DidDocumentResolver.class, JwtSignatureVerifier.class, SecurityAuditorAware.class,
-  AssetLinkService.class, ProtectedNamespaceProperties.class})
+  ProtectedNamespaceProperties.class})
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class AssetStoreTest {

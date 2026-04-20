@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import eu.xfsc.fc.core.dao.assets.AssetDao;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStoreImpl;
 import eu.xfsc.fc.core.service.assetstore.IriGenerator;
@@ -26,13 +26,13 @@ public class AssetStoreConfig {
   @Bean
   public AssetStore assetStorePublisher(AssetDao dao, GraphStore graphDb,
       @Qualifier("assetFileStore") FileStore fileStore,
-      IriGenerator iriGenerator, AssetLinkService assetLinkService,
+      IriGenerator iriGenerator, AssetRepository assetRepository,
       AssetPublisher assetPublisher) {
     AssetStore assetStore;
     if ("none".equals(pubImpl)) {
-      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetLinkService);
+      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository);
     } else {
-      assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetLinkService, assetPublisher);
+      assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetRepository, assetPublisher);
     }
     log.debug("getAssetStore; returning {} for impl {}", assetStore, pubImpl);
     return assetStore;

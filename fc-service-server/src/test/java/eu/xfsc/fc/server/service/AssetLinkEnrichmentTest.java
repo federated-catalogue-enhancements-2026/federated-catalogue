@@ -21,7 +21,6 @@ import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockJwtAuth
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.xfsc.fc.api.generated.model.Asset;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -64,8 +63,6 @@ public class AssetLinkEnrichmentTest {
   private ObjectMapper objectMapper;
   @Autowired
   private AssetStore assetStore;
-  @Autowired
-  private AssetLinkRepository assetLinkRepository;
 
   @BeforeAll
   void setup() {
@@ -75,7 +72,6 @@ public class AssetLinkEnrichmentTest {
   @AfterEach
   void cleanUp() {
     assetStore.clear();
-    assetLinkRepository.deleteAll();
   }
 
   @Test

@@ -1,11 +1,9 @@
 package eu.xfsc.fc.core.service.assetstore;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
@@ -13,18 +11,17 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.pojo.AssetLinkType;
+import eu.xfsc.fc.core.dao.assets.Asset;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.util.HashUtils;
-import eu.xfsc.fc.core.service.assetstore.IriValidator;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +45,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {AssetStoreCascadeDeleteTest.TestConfig.class, AssetStoreImpl.class,
     AssetJpaDao.class, AssetAuditRepository.class, DatabaseConfig.class, SecurityAuditorAware.class,
-    DummyGraphStore.class, FileStoreConfig.class, AssetLinkService.class, IriGenerator.class,
+    DummyGraphStore.class, FileStoreConfig.class, IriGenerator.class,
     ProtectedNamespaceProperties.class, IriValidator.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 class AssetStoreCascadeDeleteTest {
@@ -65,15 +62,11 @@ class AssetStoreCascadeDeleteTest {
   private AssetStore assetStore;
 
   @Autowired
-  private AssetLinkService assetLinkService;
-
-  @Autowired
-  private AssetLinkRepository assetLinkRepository;
+  private AssetRepository assetRepository;
 
   @AfterEach
   void cleanUp() {
     assetStore.clear();
-    assetLinkRepository.deleteAll();
   }
 
   // ===== delete MR asset cascade-deletes HR =====
@@ -83,7 +76,7 @@ class AssetStoreCascadeDeleteTest {
     final var mrMeta = storeNonRdfAsset(MR_ID, "mr content");
     final var hrMeta = storeNonRdfAsset(null, "hr content");
 
-    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE);
+    linkAssets(mrMeta.getId(), hrMeta.getId());
 
     assetStore.deleteAsset(mrMeta.getAssetHash());
 
@@ -91,8 +84,6 @@ class AssetStoreCascadeDeleteTest {
         "MR asset must be gone after delete");
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(hrMeta.getAssetHash()),
         "HR asset must be cascade-deleted when MR parent is deleted");
-    assertTrue(assetLinkRepository.findAll().isEmpty(),
-        "All link rows must be removed after cascade delete");
   }
 
   // ===== delete HR asset directly preserves MR =====
@@ -102,7 +93,7 @@ class AssetStoreCascadeDeleteTest {
     final var mrMeta = storeNonRdfAsset(MR_ID, "mr content v2");
     final var hrMeta = storeNonRdfAsset(null, "hr content v2");
 
-    assetLinkService.createLink(mrMeta.getId(), hrMeta.getId(), AssetLinkType.HAS_HUMAN_READABLE);
+    linkAssets(mrMeta.getId(), hrMeta.getId());
 
     assetStore.deleteAsset(hrMeta.getAssetHash());
 
@@ -110,8 +101,8 @@ class AssetStoreCascadeDeleteTest {
         "MR asset must survive when HR asset is deleted directly");
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(hrMeta.getAssetHash()),
         "HR asset must be gone after direct delete");
-    assertTrue(assetLinkRepository.findAll().isEmpty(),
-        "Link rows must be cleaned up after HR is deleted directly");
+    Asset mrEntity = assetRepository.findBySubjectIdWithLinkedAsset(mrMeta.getId()).orElseThrow();
+    assertNull(mrEntity.getLinkedAsset(), "linked_asset_id must be nulled by DB after HR is deleted");
   }
 
   // ===== delete unlinked asset — no cascade side effects =====
@@ -123,10 +114,17 @@ class AssetStoreCascadeDeleteTest {
     assetStore.deleteAsset(meta.getAssetHash());
 
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(meta.getAssetHash()));
-    assertTrue(assetLinkRepository.findAll().isEmpty());
   }
 
-  // ===== helper =====
+  // ===== helpers =====
+
+  private void linkAssets(String mrId, String hrId) {
+    Asset mrEntity = assetRepository.findBySubjectIdWithLinkedAsset(mrId).orElseThrow();
+    Asset hrEntity = assetRepository.findBySubjectIdWithLinkedAsset(hrId).orElseThrow();
+    mrEntity.setLinkedAsset(hrEntity);
+    mrEntity.setAssetType(AssetType.MACHINE_READABLE);
+    assetRepository.save(mrEntity);
+  }
 
   private AssetMetadata storeNonRdfAsset(String id, String contentText) {
     final var content = contentText.getBytes(StandardCharsets.UTF_8);

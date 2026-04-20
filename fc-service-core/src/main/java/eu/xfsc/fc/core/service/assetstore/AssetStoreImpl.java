@@ -1,18 +1,18 @@
 package eu.xfsc.fc.core.service.assetstore;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import lombok.extern.slf4j.Slf4j;
@@ -41,16 +41,16 @@ public class AssetStoreImpl implements AssetStore {
   private final GraphStore graphDb;
   private final FileStore fileStore;
   private final IriGenerator iriGenerator;
-  private final AssetLinkService assetLinkService;
+  private final AssetRepository assetRepository;
 
   public AssetStoreImpl(AssetDao dao, GraphStore graphDb,
       @Qualifier("assetFileStore") FileStore fileStore,
-      IriGenerator iriGenerator, AssetLinkService assetLinkService) {
+      IriGenerator iriGenerator, AssetRepository assetRepository) {
     this.dao = dao;
     this.graphDb = graphDb;
     this.fileStore = fileStore;
     this.iriGenerator = iriGenerator;
-    this.assetLinkService = assetLinkService;
+    this.assetRepository = assetRepository;
   }
 
   @Override
@@ -188,8 +188,13 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public void deleteAsset(final String hash) {
-    // Resolve IRI before deletion so we can look up and cascade-delete linked HR assets.
-    // The IRI is stored in subjectId and is needed to query asset_links.
+    // Look up linked HR IRI before deletion: after dao.delete() the asset row is gone.
+    // Only cascade from MR → HR; deleting an HR directly must NOT delete its MR parent.
+    final String hrIriToCascade = assetRepository.findByAssetHashWithLinkedAsset(hash)
+        .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
+        .map(a -> a.getLinkedAsset().getSubjectId())
+        .orElse(null);
+
     SubjectStatusRecord ssr = dao.delete(hash);
     log.debug("deleteAsset; delete result: {}", ssr);
     if (ssr == null) {
@@ -205,40 +210,13 @@ public class AssetStoreImpl implements AssetStore {
       log.debug("deleteAsset; file store cleanup skipped for hash {}: {}", hash, ex.getMessage());
     }
 
-    // Cascade-delete any linked human-readable asset.
-    // Guard: only cascade from MR → HR direction; deleting an HR asset must NOT delete its MR parent.
-    if (ssr.subjectId() != null) {
-      cascadeDeleteLinkedHumanReadable(ssr.subjectId());
-    }
-  }
-
-  /**
-   * If the deleted asset was a machine-readable asset with a linked human-readable representation,
-   * delete the HR asset as well (cascade). If the deleted asset was itself an HR asset, its
-   * link rows are cleaned up but no MR cascade occurs (guard against reverse cascade).
-   *
-   * <p>When the HR asset is successfully deleted, the recursive {@link #deleteAsset} call cleans
-   * up all link rows (both directions) via {@link AssetLinkService#deleteLinksForAsset}. The
-   * outer call to {@code deleteLinksForAsset} is only needed when no cascade occurred (HR asset
-   * already gone, or this asset had no HR link).</p>
-   *
-   * @param deletedAssetIri IRI of the asset that was just deleted
-   */
-  private void cascadeDeleteLinkedHumanReadable(String deletedAssetIri) {
-    final String hrIri = assetLinkService.getLinkedAsset(deletedAssetIri, AssetLinkType.HAS_HUMAN_READABLE)
-        .orElse(null);
-    if (hrIri != null) {
-      log.debug("cascadeDeleteLinkedHumanReadable; cascading delete of HR asset: {}", hrIri);
+    if (hrIriToCascade != null) {
       try {
-        deleteAsset(getById(hrIri).getAssetHash());
-        // Recursive deleteAsset() cleaned up all link rows for both assets — done.
-        return;
+        deleteAsset(getById(hrIriToCascade).getAssetHash());
       } catch (NotFoundException ex) {
-        log.debug("cascadeDeleteLinkedHumanReadable; HR asset {} already gone, skipping", hrIri);
+        log.debug("deleteAsset; HR asset {} already gone, skipping cascade", hrIriToCascade);
       }
     }
-    // No cascade occurred (no HR link, or HR asset was already gone): clean up remaining link rows.
-    assetLinkService.deleteLinksForAsset(deletedAssetIri);
   }
 
   @Override

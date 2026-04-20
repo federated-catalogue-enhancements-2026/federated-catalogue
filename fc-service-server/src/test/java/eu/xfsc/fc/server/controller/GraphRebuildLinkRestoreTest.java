@@ -9,11 +9,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import eu.xfsc.fc.core.dao.assetlinks.AssetLinkRepository;
-import eu.xfsc.fc.core.pojo.AssetLinkType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.GraphQuery;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.util.GraphRebuilder;
@@ -82,10 +79,6 @@ public class GraphRebuildLinkRestoreTest {
   @Autowired
   private AssetStore assetStore;
   @Autowired
-  private AssetLinkService assetLinkService;
-  @Autowired
-  private AssetLinkRepository assetLinkRepository;
-  @Autowired
   private GraphStore graphStore;
   @Autowired
   private GraphRebuilder graphRebuilder;
@@ -107,7 +100,6 @@ public class GraphRebuildLinkRestoreTest {
             // already gone — skip
           }
         });
-    assetLinkRepository.deleteAll();
   }
 
   @Test

@@ -4,7 +4,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.service.assetlink.AssetLinkService;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher;
@@ -15,8 +15,8 @@ public class PublishingAssetStore extends AssetStoreImpl {
   private final AssetPublisher assetPublisher;
 
   public PublishingAssetStore(AssetDao dao, GraphStore graphDb, FileStore fileStore,
-      IriGenerator iriGenerator, AssetLinkService assetLinkService, AssetPublisher assetPublisher) {
-    super(dao, graphDb, fileStore, iriGenerator, assetLinkService);
+      IriGenerator iriGenerator, AssetRepository assetRepository, AssetPublisher assetPublisher) {
+    super(dao, graphDb, fileStore, iriGenerator, assetRepository);
     this.assetPublisher = assetPublisher;
   }
 
