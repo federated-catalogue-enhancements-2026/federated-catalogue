@@ -165,7 +165,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new ServerException(ex);
     }
     try {
-      fileStore.storeFile(assetMetadata.getAssetHash(), assetMetadata.getContentAccessor());
+      fileStore.replaceFile(assetMetadata.getAssetHash(), assetMetadata.getContentAccessor());
     } catch (IOException ex) {
       throw new ServerException("Failed to store asset content in file store", ex);
     }
