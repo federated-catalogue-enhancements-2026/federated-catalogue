@@ -1518,7 +1518,7 @@ paths:
         - Assets
       summary: Upload and link a human-readable representation to a machine-readable asset
       description: >
-        Uploads a human-readable document (PDF, DOCX, HTML, TXT) and links it bidirectionally
+        Uploads a human-readable document (e.g. PDF) and links it bidirectionally
         to the existing machine-readable asset identified by {id}. The human-readable document
         is stored as an independent asset with its own IRI.
         Multipart uploads are handled by the server outside the generated delegate pattern.
@@ -1545,7 +1545,7 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: Human-readable document (PDF, DOCX, HTML, or TXT)
+                  description: Human-readable document (e.g. PDF)
       responses:
         '201':
           description: Created — the human-readable asset was stored and linked
@@ -1554,6 +1554,57 @@ paths:
               description: URL of the new human-readable asset.
               schema:
                 type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Assets
+      summary: Replace the human-readable representation linked to a machine-readable asset
+      description: >
+        Replaces the content of an existing human-readable document linked to the machine-readable asset
+        identified by {id}. The human-readable asset must already be linked — use POST to create the
+        initial link. The IRI of the human-readable asset is preserved.
+        Required permission: ASSET_UPDATE or ADMIN_ALL
+      operationId: replaceHumanReadable
+      security:
+        - jwt: []
+      parameters:
+        - name: id
+          in: path
+          description: IRI of the machine-readable asset
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Human-readable document
+      responses:
+        '200':
+          description: OK — the human-readable asset content was replaced
           content:
             application/json:
               schema:

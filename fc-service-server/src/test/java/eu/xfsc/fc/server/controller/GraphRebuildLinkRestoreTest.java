@@ -66,7 +66,6 @@ public class GraphRebuildLinkRestoreTest {
   private static final String FCMETA_NS =
       "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
   private static final String FCMETA_HAS_HUMAN_READABLE = FCMETA_NS + "hasHumanReadable";
-  private static final String FCMETA_HAS_MACHINE_READABLE = FCMETA_NS + "hasMachineReadable";
   /** The RDF-star wrapping predicate used by {@link eu.xfsc.fc.graphdb.service.SparqlGraphStore}. */
   private static final String CRED_SUBJECT_URI = "https://www.w3.org/2018/credentials#credentialSubject";
 
@@ -143,7 +142,7 @@ public class GraphRebuildLinkRestoreTest {
     // and predicate (fcmeta:hasHumanReadable).
     final var sparql = """
         SELECT ?s ?p ?o WHERE {
-          <<?s ?p ?o>> <%s> <%s> .
+          <<(?s ?p ?o)>> <%s> <%s> .
           FILTER(?s = <%s> && ?p = <%s>)
         }
         """.formatted(CRED_SUBJECT_URI, mrAsset.getId(), mrAsset.getId(), FCMETA_HAS_HUMAN_READABLE);

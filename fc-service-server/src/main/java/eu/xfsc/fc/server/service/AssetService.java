@@ -344,8 +344,9 @@ public class AssetService implements AssetsApiDelegate {
 
   /**
    * POST /assets/{id}/human-readable — upload and link a human-readable representation.
+   * Returns 409 if a human-readable asset is already linked; use PUT to replace it.
    *
-   * @param id   URL-decoded IRI of the machine-readable parent asset
+   * @param id   URL-encoded IRI of the machine-readable parent asset
    * @param file the human-readable document
    * @return 201 Created with the new human-readable asset metadata
    */
@@ -355,26 +356,65 @@ public class AssetService implements AssetsApiDelegate {
     if (file == null) {
       throw new ClientException("No file was provided in the upload request");
     }
-
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
-    final String safeFilename = StringUtils.sanitizeFilename(file.getOriginalFilename());
-    log.debug("uploadHumanReadable.enter; parentId: {}, filename: {}, contentType: {}",
-        decodedId, safeFilename, file.getContentType());
+    log.debug("uploadHumanReadable.enter; parentId: {}", decodedId);
 
-    final String contentType = file.getContentType() != null
-        ? file.getContentType()
-        : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    final AssetMetadata parentMeta = assetStorePublisher.getById(decodedId);
+    checkParticipantAccess(parentMeta.getIssuer());
 
-    validateHumanReadableContentType(contentType);
+    final boolean hrAlreadyLinked = assetStorePublisher.findLink(decodedId)
+        .filter(ref -> ref.ownType() == AssetType.MACHINE_READABLE)
+        .isPresent();
+    if (hrAlreadyLinked) {
+      throw new ConflictException("A human-readable asset is already linked to " + decodedId + ". Use PUT to replace it.");
+    }
 
-    // Verify the machine-readable parent asset exists (throws NotFoundException -> 404)
+    final AssetMetadata hrMetadata = storeAndLinkHumanReadable(decodedId, file, null);
+    log.debug("uploadHumanReadable.exit; linked {} -> {}", decodedId, hrMetadata.getId());
+
+    final String encodedId = UriUtils.encodePathSegment(hrMetadata.getId(), StandardCharsets.UTF_8);
+    return ResponseEntity
+        .created(URI.create("/assets/" + encodedId))
+        .body(hrMetadata);
+  }
+
+  /**
+   * PUT /assets/{id}/human-readable — replace the existing human-readable representation.
+   * Returns 404 if no human-readable asset is currently linked; use POST to create the initial link.
+   *
+   * @param id   URL-encoded IRI of the machine-readable parent asset
+   * @param file the replacement human-readable document
+   * @return 200 OK with the updated human-readable asset metadata
+   */
+  @Override
+  @Transactional
+  public ResponseEntity<Asset> replaceHumanReadable(String id, MultipartFile file) {
+    if (file == null) {
+      throw new ClientException("No file was provided in the upload request");
+    }
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    log.debug("replaceHumanReadable.enter; parentId: {}", decodedId);
+
     final AssetMetadata parentMeta = assetStorePublisher.getById(decodedId);
     checkParticipantAccess(parentMeta.getIssuer());
 
     final String existingHrId = assetStorePublisher.findLink(decodedId)
         .filter(ref -> ref.ownType() == AssetType.MACHINE_READABLE)
         .map(LinkedAssetRef::linkedIri)
-        .orElse(null);
+        .orElseThrow(() -> new NotFoundException(
+            "No human-readable asset is linked to " + decodedId + ". Use POST to create the initial link."));
+
+    final AssetMetadata hrMetadata = storeAndLinkHumanReadable(decodedId, file, existingHrId);
+    log.debug("replaceHumanReadable.exit; replaced {} -> {}", decodedId, hrMetadata.getId());
+
+    return ResponseEntity.ok(hrMetadata);
+  }
+
+  private AssetMetadata storeAndLinkHumanReadable(String decodedId, MultipartFile file, String existingHrId) {
+    final String contentType = file.getContentType() != null
+        ? file.getContentType()
+        : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    validateHumanReadableContentType(contentType);
 
     final byte[] content;
     try {
@@ -383,20 +423,15 @@ public class AssetService implements AssetsApiDelegate {
       throw new ServerException("Failed to read uploaded file", ex);
     }
 
-    final AssetMetadata hrMetadata = assetUploadService.processUpload(content, contentType, safeFilename, existingHrId);
+    final AssetMetadata hrMetadata = assetUploadService.processUpload(
+        content, contentType, StringUtils.sanitizeFilename(file.getOriginalFilename()), existingHrId);
     assetStorePublisher.linkAssets(decodedId, hrMetadata.getId());
     try {
       assetStorePublisher.writeAssetLinkTriples(decodedId, hrMetadata.getId());
     } catch (Exception ex) {
-      log.warn("uploadHumanReadable; graph triple write failed (non-fatal)", ex);
+      log.warn("storeAndLinkHumanReadable; graph triple write failed (non-fatal)", ex);
     }
-
-    log.debug("uploadHumanReadable.exit; linked {} -> {}", decodedId, hrMetadata.getId());
-
-    final String encodedId = UriUtils.encodePathSegment(hrMetadata.getId(), StandardCharsets.UTF_8);
-    return ResponseEntity
-        .created(URI.create("/assets/" + encodedId))
-        .body(hrMetadata);
+    return hrMetadata;
   }
 
   /**

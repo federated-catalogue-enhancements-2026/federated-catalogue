@@ -3,6 +3,7 @@ package eu.xfsc.fc.server.controller;
 import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_UPDATE_WITH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,6 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -181,41 +183,7 @@ public class AssetLinkControllerTest {
   @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
       @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
-  void uploadHumanReadable_reupload_differentContent_returnsCreated() throws Exception {
-    final var mrAsset = uploadMachineReadableAsset();
-    mrIri = mrAsset.getId();
-    mrHash = mrAsset.getAssetHash();
-
-    final var file = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
-    final var firstResult = mockMvc.perform(MockMvcRequestBuilders
-            .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
-            .file(file)
-            .with(csrf())
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isCreated())
-        .andReturn();
-    final var hrV1 = objectMapper.readValue(firstResult.getResponse().getContentAsString(), Asset.class);
-
-    final var file2 = new MockMultipartFile("file", "doc2.pdf", MediaType.APPLICATION_PDF_VALUE,
-        "different content".getBytes(StandardCharsets.UTF_8));
-    final var secondResult = mockMvc.perform(MockMvcRequestBuilders
-            .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
-            .file(file2)
-            .with(csrf())
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isCreated())
-        .andReturn();
-    final var hrV2 = objectMapper.readValue(secondResult.getResponse().getContentAsString(), Asset.class);
-
-    assertEquals(hrV1.getId(), hrV2.getId(), "Re-upload must reuse the same HR IRI");
-
-    deleteAssetQuietly(hrV2.getAssetHash());
-  }
-
-  @Test
-  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-      @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
-  void uploadHumanReadable_reupload_sameContent_returnsConflict() throws Exception {
+  void uploadHumanReadable_whenHrAlreadyLinked_returnsConflict() throws Exception {
     final var mrAsset = uploadMachineReadableAsset();
     mrIri = mrAsset.getId();
     mrHash = mrAsset.getAssetHash();
@@ -230,7 +198,8 @@ public class AssetLinkControllerTest {
         .andReturn();
     final var hrAsset = objectMapper.readValue(firstResult.getResponse().getContentAsString(), Asset.class);
 
-    final var file2 = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
+    final var file2 = new MockMultipartFile("file", "doc2.pdf", MediaType.APPLICATION_PDF_VALUE,
+        "different content".getBytes(StandardCharsets.UTF_8));
     mockMvc.perform(MockMvcRequestBuilders
             .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
             .file(file2)
@@ -239,6 +208,83 @@ public class AssetLinkControllerTest {
         .andExpect(status().isConflict());
 
     deleteAssetQuietly(hrAsset.getAssetHash());
+  }
+
+  // ===== PUT /assets/{id}/human-readable =====
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+      @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
+  void replaceHumanReadable_existingHr_returnsOkAndPreservesIri() throws Exception {
+    final var mrAsset = uploadMachineReadableAsset();
+    mrIri = mrAsset.getId();
+    mrHash = mrAsset.getAssetHash();
+
+    final var initialFile = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
+    final var postResult = mockMvc.perform(MockMvcRequestBuilders
+            .multipart(String.format(HR_URL_TEMPLATE, encode(mrIri)))
+            .file(initialFile)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
+    final var hrV1 = objectMapper.readValue(postResult.getResponse().getContentAsString(), Asset.class);
+
+    final var replacementFile = new MockMultipartFile("file", "doc2.pdf", MediaType.APPLICATION_PDF_VALUE,
+        "replacement content".getBytes(StandardCharsets.UTF_8));
+    final var putResult = mockMvc.perform(MockMvcRequestBuilders
+            .multipart(HttpMethod.PUT, String.format(HR_URL_TEMPLATE, encode(mrIri)))
+            .file(replacementFile)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andReturn();
+    final var hrV2 = objectMapper.readValue(putResult.getResponse().getContentAsString(), Asset.class);
+
+    assertEquals(hrV1.getId(), hrV2.getId(), "PUT must preserve the HR asset IRI");
+
+    deleteAssetQuietly(hrV2.getAssetHash());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+      @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
+  void replaceHumanReadable_noLinkedHr_returnsNotFound() throws Exception {
+    final var mrAsset = uploadMachineReadableAsset();
+    mrIri = mrAsset.getId();
+    mrHash = mrAsset.getAssetHash();
+
+    final var file = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
+    mockMvc.perform(MockMvcRequestBuilders
+            .multipart(HttpMethod.PUT, String.format(HR_URL_TEMPLATE, encode(mrIri)))
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void replaceHumanReadable_unauthenticated_returnsUnauthorized() throws Exception {
+    final var file = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
+    mockMvc.perform(MockMvcRequestBuilders
+            .multipart(HttpMethod.PUT, String.format(HR_URL_TEMPLATE, "urn:uuid:any"))
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+      @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
+  void replaceHumanReadable_wrongRole_returnsForbidden() throws Exception {
+    final var file = new MockMultipartFile("file", "doc.pdf", MediaType.APPLICATION_PDF_VALUE, PDF_CONTENT);
+    mockMvc.perform(MockMvcRequestBuilders
+            .multipart(HttpMethod.PUT, String.format(HR_URL_TEMPLATE, "urn:uuid:any"))
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isForbidden());
   }
 
   // ===== GET /assets/{id}/human-readable =====
