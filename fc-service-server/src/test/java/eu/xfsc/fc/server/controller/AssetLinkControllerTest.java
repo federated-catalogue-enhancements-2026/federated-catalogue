@@ -396,9 +396,11 @@ public class AssetLinkControllerTest {
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
       @StringClaim(name = PARTICIPANT_ID, value = TEST_PARTICIPANT_ID)})))
   void uploadAsset_withHasHumanReadableTriple_stripsTripleAndReturnsWarning() throws Exception {
-    // An external upload that contains a fcmeta:hasHumanReadable
-    // triple must have the triple silently stripped and a user-visible warning returned.
-    // The protected namespace must not be settable by external clients.
+    // Clients must not be able to set triples in the protected fcmeta namespace —
+    // the server strips them and returns a warning.
+    final var protectedFcmetaNamespace = "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
+    final var hasHumanReadablePredicate = protectedFcmetaNamespace + "hasHumanReadable";
+
     final var jsonLd = """
         {
           "@context": ["https://www.w3.org/ns/credentials/v2"],
@@ -414,12 +416,11 @@ public class AssetLinkControllerTest {
               "@id": "http://example.org/test-issuer",
               "@type": "https://w3id.org/gaia-x/2511#ServiceOffering",
               "gx:hasLegallyBindingName": "link inject test",
-              "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#hasHumanReadable":
-                  "http://example.org/some-pdf"
+              "%s": "http://example.org/some-pdf"
             }
           }]
         }
-        """;
+        """.formatted(hasHumanReadablePredicate);
 
     final var result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
             .content(jsonLd)
@@ -435,7 +436,7 @@ public class AssetLinkControllerTest {
     assertFalse(asset.getWarnings().isEmpty(), "Warnings list must not be empty");
     assertTrue(asset.getWarnings().getFirst().contains("triple(s)"),
         "Warning must state how many triples were filtered");
-    assertTrue(asset.getWarnings().getFirst().contains("federated-catalogue/meta#"),
+    assertTrue(asset.getWarnings().getFirst().contains(protectedFcmetaNamespace),
         "Warning must reference the protected namespace URI");
 
     deleteAssetQuietly(asset.getAssetHash());

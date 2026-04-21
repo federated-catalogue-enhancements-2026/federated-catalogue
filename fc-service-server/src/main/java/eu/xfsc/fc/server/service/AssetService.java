@@ -49,7 +49,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -480,10 +479,10 @@ public class AssetService implements AssetsApiDelegate {
    * @throws ClientException if the type is not in {@code federated-catalogue.assets.hr-content-types}
    */
   void validateHumanReadableContentType(String contentType) {
-    if (contentType == null || !assetProperties.getHrContentTypes().contains(contentType)) {
+    if (contentType == null || !assetProperties.getHumanReadableContentTypes().contains(contentType)) {
       throw new ClientException(String.format(
           "Unsupported content type '%s'. Accepted types: %s", contentType,
-          String.join(", ", new TreeSet<>(assetProperties.getHrContentTypes()))));
+          String.join(", ", new TreeSet<>(assetProperties.getHumanReadableContentTypes()))));
     }
   }
 

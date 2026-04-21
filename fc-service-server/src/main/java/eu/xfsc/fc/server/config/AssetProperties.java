@@ -15,7 +15,7 @@ import lombok.Setter;
 @ConfigurationProperties("federated-catalogue.assets")
 public class AssetProperties {
 
-  private Set<String> hrContentTypes = new LinkedHashSet<>(Set.of(
+  private Set<String> humanReadableContentTypes = new LinkedHashSet<>(Set.of(
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/html",
