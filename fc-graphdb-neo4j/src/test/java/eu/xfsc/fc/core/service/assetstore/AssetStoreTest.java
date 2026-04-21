@@ -10,6 +10,7 @@ import java.util.Map;
 
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
+import eu.xfsc.fc.core.pojo.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -36,14 +37,6 @@ import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.GraphQuery;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.Validator;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
@@ -108,12 +101,12 @@ public class AssetStoreTest {
     return assetMeta;
   }
 
-  private static List<CredentialClaim> createClaims(String subject) {
-    final CredentialClaim claim1 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
-    final CredentialClaim claim2 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#name>", "\"EuProGigant Portal\"");
-    final CredentialClaim claim3 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
-    final CredentialClaim claim4 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
-    final CredentialClaim claim5 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "\"contentHash\"");
+  private static List<RdfClaim> createClaims(String subject) {
+    final RdfClaim claim1 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
+    final RdfClaim claim2 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#name>", "\"EuProGigant Portal\"");
+    final RdfClaim claim3 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
+    final RdfClaim claim4 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
+    final RdfClaim claim5 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "\"contentHash\"");
     return List.of(claim1, claim2, claim3, claim4, claim5);
   }
 

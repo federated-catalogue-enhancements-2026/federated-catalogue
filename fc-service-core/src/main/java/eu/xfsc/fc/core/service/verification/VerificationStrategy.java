@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.verification;
 
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 
@@ -48,7 +48,7 @@ public interface VerificationStrategy {
    * @param payload the RDF credential content to extract claims from
    * @return the list of extracted claims
    */
-  List<CredentialClaim> extractClaims(ContentAccessor payload);
+  List<RdfClaim> extractClaims(ContentAccessor payload);
 
   /**
    * Override URI for one of the Trust Framework base classes.

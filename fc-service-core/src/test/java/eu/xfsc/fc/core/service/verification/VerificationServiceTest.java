@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.*;
 
 import eu.xfsc.fc.core.util.TestUtil;
 import org.junit.jupiter.api.*;
@@ -42,14 +42,6 @@ import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.pojo.SchemaValidationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
-import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -372,7 +364,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     assertNotNull(result);
     assertEquals(12, result.getClaims().size());
-    List<CredentialClaim> expectedClaims = new ArrayList<>();
+    List<RdfClaim> expectedClaims = new ArrayList<>();
     expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
     expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>"));
@@ -386,7 +378,7 @@ public class VerificationServiceTest {
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>"));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\""));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
-    for (CredentialClaim claim: expectedClaims) {
+    for (RdfClaim claim: expectedClaims) {
     	assertTrue(result.getClaims().contains(claim));
     }
   }
@@ -404,8 +396,8 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
-    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    List<RdfClaim> actualClaims = result.getClaims();
+    Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<https://w3id.org/gaia-x/2511#name>", "\"deltaDAO AG\""));
     expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<https://w3id.org/gaia-x/2511#legalName>", "\"deltaDAO AG\""));
@@ -424,9 +416,9 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getClaims();
 
-    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<https://w3id.org/gaia-x/2511#legalName>", "\"deltaDAO AG\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<https://w3id.org/gaia-x/2511#registrationNumber>", "\"DEK1101R.HRB170364\""));
@@ -456,8 +448,8 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoVCs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
-    List<CredentialClaim> expectedClaims = new ArrayList<>();
+    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> expectedClaims = new ArrayList<>();
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#locality>", "\"Town Name\""));
@@ -481,8 +473,8 @@ public class VerificationServiceTest {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/specialCharacters.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
-    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    List<RdfClaim> actualClaims = result.getClaims();
+    Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#Resource>"));
     expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://purl.org/dc/terms/description>", "\"\\n \\\\ Test with </\\\"s>pecial\\\" \\\\ / characters \\b </\\f \\n \\r \\t 🔥\""));
     assertEquals(expectedClaims.size(), actualClaims.size());
@@ -525,9 +517,9 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoCSs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getClaims();
 
-    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<https://w3id.org/gaia-x/2511#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<https://w3id.org/gaia-x/2511#Provider1>", "<https://w3id.org/gaia-x/2511#headquarterAddress>", "_:b0"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
@@ -621,9 +613,9 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<CredentialClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getClaims();
 
-    for (CredentialClaim claim : actualClaims) {
+    for (RdfClaim claim : actualClaims) {
       assertFalse(claim.getPredicateString().contains(protectedNsProps.getNamespace()),
           "Protected namespace predicate should have been filtered: " + claim);
       assertFalse(claim.getSubjectString().contains(protectedNsProps.getNamespace()),
@@ -634,7 +626,7 @@ public class VerificationServiceTest {
       }
     }
 
-    Set<CredentialClaim> expectedClaims = new HashSet<>();
+    Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<https://w3id.org/gaia-x/2511#legalName>", "\"deltaDAO AG\""));
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<https://w3id.org/gaia-x/2511#registrationNumber>", "\"DEK1101R.HRB170364\""));
@@ -663,7 +655,7 @@ public class VerificationServiceTest {
   void extractClaims_allFcmetaClaimsFiltered_returnsEmptyList() {
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-only-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
-    List<CredentialClaim> claims = result.getClaims();
+    List<RdfClaim> claims = result.getClaims();
     assertNotNull(claims, "Result should not be null even when all claims are filtered");
     assertTrue(claims.isEmpty(), "All fcmeta: claims should have been filtered, leaving an empty list");
     assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");
@@ -803,15 +795,15 @@ public class VerificationServiceTest {
   void extractClaims_vc2StandaloneVC_returnsOnlyCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
 
-    List<CredentialClaim> claims = verificationService.extractClaims(content);
+    List<RdfClaim> claims = verificationService.extractClaims(content);
 
     assertNotNull(claims);
     assertFalse(claims.isEmpty(), "VC 2.0 standalone VC should produce non-empty claims");
-    CredentialClaim expectedType = new CredentialClaim(
+    RdfClaim expectedType = new CredentialClaim(
         "<did:web:participant.example.com>",
         "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
         "<https://w3id.org/gaia-x/2511#LegalPerson>");
-    CredentialClaim expectedName = new CredentialClaim(
+    RdfClaim expectedName = new CredentialClaim(
         "<did:web:participant.example.com>",
         "<https://w3id.org/gaia-x/2511#legalName>",
         "\"Example Corp\"");
@@ -826,11 +818,11 @@ public class VerificationServiceTest {
   void extractClaims_vc2VpWithSingleVC_returnsOnlyCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVP2.jsonld");
 
-    List<CredentialClaim> claims = verificationService.extractClaims(content);
+    List<RdfClaim> claims = verificationService.extractClaims(content);
 
     assertNotNull(claims);
     assertFalse(claims.isEmpty(), "VC 2.0 VP should produce non-empty claims");
-    CredentialClaim expectedType = new CredentialClaim(
+    RdfClaim expectedType = new CredentialClaim(
         "<did:web:participant.example.com>",
         "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
         "<https://w3id.org/gaia-x/2511#Participant>");
@@ -844,7 +836,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2VpWithMultipleVCs_returnsAllCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVP2_multi.jsonld");
 
-    List<CredentialClaim> claims = verificationService.extractClaims(content);
+    List<RdfClaim> claims = verificationService.extractClaims(content);
 
     assertNotNull(claims);
     Set<String> subjects = new HashSet<>();
@@ -859,7 +851,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2MultipleCredentialSubjects_returnsAllSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVC2_multi_cs.jsonld");
 
-    List<CredentialClaim> claims = verificationService.extractClaims(content);
+    List<RdfClaim> claims = verificationService.extractClaims(content);
 
     assertNotNull(claims);
     Set<String> subjects = new HashSet<>();

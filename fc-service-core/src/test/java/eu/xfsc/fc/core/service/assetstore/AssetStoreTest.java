@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.assetstore;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
+import eu.xfsc.fc.core.pojo.*;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.DidResolverConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderConfig;
@@ -12,16 +13,6 @@ import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
-import eu.xfsc.fc.core.pojo.AssetFilter;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.GraphQuery;
-import eu.xfsc.fc.core.pojo.PaginatedResults;
-import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
@@ -45,7 +36,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -103,12 +93,12 @@ public class AssetStoreTest {
     return assetMeta;
   }
 
-  private static List<CredentialClaim> createClaims(String subject) {
-    final CredentialClaim claim1 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
-    final CredentialClaim claim2 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#name>", "\"EuProGigant Portal\"");
-    final CredentialClaim claim3 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
-    final CredentialClaim claim4 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
-    final CredentialClaim claim5 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "\"contentHash\"");
+  private static List<RdfClaim> createClaims(String subject) {
+    final RdfClaim claim1 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#providedBy>", "<https://delta-dao.com/.well-known/participant.json>");
+    final RdfClaim claim2 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#name>", "\"EuProGigant Portal\"");
+    final RdfClaim claim3 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#description>", "\"EuProGigant Minimal Viable Gaia-X Portal\"");
+    final RdfClaim claim4 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "<https://euprogigant.com/en/terms/>");
+    final RdfClaim claim5 = new CredentialClaim(subject, "<https://w3id.org/gaia-x/2511#TermsAndConditions>", "\"contentHash\"");
     return List.of(claim1, claim2, claim3, claim4, claim5);
   }
 

@@ -11,7 +11,7 @@ import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
 import jakarta.annotation.PostConstruct;
 
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.service.filestore.FileStore;
@@ -71,7 +71,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
             if (schema == null) {
                 schema = schemaStore.getCompositeSchema(SchemaStore.SchemaType.SHAPE);
             }
-            List<CredentialClaim> claims = extractClaims(payload);
+            List<RdfClaim> claims = extractClaims(payload);
             result = validateClaimsAgainstSchema(claims, schema);
         } catch (Exception exc) {
             log.info("validateCredentialAgainstSchema.error: {}", exc.getMessage());
@@ -83,7 +83,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
     /** {@inheritDoc} */
     @Override
-    public SchemaValidationResult validateClaimsAgainstCompositeSchema(List<CredentialClaim> claims) {
+    public SchemaValidationResult validateClaimsAgainstCompositeSchema(List<RdfClaim> claims) {
         log.debug("validateClaimsAgainstCompositeSchema.enter;");
         SchemaValidationResult result = null;
         try {
@@ -99,7 +99,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
     /** {@inheritDoc} */
     @Override
-    public SchemaValidationResult validateClaimsAgainstSchema(List<CredentialClaim> claims, ContentAccessor schema) {
+    public SchemaValidationResult validateClaimsAgainstSchema(List<RdfClaim> claims, ContentAccessor schema) {
         String report = ClaimValidator.validateClaimsBySchema(claims, schema, streamManager);
         return new SchemaValidationResult(report == null, report);
     }
@@ -131,8 +131,8 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
      * @param payload the credential to extract claims from
      * @return extracted claims, or {@code null} if extraction fails
      */
-    private List<CredentialClaim> extractClaims(ContentAccessor payload) {
-        List<CredentialClaim> claims = null;
+    private List<RdfClaim> extractClaims(ContentAccessor payload) {
+        List<RdfClaim> claims = null;
         for (ClaimExtractor extractor : EXTRACTORS) {
             try {
                 claims = extractor.extractClaims(payload);

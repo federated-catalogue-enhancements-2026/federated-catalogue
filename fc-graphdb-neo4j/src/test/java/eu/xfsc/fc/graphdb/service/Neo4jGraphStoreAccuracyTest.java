@@ -6,6 +6,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.pojo.*;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
@@ -13,11 +14,6 @@ import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.service.assetstore.AssetStoreImpl;
 import eu.xfsc.fc.core.service.assetstore.IriGenerator;
 import eu.xfsc.fc.core.service.assetstore.IriValidator;
@@ -178,7 +174,7 @@ public class Neo4jGraphStoreAccuracyTest {
   @Test
   void testQueryForGroupBYAndLocation() {
     String credentialSubject1 = "http://example.org/test-issuer";
-    List<CredentialClaim> claimList = Arrays.asList(
+    List<RdfClaim> claimList = Arrays.asList(
             new CredentialClaim(
                     "<http://example.org/test-issuer>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -222,7 +218,7 @@ public class Neo4jGraphStoreAccuracyTest {
     );
 
     String credentialSubject2 = "http://example.org/test-issuer2";
-    List<CredentialClaim> claimList2 = Arrays.asList(
+    List<RdfClaim> claimList2 = Arrays.asList(
             new CredentialClaim(
                     "<http://example.org/test-issuer2>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -266,7 +262,7 @@ public class Neo4jGraphStoreAccuracyTest {
     );
 
     String credentialSubject3 = "http://example.org/test-issuer3";
-    List<CredentialClaim> claimList3 = Arrays.asList(
+    List<RdfClaim> claimList3 = Arrays.asList(
             new CredentialClaim(
                     "<http://example.org/test-issuer3>",
                     "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -343,15 +339,15 @@ public class Neo4jGraphStoreAccuracyTest {
 
     //TODO:: adding manually claims, after final implementation we will remove it and change the query according to credential file content
 
-    CredentialClaim claim = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal.json>",
+    RdfClaim claim = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<https://w3id.org/gaia-x/2511#ServiceOffering>");
 
-    CredentialClaim claimName = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal.json>",
+    RdfClaim claimName = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal.json>",
             "<https://w3id.org/gaia-x/2511#name>",
             "\"Portal\"");
 
-    List<CredentialClaim> claimFile = List.of(claim, claimName);
+    List<RdfClaim> claimFile = List.of(claim, claimName);
 
     verificationResult.setClaims(claimFile);
     verificationResult.setId(claimFile.getFirst().getSubjectValue());
@@ -366,15 +362,15 @@ public class Neo4jGraphStoreAccuracyTest {
     CredentialVerificationResultOffering verificationResult2 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
-    CredentialClaim claim1 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal2.json>",
+    RdfClaim claim1 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal2.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<https://w3id.org/gaia-x/2511#ServiceOffering>");
 
-    CredentialClaim claimName1 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal2.json>",
+    RdfClaim claimName1 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal2.json>",
             "<https://w3id.org/gaia-x/2511#name>",
             "\"Portal2\"");
 
-    List<CredentialClaim> claimFile1 = List.of(claim1, claimName1);
+    List<RdfClaim> claimFile1 = List.of(claim1, claimName1);
 
     verificationResult2.setClaims(claimFile1);
     verificationResult2.setId(claimFile1.getFirst().getSubjectValue());
@@ -390,15 +386,15 @@ public class Neo4jGraphStoreAccuracyTest {
     CredentialVerificationResultOffering verificationResult3 =
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessorDirect3, true, false, false, false);
 
-    CredentialClaim claim3 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal3.json>",
+    RdfClaim claim3 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal3.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<https://w3id.org/gaia-x/2511#ServiceOffering>");
 
-    CredentialClaim claimName3 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal3.json>",
+    RdfClaim claimName3 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal3.json>",
             "<https://w3id.org/gaia-x/2511#name>",
             " \"Portal3\"");
 
-    List<CredentialClaim> claimFile3 = List.of(claim3, claimName3);
+    List<RdfClaim> claimFile3 = List.of(claim3, claimName3);
 
     verificationResult3.setClaims(claimFile3);
     verificationResult3.setId(claimFile3.getFirst().getSubjectValue());
@@ -416,16 +412,16 @@ public class Neo4jGraphStoreAccuracyTest {
             (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
 
-    CredentialClaim claim4 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal4.json>",
+    RdfClaim claim4 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal4.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
             "<https://w3id.org/gaia-x/2511#ServiceOffering>");
 
-    CredentialClaim claimName4 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal4.json>",
+    RdfClaim claimName4 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal4.json>",
             "<https://w3id.org/gaia-x/2511#name>",
             "\"Portal2\"");
 
 
-    List<CredentialClaim> claimFile4 = List.of(claim4, claimName4);
+    List<RdfClaim> claimFile4 = List.of(claim4, claimName4);
 
     verificationResult4.setClaims(claimFile4);
     verificationResult4.setId(claimFile4.getFirst().getSubjectValue());

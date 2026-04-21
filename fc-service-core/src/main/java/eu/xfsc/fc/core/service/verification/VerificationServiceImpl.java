@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -130,7 +130,7 @@ public class VerificationServiceImpl implements VerificationService {
    * @return a list of claims.
    */
   @Override
-  public List<CredentialClaim> extractClaims(ContentAccessor payload) {
+  public List<RdfClaim> extractClaims(ContentAccessor payload) {
     return resolveStrategy(payload).extractClaims(payload);
   }
 

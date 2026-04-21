@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.verification;
 
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -75,7 +75,7 @@ public interface VerificationService {
    * @param payload The RDF payload to extract claims from.
    * @return The list of extracted claims.
    */
-  List<CredentialClaim> extractClaims(ContentAccessor payload);
+  List<RdfClaim> extractClaims(ContentAccessor payload);
 
   /**
    * The function validates the credential against the given schema.

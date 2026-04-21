@@ -28,7 +28,7 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
@@ -249,10 +249,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return result;
     }
 
-    public List<CredentialClaim> extractClaims(ContentAccessor payload) {
+    public List<RdfClaim> extractClaims(ContentAccessor payload) {
         // Make sure our interceptors are in place.
         initLoaders();
-        List<CredentialClaim> claims = null;
+        List<RdfClaim> claims = null;
         for (ClaimExtractor extra : extractors) {
             try {
                 claims = extra.extractClaims(payload);
@@ -273,9 +273,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     /**
      * Phase 1: Detect credential format, verify JWT signature, and unwrap to JSON-LD.
      * After this method, the payload is always JSON-LD.
-     *
-     * <p>TODO: signature verification could move to a dedicated component when this class is split.
-     */
+     **/
     private VerificationContext detectAndUnwrap(ContentAccessor payload, boolean verifySigs) {
         String body = payload.getContentAsString().strip();
         payload = new ContentAccessorDirect(body, payload.getContentType());
@@ -414,7 +412,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         // EVC wrappers with data: URIs. This is intentionally NOT in detectAndUnwrap()
         // because signature verification needs the original EVC entries intact.
         ContentAccessor claimPayload = resolveInnerEnvelopedCredentials(payload);
-        List<CredentialClaim> claims = extractClaims(claimPayload);
+        List<RdfClaim> claims = extractClaims(claimPayload);
         FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
         claims = filtered.claims();
         log.debug("verifyCredential; claims extracted: {}, time taken: {}",
@@ -426,11 +424,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return filtered;
     }
 
-    private void validateSubjectUniqueness(List<CredentialClaim> claims) {
+    private void validateSubjectUniqueness(List<RdfClaim> claims) {
         Set<String> subjects = new HashSet<>();
         Set<String> objects = new HashSet<>();
         if (claims != null && !claims.isEmpty()) {
-            for (CredentialClaim claim : claims) {
+            for (RdfClaim claim : claims) {
                 subjects.add(claim.getSubjectString());
                 objects.add(claim.getObjectString());
             }
@@ -450,7 +448,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
     }
 
-    private void validateSchema(List<CredentialClaim> claims) {
+    private void validateSchema(List<RdfClaim> claims) {
         eu.xfsc.fc.core.pojo.SchemaValidationResult result =
             schemaValidationService.validateClaimsAgainstCompositeSchema(claims);
         if (result == null || !result.isConforming()) {
@@ -499,7 +497,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * Phase 5: Build the typed result object based on the resolved base class.
      */
     private CredentialVerificationResult assembleResult(TrustFrameworkBaseClass baseClass,
-        TypedCredentials typedCredentials, List<CredentialClaim> claims, List<Validator> validators) {
+                                                        TypedCredentials typedCredentials, List<RdfClaim> claims, List<Validator> validators) {
         String id = typedCredentials.getID();
         String issuer = typedCredentials.getIssuer();
         Instant issuedDate = typedCredentials.getIssuanceDate();
