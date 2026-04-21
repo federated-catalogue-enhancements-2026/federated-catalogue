@@ -22,6 +22,7 @@ import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.assetstore.LinkedAssetRef;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
+import eu.xfsc.fc.server.config.AssetProperties;
 import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
 import eu.xfsc.fc.server.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,22 +66,12 @@ public class AssetService implements AssetsApiDelegate {
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
 
-  /** MIME types accepted as human-readable representations. */
-  public static final Set<String> ACCEPTED_HR_CONTENT_TYPES = Set.of(
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/html",
-      "text/plain"
-  );
-
-  private static final String ACCEPTED_TYPES_MESSAGE =
-      String.join(", ", new TreeSet<>(ACCEPTED_HR_CONTENT_TYPES));
-
   private final VerificationService verificationService;
   private final AssetStore assetStorePublisher;
   private final HttpServletRequest httpServletRequest;
   private final AssetUploadService assetUploadService;
   @Qualifier("assetFileStore") private final FileStore assetFileStore;
+  private final AssetProperties assetProperties;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -486,12 +477,13 @@ public class AssetService implements AssetsApiDelegate {
    * Validate that the given MIME type is an accepted human-readable content type.
    *
    * @param contentType the MIME type to validate
-   * @throws ClientException if the type is not in {@link #ACCEPTED_HR_CONTENT_TYPES}
+   * @throws ClientException if the type is not in {@code federated-catalogue.assets.hr-content-types}
    */
   void validateHumanReadableContentType(String contentType) {
-    if (contentType == null || !ACCEPTED_HR_CONTENT_TYPES.contains(contentType)) {
+    if (contentType == null || !assetProperties.getHrContentTypes().contains(contentType)) {
       throw new ClientException(String.format(
-          "Unsupported content type '%s'. Accepted types: %s", contentType, ACCEPTED_TYPES_MESSAGE));
+          "Unsupported content type '%s'. Accepted types: %s", contentType,
+          String.join(", ", new TreeSet<>(assetProperties.getHrContentTypes()))));
     }
   }
 
