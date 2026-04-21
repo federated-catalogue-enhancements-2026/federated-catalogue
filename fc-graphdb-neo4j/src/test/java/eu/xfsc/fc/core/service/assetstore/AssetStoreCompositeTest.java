@@ -40,9 +40,12 @@ import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
+import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
@@ -272,5 +275,52 @@ public class AssetStoreCompositeTest {
                     "Protected namespace relationship should not exist after rebuild: " + relType);
         }
         assetStorePublisher.deleteAsset(hash);
+    }
+
+    @Test
+    void test04RebuildGraphDb_nonCredentialNTriples_restoresClaimsAfterRebuild() {
+
+        // Arrange — minimal N-Triples document, deliberately not a VC/VP
+        final String subjectUri = "http://example.org/non-credential-test/subject1";
+        final String nTriples = "<" + subjectUri + "> "
+                + "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
+                + "<http://example.org/non-credential-test/Resource> .";
+        ContentAccessorDirect content = new ContentAccessorDirect(nTriples, VerificationConstants.MEDIA_TYPE_NTRIPLES);
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+        Assertions.assertInstanceOf(NonCredentialVerificationResult.class, result,
+                "N-Triples content without VC/VP structure must produce a NonCredentialVerificationResult");
+        Assertions.assertFalse(result.getClaims().isEmpty(),
+                "N-Triples content must yield at least one extracted claim");
+
+        AssetMetadata assetMeta = new AssetMetadata(subjectUri, null, null, content);
+        assetMeta.setContentType(VerificationConstants.MEDIA_TYPE_NTRIPLES);
+        assetStorePublisher.storeCredential(assetMeta, result);
+
+        // Verify initial graph storage
+        List<Map<String, Object>> nodes = graphStore.queryData(
+                new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", subjectUri))).getResults();
+        Assertions.assertFalse(nodes.isEmpty(), "Graph must contain subject node after initial store");
+
+        // Delete claims — simulates the scenario that triggers a graph rebuild
+        graphStore.deleteClaims(assetMeta.getId());
+
+        nodes = graphStore.queryData(
+                new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", subjectUri))).getResults();
+        Assertions.assertTrue(nodes.isEmpty(), "Graph must be empty after deleting claims");
+
+        // Rebuild
+        GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore,
+                claimExtractionService, protectedNamespaceFilter, assetRepository);
+        reBuilder.rebuildGraphDb(1, 0, 1, 10);
+
+        // Assert — FAILS with current code: addAssetToGraph() calls extractCredentialClaims()
+        // which returns empty for N-Triples content, leaving the graph empty after rebuild
+        nodes = graphStore.queryData(
+                new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", subjectUri))).getResults();
+        Assertions.assertFalse(nodes.isEmpty(),
+                "Graph must contain non-credential triples after rebuild");
+
+        assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
     }
 }
