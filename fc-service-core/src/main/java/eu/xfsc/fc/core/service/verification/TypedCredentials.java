@@ -143,11 +143,11 @@ record TypedCredentials(VerifiablePresentation presentation,
 
     private String getID(Map<String, Object> map) {
         Object id = map.get("id");
-        if (id != null) {
+        if (id != null && !id.toString().isBlank()) {
             return id.toString();
         }
         id = map.get("@id");
-        if (id != null) {
+        if (id != null && !id.toString().isBlank()) {
             return id.toString();
         }
         return null;
