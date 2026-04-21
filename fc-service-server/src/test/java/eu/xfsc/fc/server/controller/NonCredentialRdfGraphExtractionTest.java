@@ -56,101 +56,101 @@ import org.springframework.web.context.WebApplicationContext;
 @TestPropertySource(properties = {"graphstore.impl=fuseki"})
 public class NonCredentialRdfGraphExtractionTest {
 
-    private static final String SPARQL_CONTENT_TYPE = "application/sparql-query";
-    private static final String PROP_CREDENTIAL_SUBJECT = "https://www.w3.org/2018/credentials#credentialSubject";
-    private static final String TEST_ISSUER = "http://example.org/test-issuer";
-    private static final String TEST_ASSET_SUBJECT = "http://example.org/item1";
-    private static final String TEST_ASSET_PREDICATE = "http://example.org/name";
-    private static final String TEST_ASSET_OBJECT = "Cloud Storage Service";
+  private static final String SPARQL_CONTENT_TYPE = "application/sparql-query";
+  private static final String PROP_CREDENTIAL_SUBJECT = "https://www.w3.org/2018/credentials#credentialSubject";
+  private static final String TEST_ISSUER = "http://example.org/test-issuer";
+  private static final String TEST_ASSET_SUBJECT = "http://example.org/item1";
+  private static final String TEST_ASSET_PREDICATE = "http://example.org/name";
+  private static final String TEST_ASSET_OBJECT = "Cloud Storage Service";
 
-    // Single-triple JSON-LD document — no VerifiableCredential/VerifiablePresentation wrapper.
-    // FormatDetector returns UNKNOWN → non-credential extraction path is taken → JenaAllTriplesExtractor is used.
-    private static final String SINGLE_TRIPLE_JSONLD = """
-            {
-              "@context": {"ex": "http://example.org/"},
-              "@id": "ex:item1",
-              "ex:name": "%s"
-            }
-            """.formatted(TEST_ASSET_OBJECT);
+  // Single-triple JSON-LD document — no VerifiableCredential/VerifiablePresentation wrapper.
+  // FormatDetector returns UNKNOWN → non-credential extraction path is taken → JenaAllTriplesExtractor is used.
+  private static final String SINGLE_TRIPLE_JSONLD = """
+      {
+          "@context": {"ex": "http://example.org/"},
+          "@id": "ex:item1",
+          "ex:name": "%s"
+        }
+      """.formatted(TEST_ASSET_OBJECT);
 
-    @Autowired
-    private WebApplicationContext context;
+  @Autowired
+  private WebApplicationContext context;
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired
+  private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+  @Autowired
+  private ObjectMapper objectMapper;
 
-    @Autowired
-    private AssetStore assetStore;
+  @Autowired
+  private AssetStore assetStore;
 
-    @BeforeAll
-    void setup() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    }
+  @BeforeAll
+  void setup() {
+    mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+  }
 
-    /**
-     * SRS verification: upload a JSON-LD asset with one triple → triple is queryable via SPARQL.
-     */
-    @Test
-    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, PREFIX + QUERY_EXECUTE},
-            claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-                    @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    void uploadNonCredentialJsonLd_singleTriple_isExtractedToGraph() throws Exception {
-        byte[] content = SINGLE_TRIPLE_JSONLD.getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "item.jsonld",
-                "application/ld+json", content);
+  /**
+   * SRS verification: upload a JSON-LD asset with one triple → triple is queryable via SPARQL.
+   */
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, PREFIX + QUERY_EXECUTE},
+      claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+          @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void uploadNonCredentialJsonLd_singleTriple_isExtractedToGraph() throws Exception {
+    byte[] content = SINGLE_TRIPLE_JSONLD.getBytes(StandardCharsets.UTF_8);
+    MockMultipartFile file = new MockMultipartFile("file", "item.jsonld",
+        "application/ld+json", content);
 
-        // Arrange: verify graph is empty before upload
-        String queryBefore = sparqlForAsset(TEST_ASSET_SUBJECT);
-        String responseBefore = postQuery(queryBefore);
-        Results resultsBefore = objectMapper.readValue(responseBefore, Results.class);
-        assertEquals(0, resultsBefore.getItems().size(), "Graph must be empty before upload");
+    // Arrange: verify graph is empty before upload
+    String queryBefore = sparqlForAsset(TEST_ASSET_SUBJECT);
+    String responseBefore = postQuery(queryBefore);
+    Results resultsBefore = objectMapper.readValue(responseBefore, Results.class);
+    assertEquals(0, resultsBefore.getItems().size(), "Graph must be empty before upload");
 
-        // Act: upload the non-credential JSON-LD asset
-        MvcResult uploadResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                        .file(file)
-                        .with(csrf())
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated())
-                .andReturn();
+    // Act: upload the non-credential JSON-LD asset
+    MvcResult uploadResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andReturn();
 
-        Asset asset = objectMapper.readValue(uploadResult.getResponse().getContentAsString(), Asset.class);
-        assertNotNull(asset.getId(), "Asset ID must be assigned");
-        assertNotNull(asset.getAssetHash(), "Asset hash must be set");
+    Asset asset = objectMapper.readValue(uploadResult.getResponse().getContentAsString(), Asset.class);
+    assertNotNull(asset.getId(), "Asset ID must be assigned");
+    assertNotNull(asset.getAssetHash(), "Asset hash must be set");
 
-        // Assert: the extracted triple is queryable via SPARQL
-        String queryAfter = sparqlForAsset(asset.getId());
-        String responseAfter = postQuery(queryAfter);
-        Results resultsAfter = objectMapper.readValue(responseAfter, Results.class);
+    // Assert: the extracted triple is queryable via SPARQL
+    String queryAfter = sparqlForAsset(asset.getId());
+    String responseAfter = postQuery(queryAfter);
+    Results resultsAfter = objectMapper.readValue(responseAfter, Results.class);
 
-        assertFalse(resultsAfter.getItems().isEmpty(), "Graph must contain at least one extracted triple");
+    assertFalse(resultsAfter.getItems().isEmpty(), "Graph must contain at least one extracted triple");
 
-        Map<String, Object> triple = resultsAfter.getItems().get(0);
-        assertEquals(TEST_ASSET_SUBJECT, triple.get("s"),
-                "Subject must match the @id from the uploaded JSON-LD");
-        assertEquals(TEST_ASSET_PREDICATE, triple.get("p"),
-                "Predicate must match ex:name");
-        assertEquals(TEST_ASSET_OBJECT, triple.get("o"),
-                "Object must match the name literal");
+    Map<String, Object> triple = resultsAfter.getItems().get(0);
+    assertEquals(TEST_ASSET_SUBJECT, triple.get("s"),
+        "Subject must match the @id from the uploaded JSON-LD");
+    assertEquals(TEST_ASSET_PREDICATE, triple.get("p"),
+        "Predicate must match ex:name");
+    assertEquals(TEST_ASSET_OBJECT, triple.get("o"),
+        "Object must match the name literal");
 
-        assetStore.deleteAsset(asset.getAssetHash());
-    }
+    assetStore.deleteAsset(asset.getAssetHash());
+  }
 
-    private String sparqlForAsset(String assetIri) {
-        return "SELECT ?s ?p ?o WHERE { <<(?s ?p ?o)>> <" + PROP_CREDENTIAL_SUBJECT + "> <" + assetIri + "> }";
-    }
+  private String sparqlForAsset(String assetIri) {
+    return "SELECT ?s ?p ?o WHERE { <<(?s ?p ?o)>> <" + PROP_CREDENTIAL_SUBJECT + "> <" + assetIri + "> }";
+  }
 
-    private String postQuery(String sparqlQuery) throws Exception {
-        return mockMvc.perform(MockMvcRequestBuilders.post("/query")
-                        .content(sparqlQuery)
-                        .contentType(SPARQL_CONTENT_TYPE)
-                        .header("Accept", "application/json")
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-    }
+  private String postQuery(String sparqlQuery) throws Exception {
+    return mockMvc.perform(MockMvcRequestBuilders.post("/query")
+            .content(sparqlQuery)
+            .contentType(SPARQL_CONTENT_TYPE)
+            .header("Accept", "application/json")
+            .with(csrf()))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+  }
 }

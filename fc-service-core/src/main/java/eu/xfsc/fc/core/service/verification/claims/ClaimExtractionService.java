@@ -21,43 +21,43 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ClaimExtractionService {
 
-    private static final ClaimExtractor[] CREDENTIAL_EXTRACTORS = {
-            new CredentialSubjectClaimExtractor(), new DanubeTechClaimExtractor()
-    };
+  private static final ClaimExtractor[] CREDENTIAL_EXTRACTORS = {
+      new CredentialSubjectClaimExtractor(), new DanubeTechClaimExtractor()
+  };
 
-    private final JenaAllTriplesExtractor jenaExtractor;
+  private final JenaAllTriplesExtractor jenaExtractor;
 
-    /**
-     * Extracts claims from W3C Verifiable Credential payloads (JSON-LD).
-     * Tries each credential-aware extractor in order until one succeeds.
-     *
-     * @param payload the credential content to extract claims from
-     * @return extracted claims, or an empty list if all extractors fail
-     */
-    public List<RdfClaim> extractCredentialClaims(ContentAccessor payload) {
-        List<RdfClaim> claims = Collections.emptyList();
-        for (ClaimExtractor extractor : CREDENTIAL_EXTRACTORS) {
-            try {
-                List<RdfClaim> result = extractor.extractClaims(payload);
-                if (result != null && !result.isEmpty()) {
-                    claims = result;
-                    break;
-                }
-            } catch (Exception ex) {
-                log.error("extractCredentialClaims.error using {}", extractor.getClass().getName(), ex);
-            }
+  /**
+   * Extracts claims from W3C Verifiable Credential payloads (JSON-LD).
+   * Tries each credential-aware extractor in order until one succeeds.
+   *
+   * @param payload the credential content to extract claims from
+   * @return extracted claims, or an empty list if all extractors fail
+   */
+  public List<RdfClaim> extractCredentialClaims(ContentAccessor payload) {
+    List<RdfClaim> claims = Collections.emptyList();
+    for (ClaimExtractor extractor : CREDENTIAL_EXTRACTORS) {
+      try {
+        List<RdfClaim> result = extractor.extractClaims(payload);
+        if (result != null && !result.isEmpty()) {
+          claims = result;
+          break;
         }
-        return claims;
+      } catch (Exception ex) {
+        log.error("extractCredentialClaims.error using {}", extractor.getClass().getName(), ex);
+      }
     }
+    return claims;
+  }
 
-    /**
-     * Extracts all RDF triples from non-credential RDF content (JSON-LD, Turtle, N-Triples, RDF/XML).
-     *
-     * @param payload the RDF content to extract triples from
-     * @return extracted claims
-     * @throws Exception if parsing fails for all supported formats
-     */
-    public List<RdfClaim> extractAllTriples(ContentAccessor payload) throws Exception {
-        return jenaExtractor.extractClaims(payload);
-    }
+  /**
+   * Extracts all RDF triples from non-credential RDF content (JSON-LD, Turtle, N-Triples, RDF/XML).
+   *
+   * @param payload the RDF content to extract triples from
+   * @return extracted claims
+   * @throws Exception if parsing fails for all supported formats
+   */
+  public List<RdfClaim> extractAllTriples(ContentAccessor payload) throws Exception {
+    return jenaExtractor.extractClaims(payload);
+  }
 }
