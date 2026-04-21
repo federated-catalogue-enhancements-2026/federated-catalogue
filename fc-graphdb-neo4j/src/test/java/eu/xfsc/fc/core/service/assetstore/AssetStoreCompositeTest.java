@@ -59,7 +59,7 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
-import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.GraphRebuilder;
@@ -109,7 +109,7 @@ import lombok.extern.slf4j.Slf4j;
         SecurityAuditorAware.class,
         ValidatorCacheJpaDao.class,
         Vc2Processor.class,
-        VerificationServiceImpl.class
+        VerificationService.class
 })
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
@@ -125,7 +125,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Autowired
-    private VerificationServiceImpl verificationService;
+    private VerificationService verificationService;
 
     @Autowired
     private ClaimExtractionService claimExtractionService;
@@ -169,7 +169,6 @@ public class AssetStoreCompositeTest {
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
         // Only verify semantics, not schema or signatures
-        // Only verify semantics, not schema or signatures
         CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
         AssetMetadata assetMeta = new AssetMetadata(content, result);
         assetStorePublisher.storeCredential(assetMeta, result);
@@ -202,7 +201,6 @@ public class AssetStoreCompositeTest {
 
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
-        // Only verify semantics, not schema or signatures
         // Only verify semantics, not schema or signatures
         CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
         AssetMetadata assetMeta = new AssetMetadata(content, result);
