@@ -59,7 +59,7 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
-import eu.xfsc.fc.core.service.verification.VerificationService;
+import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.GraphRebuilder;
@@ -109,7 +109,7 @@ import lombok.extern.slf4j.Slf4j;
         SecurityAuditorAware.class,
         ValidatorCacheJpaDao.class,
         Vc2Processor.class,
-        VerificationService.class
+        VerificationServiceImpl.class
 })
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
@@ -125,7 +125,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Autowired
-    private VerificationService verificationService;
+    private VerificationServiceImpl verificationService;
 
     @Autowired
     private ClaimExtractionService claimExtractionService;
