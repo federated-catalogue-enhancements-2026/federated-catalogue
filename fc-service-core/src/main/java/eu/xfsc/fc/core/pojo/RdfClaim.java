@@ -44,7 +44,7 @@ public class RdfClaim {
   }
 
   public String getSubjectValue() {
-    return triple == null ? subject.substring(1, subject.length() - 1) : nodeValue(triple.getSubject());
+      return triple == null ? extractValue(subject) : nodeValue(triple.getSubject());
   }
 
   public RDFNode getPredicate() {
@@ -56,7 +56,7 @@ public class RdfClaim {
   }
 
   public String getPredicateValue() {
-    return triple == null ? predicate.substring(1, predicate.length() - 1) : nodeValue(triple.getPredicate());
+      return triple == null ? extractValue(predicate) : nodeValue(triple.getPredicate());
   }
 
   public RDFNode getObject() {
@@ -68,7 +68,7 @@ public class RdfClaim {
   }
 
   public String getObjectValue() {
-    return triple == null ? object.substring(1, object.length() - 1) : nodeValue(triple.getObject());
+      return triple == null ? extractValue(object) : nodeValue(triple.getObject());
   }
 
   public String asTriple() {
@@ -122,7 +122,26 @@ public class RdfClaim {
     }
   }
 
-  private String nodeValue(RDFNode node) {
+    private static String extractValue(String encoded) {
+        if (isIri(encoded)) {
+            return encoded.substring(1, encoded.length() - 1);
+        }
+        if (isLiteral(encoded)) {
+            return encoded.substring(1, encoded.length() - 1);
+        }
+        // is blank node: raw label string, return as is
+        return encoded;
+    }
+
+    private static boolean isLiteral(String encoded) {
+        return encoded.startsWith("\"") && encoded.endsWith("\"");
+    }
+
+    private static boolean isIri(String encoded) {
+        return encoded.startsWith("<") && encoded.endsWith(">");
+    }
+
+    private String nodeValue(RDFNode node) {
     if (node.isAnon()) {
       return node.asResource().getId().getLabelString();
     }
