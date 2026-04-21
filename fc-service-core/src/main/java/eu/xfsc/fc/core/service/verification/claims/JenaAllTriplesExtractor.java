@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.RdfClaim;
+import eu.xfsc.fc.core.service.verification.VerificationConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +67,7 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
         for (Lang lang : toTry) {
             try {
                 Model model = ModelFactory.createDefaultModel();
-                RDFParser.fromString(body).lang(lang).parse(model);
+                RDFParser.fromString(body, lang).parse(model);
                 return model;
             } catch (RiotException ex) {
                 log.debug("parseWithFallback; lang {} failed: {}", lang, ex.getMessage());
@@ -85,9 +86,9 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
             return Lang.JSONLD;
         }
         return switch (contentType.strip().toLowerCase()) {
-            case "text/turtle", "application/x-turtle" -> Lang.TURTLE;
-            case "application/n-triples", "text/plain" -> Lang.NTRIPLES;
-            case "application/rdf+xml", "application/xml" -> Lang.RDFXML;
+            case VerificationConstants.MEDIA_TYPE_TURTLE, "application/x-turtle" -> Lang.TURTLE;
+            case VerificationConstants.MEDIA_TYPE_NTRIPLES, "text/plain" -> Lang.NTRIPLES;
+            case VerificationConstants.MEDIA_TYPE_RDF_XML, "application/xml" -> Lang.RDFXML;
             default -> Lang.JSONLD;
         };
     }

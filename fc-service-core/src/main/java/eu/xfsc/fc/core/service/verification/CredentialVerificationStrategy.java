@@ -264,14 +264,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Override URI for one of the Trust Framework base classes.
-     * Package-private — used only in tests.
-     */
-    void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
-        baseClassUris.put(baseClass, List.of(uri));
-    }
-
-    /**
      * Phase 1: Detect credential format, verify JWT signature, and unwrap to JSON-LD.
      * After this method, the payload is always JSON-LD.
      **/

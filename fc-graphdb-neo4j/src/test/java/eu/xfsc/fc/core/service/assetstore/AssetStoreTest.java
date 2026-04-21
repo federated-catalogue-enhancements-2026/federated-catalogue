@@ -138,7 +138,6 @@ public class AssetStoreTest {
    */
   @Test
   void test01StoreCredential() {
-    log.info("test01StoreCredential");
     final String content = "Some Test Content";
 
     final AssetMetadata assetMeta = createAssetMetadata("https://delta-dao.com/.well-known/serviceMVGPortal.json", // "TestAsset/1",
@@ -152,7 +151,7 @@ public class AssetStoreTest {
 
     List<Map<String, Object>> claims = graphStore.queryData(
         new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
-    Assertions.assertTrue(claims.size() > 0); //only 1 node found..
+      Assertions.assertFalse(claims.isEmpty()); //only 1 node found..
 
     final ContentAccessor credentialFileByHash = assetStorePublisher.getFileByHash(hash);
     assertEquals(credentialFileByHash, assetMeta.getContentAccessor(), "Getting the credential file by hash is equal to the stored credential file");
