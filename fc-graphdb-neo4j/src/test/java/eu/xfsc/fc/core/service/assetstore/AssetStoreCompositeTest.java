@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
+import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import org.junit.jupiter.api.AfterAll;
@@ -42,12 +43,12 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
+import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
 import eu.xfsc.fc.core.service.verification.FormatDetector;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
@@ -59,7 +60,6 @@ import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
-import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
@@ -80,6 +80,7 @@ import lombok.extern.slf4j.Slf4j;
         AssetStoreImpl.class,
         ClaimExtractionService.class,
         CredentialVerificationStrategy.class,
+        DanubeTechFormatMatcher.class,
         DatabaseConfig.class,
         DidDocumentResolver.class,
         DidResolverConfig.class,
@@ -166,7 +167,8 @@ public class AssetStoreCompositeTest {
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
         // Only verify semantics, not schema or signatures
-        CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
+        // Only verify semantics, not schema or signatures
+        CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
         AssetMetadata assetMeta = new AssetMetadata(content, result);
         assetStorePublisher.storeCredential(assetMeta, result);
 
@@ -199,7 +201,8 @@ public class AssetStoreCompositeTest {
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
         // Only verify semantics, not schema or signatures
-        CredentialVerificationResultParticipant result = (CredentialVerificationResultParticipant) verificationService.verifyCredential(content, true, false, false, false);
+        // Only verify semantics, not schema or signatures
+        CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
         AssetMetadata assetMeta = new AssetMetadata(content, result);
         assetStorePublisher.storeCredential(assetMeta, result);
 

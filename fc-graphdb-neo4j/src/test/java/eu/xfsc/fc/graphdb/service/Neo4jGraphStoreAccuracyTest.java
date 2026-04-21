@@ -337,8 +337,8 @@ public class Neo4jGraphStoreAccuracyTest {
   private void initialiseAllDataBaseWithManuallyAddingCredential() throws IOException {
 
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME));
-    CredentialVerificationResultOffering verificationResult =
-            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
+      CredentialVerificationResult verificationResult =
+              verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
     //TODO:: adding manually claims, after final implementation we will remove it and change the query according to credential file content
 
@@ -362,8 +362,8 @@ public class Neo4jGraphStoreAccuracyTest {
     //adding 2 credential skipping credential validation as we don't have full implementation
     ContentAccessorDirect contentAccessorDirect2 =
             new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME1));
-    CredentialVerificationResultOffering verificationResult2 =
-            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
+      CredentialVerificationResult verificationResult2 =
+              verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
     RdfClaim claim1 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal2.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -386,8 +386,8 @@ public class Neo4jGraphStoreAccuracyTest {
     //adding credential 3
     ContentAccessorDirect contentAccessorDirect3 =
             new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME2));
-    CredentialVerificationResultOffering verificationResult3 =
-            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessorDirect3, true, false, false, false);
+      CredentialVerificationResult verificationResult3 =
+              verificationService.verifyCredential(contentAccessorDirect3, true, false, false, false);
 
     RdfClaim claim3 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal3.json>",
             "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>",
@@ -411,8 +411,8 @@ public class Neo4jGraphStoreAccuracyTest {
     //adding credential 4
     ContentAccessorDirect contentAccessorDirect4 =
             new ContentAccessorDirect(getMockFileDataAsString(SERVICE_CREDENTIAL_FILE_NAME3));
-    CredentialVerificationResultOffering verificationResult4 =
-            (CredentialVerificationResultOffering) verificationService.verifyCredential(contentAccessor, true, false, false, false);
+      CredentialVerificationResult verificationResult4 =
+              verificationService.verifyCredential(contentAccessor, true, false, false, false);
 
 
     RdfClaim claim4 = new CredentialClaim("<https://w3id.org/gaia-x/2511#serviceMVGPortal4.json>",
