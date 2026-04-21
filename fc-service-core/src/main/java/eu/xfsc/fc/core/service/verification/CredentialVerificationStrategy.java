@@ -24,6 +24,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.trustframework.TrustFramework;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
 import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -47,6 +48,7 @@ import foundation.identity.jsonld.JsonLDObject;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.stream.StreamManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -224,8 +226,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 log.debug("verifyCredential.exit; non-credential RDF, claims: {}",
                         filtered.claims() == null ? "null" : filtered.claims().size());
                 return result;
-            } catch (Exception ex) {
+            } catch (RiotException ex) {
                 throw new ClientException("Non-credential RDF parse failed: " + ex.getMessage(), ex);
+            } catch (Exception ex) {
+                throw new ServerException("Failed to read non-credential RDF content", ex);
             }
         }
 
