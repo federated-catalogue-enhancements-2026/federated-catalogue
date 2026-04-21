@@ -140,12 +140,8 @@ federated-catalogue:
       - application/vp+jwt
       # non-credential RDF formats (claim extraction only; schema validation is not supported)
       - text/turtle
-      - application/x-turtle
       - application/n-triples
       - application/rdf+xml
-      - application/n3
-      - text/rdf+n3
-      - text/n3
   assets:
     human-readable-content-types:
       - application/pdf

@@ -88,7 +88,6 @@ class JenaAllTriplesExtractorTest {
     @Test
     void detectLang_turtleContentType_returnsTurtle() {
         assertEquals(Lang.TURTLE, JenaAllTriplesExtractor.detectLang("text/turtle"));
-        assertEquals(Lang.TURTLE, JenaAllTriplesExtractor.detectLang("application/x-turtle"));
     }
 
     @Test
