@@ -105,7 +105,7 @@ public class RdfClaim {
      * in double quotes directly, avoiding a {@link ClassCastException} from calling
      * {@code asResource()} on a literal node.</p>
      */
-  private String rdf2String(RDFNode node, ObjectMapper objectMapper) {
+    public static String rdf2String(RDFNode node, ObjectMapper objectMapper) {
     if (node.isAnon()) {
       return node.asResource().getId().getLabelString();
     } else if (node.isLiteral()) {

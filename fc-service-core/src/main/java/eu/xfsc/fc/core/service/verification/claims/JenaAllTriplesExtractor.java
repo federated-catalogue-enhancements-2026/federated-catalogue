@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.service.verification.claims;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.RdfClaim;
@@ -103,22 +102,11 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
     }
 
     /**
-     * Formats an RDF node as a string, producing output identical to
-     * {@link eu.xfsc.fc.core.pojo.RdfClaim}'s internal {@code rdf2String} method:
-     * blank nodes as raw label, literals as JSON-serialized lexical form, IRIs as {@code <uri>}.
+     * Formats an RDF node as a string in the internal claim format.
+     * Delegates to {@link eu.xfsc.fc.core.pojo.RdfClaim#rdf2String} — the single source of truth
+     * for blank node, literal, and IRI serialization.
      */
     String nodeToString(RDFNode node) {
-        if (node.isAnon()) {
-            return node.asResource().getId().getLabelString();
-        }
-        if (node.isLiteral()) {
-            try {
-                return objectMapper.writeValueAsString(node.asLiteral().getLexicalForm());
-            } catch (JsonProcessingException e) {
-                log.error("nodeToString; failed to serialize literal: {}", node, e);
-                return "\"" + node.asLiteral().getLexicalForm() + "\"";
-            }
-        }
-        return "<" + node.asResource().getURI() + ">";
+        return RdfClaim.rdf2String(node, objectMapper);
     }
 }
