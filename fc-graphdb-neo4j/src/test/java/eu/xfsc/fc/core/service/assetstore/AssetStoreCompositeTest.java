@@ -57,7 +57,6 @@ import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
-import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.GraphRebuilder;

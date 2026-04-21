@@ -33,6 +33,7 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
+import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
@@ -215,8 +216,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             try {
                 List<RdfClaim> claims = claimExtractionService.extractAllTriples(ctx.payload());
                 FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "non-credential extraction");
-                CredentialVerificationResult result = new CredentialVerificationResult(
-                        Instant.now(), AssetStatus.ACTIVE.getValue(), null, null, null, filtered.claims(), null);
+                CredentialVerificationResult result = new NonCredentialVerificationResult(
+                        Instant.now(), AssetStatus.ACTIVE.getValue(), filtered.claims());
                 if (filtered.hasWarning()) {
                     result.setWarnings(List.of(filtered.warning()));
                 }
