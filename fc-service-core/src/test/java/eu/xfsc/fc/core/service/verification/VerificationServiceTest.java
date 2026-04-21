@@ -43,6 +43,7 @@ import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
+import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
@@ -68,7 +69,7 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
         VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class, ValidatorCacheJpaDao.class, HttpDocumentResolver.class,
-        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class})
+        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class, JenaAllTriplesExtractor.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class VerificationServiceTest {
 
@@ -111,21 +112,22 @@ public class VerificationServiceTest {
   }
 
   @Test
-  void verifyCredential_vc11Input_rejected() {
-    // VC 1.1 is no longer supported — claim extractors reject it and downstream
-    // validation fails. The exact exception type depends on the first failing phase
-    // (schema validation, semantic check, etc.).
-    String body = """
+  void verifyCredential_nonVcJsonLd_processedAsNonCredentialRdf() {
+      // JSON-LD without VC 2.0 context → UNKNOWN format → non-credential RDF path
+      // (VC 1.1 format is not recognized by Loire or DanubeTech matchers)
+      ContentAccessor content = new ContentAccessorDirect("""
         {
-          "@context": ["https://www.w3.org/2018/credentials/v1"],
-          "type": ["VerifiableCredential"],
-          "proof": { "type": "JsonWebSignature2020" }
+                "@context": {"ex": "http://example.org/"},
+                "ex:type": "ex:CustomType",
+                "ex:value": "Test"
         }
-        """;
-    ContentAccessor vc11 = new ContentAccessorDirect(body);
+              """);
 
-    assertThrowsExactly(VerificationException.class,
-        () -> verificationService.verifyCredential(vc11, false, true, false, false));
+      CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+      assertNotNull(result);
+      assertNotNull(result.getClaims());
+      assertFalse(result.getClaims().isEmpty(), "Non-VC JSON-LD is processed as non-credential RDF");
   }
 
   @Test
@@ -140,22 +142,32 @@ public class VerificationServiceTest {
 
   @Test
   void invalidSyntax_MissingQuote() {
-    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
+      // Malformed JSON (missing quote) → UNKNOWN format → JenaAllTriplesExtractor fails all formats
     String path = "VerificationService/syntax/missingQuote.jsonld";
     ContentAccessor content = getAccessor(path);
     Exception ex = assertThrowsExactly(ClientException.class, ()
             -> verificationService.verifyCredential(content));
-    assertTrue(ex.getMessage().startsWith("Syntactic error: "));
+      assertTrue(ex.getMessage().startsWith("Non-credential RDF parse failed: "),
+              "Expected non-credential RDF parse error but got: " + ex.getMessage());
     assertNotNull(ex.getCause());
   }
 
   @Test
-  void verifyCredential_VPWithoutVC_throwsVerificationException() {
-    String path = "VerificationService/syntax/smallExample.jsonld";
-    schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
-    Exception ex = assertThrowsExactly(VerificationException.class, ()
-            -> verificationService.verifyCredential(getAccessor(path)));
-    assertTrue(ex.getMessage().contains("unexpected credential type: null"));
+  void verifyCredential_plainJsonLd_noVcContext_processedAsNonCredentialRdf() {
+      // Plain JSON-LD without VC 2.0 context → UNKNOWN → non-credential RDF path
+      ContentAccessor content = new ContentAccessorDirect("""
+              {
+                "@context": {"ex": "http://example.org/"},
+                "@id": "http://example.org/person1",
+                "ex:name": "Test Person"
+              }
+              """);
+
+      CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+      assertNotNull(result);
+      assertNotNull(result.getClaims());
+      assertFalse(result.getClaims().isEmpty(), "Plain JSON-LD must extract triples as non-credential RDF");
   }
 
   @Test
@@ -1032,6 +1044,105 @@ public class VerificationServiceTest {
 
     assertTrue(ex.getMessage().contains("EnvelopedVerifiableCredential"), ex.getMessage());
   }
+
+    // --- Non-credential RDF claims extraction ---
+
+    @Test
+    void verifyCredential_nonCredentialJsonLd_returnsAllTriples() {
+        ContentAccessor content = getAccessor("Claims-Tests/simple-jsonld.jsonld");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertNotNull(result.getClaims());
+        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from non-credential JSON-LD");
+        assertTrue(result.getClaims().stream()
+                        .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
+                "Subject IRI must appear in extracted claims");
+    }
+
+    @Test
+    void verifyCredential_turtleFormat_returnsAllTriples() {
+        ContentAccessor content = getAccessor("Claims-Tests/simple.ttl");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertNotNull(result.getClaims());
+        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from Turtle");
+        assertTrue(result.getClaims().stream()
+                        .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
+                "Subject IRI must appear in extracted claims");
+    }
+
+    @Test
+    void verifyCredential_nTriplesFormat_returnsAllTriples() {
+        ContentAccessor content = getAccessor("Claims-Tests/simple.nt");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertNotNull(result.getClaims());
+        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from N-Triples");
+        assertTrue(result.getClaims().stream()
+                        .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
+                "Subject IRI must appear in extracted claims");
+    }
+
+    @Test
+    void verifyCredential_rdfXmlFormat_returnsAllTriples() {
+        ContentAccessor content = getAccessor("Claims-Tests/simple.rdf");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertNotNull(result.getClaims());
+        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from RDF/XML");
+        assertTrue(result.getClaims().stream()
+                        .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
+                "Subject IRI must appear in extracted claims");
+    }
+
+    @Test
+    void verifyCredential_nonCredentialResult_claimsAreRdfClaimNotCredentialClaim() {
+        ContentAccessor content = getAccessor("Claims-Tests/simple-jsonld.jsonld");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertFalse(result.getClaims().isEmpty());
+        assertInstanceOf(RdfClaim.class, result.getClaims().get(0));
+        assertFalse(result.getClaims().get(0) instanceof CredentialClaim,
+                "Non-credential extractor must return RdfClaim, not CredentialClaim");
+    }
+
+    @Test
+    void verifyCredential_credentialContent_stillUsesVcExtractors() {
+        // Regression: VC 2.0 credential path unchanged — only credentialSubject triples returned
+        ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertNotNull(result.getClaims(), "VC credential must return non-null claims");
+        assertFalse(result.getClaims().isEmpty(), "VC credential must return non-empty claims");
+        boolean hasIssuerSubject = result.getClaims().stream()
+                .anyMatch(c -> c.getSubjectString().contains("issuer.example.com"));
+        assertFalse(hasIssuerSubject, "Issuer IRI must not appear as credentialSubject — only subject triples");
+    }
+
+    @Test
+    void verifyCredential_credentialContent_claimsAreCredentialClaim() {
+        // Regression: VC 2.0 credential extractors still return CredentialClaim instances
+        ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
+
+        CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
+
+        assertNotNull(result);
+        assertFalse(result.getClaims().isEmpty());
+        assertInstanceOf(CredentialClaim.class, result.getClaims().get(0),
+                "VC credential extractor must return CredentialClaim instances");
+    }
 
   // --- helpers ---
 

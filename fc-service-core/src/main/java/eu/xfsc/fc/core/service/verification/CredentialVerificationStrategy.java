@@ -18,7 +18,6 @@ import com.apicatalog.jsonld.loader.SchemeRouter;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
@@ -39,8 +38,9 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
 import eu.xfsc.fc.core.service.verification.claims.CredentialSubjectClaimExtractor;
+import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
+import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -161,6 +161,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final FormatDetector formatDetector;
     private final LoireJwtParser loireJwtParser;
+    private final JenaAllTriplesExtractor jenaExtractor;
 
     @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
     private String trustAnchorAddr;
@@ -213,6 +214,24 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         long stamp = System.currentTimeMillis();
 
         VerificationContext ctx = detectAndUnwrap(payload, verifyVCSignatures || verifyVPSignatures);
+
+        // non-credential RDF — UNKNOWN non-JWT bypasses the VC/VP pipeline
+        if (ctx.format() == CredentialFormat.UNKNOWN) {
+            try {
+                List<RdfClaim> claims = jenaExtractor.extractClaims(ctx.payload());
+                FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "non-credential extraction");
+                CredentialVerificationResult result = new CredentialVerificationResult(
+                        Instant.now(), AssetStatus.ACTIVE.getValue(), null, null, null, filtered.claims(), null);
+                if (filtered.hasWarning()) {
+                    result.setWarnings(List.of(filtered.warning()));
+                }
+                log.debug("verifyCredential.exit; non-credential RDF, claims: {}",
+                        filtered.claims() == null ? "null" : filtered.claims().size());
+                return result;
+            } catch (Exception ex) {
+                throw new ClientException("Non-credential RDF parse failed: " + ex.getMessage(), ex);
+            }
+        }
 
         // syntactic + semantic validation
         JsonLDObject ld = parseContent(ctx.payload());
@@ -293,8 +312,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
 
-        // Reject ambiguous/unrecognizable JWTs — UNKNOWN non-JWT payloads fall through
-        // to parseCredentials() for a more specific type error.
+        // Reject ambiguous/unrecognizable JWTs — UNKNOWN non-JWT payloads are routed
+        // to JenaAllTriplesExtractor in verifyCredential() before parseContent().
         if (format == CredentialFormat.UNKNOWN && body.startsWith(JWT_PREFIX)) {
             throw new ClientException(
                 "Unrecognizable JWT credential format — JWT does not have recognized "
@@ -313,20 +332,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
         // Version dispatch — unwrap to JSON-LD
-        // NOTE: A future VcStructureDetector.isVcStructured() call MUST be placed AFTER
-        // unwrapping, not before — a JWT-wrapped VC 2.0 payload would not be recognised as a VC.
         payload = switch (format) {
             case GAIAX_V2_LOIRE -> loireJwtParser.unwrap(payload);
             case VC2_DANUBETECH -> vc2Processor.preProcess(payload);
             default -> {
-                // UNKNOWN non-JWT: distinguish malformed JSON (syntactic error) from
-                // unrecognized-but-valid JSON-LD (fall through to parseCredentials()
-                // for a specific type error).
-                try {
-                    objectMapper.readTree(body);
-                } catch (JsonProcessingException ex) {
-                    throw new ClientException("Syntactic error: " + ex.getMessage(), ex);
-                }
+                // UNKNOWN non-JWT: non-credential RDF — payload already normalized at method start;
+                // no unwrapping needed. verifyCredential() routes UNKNOWN to JenaAllTriplesExtractor
+                // before parseContent().
                 yield payload;
             }
         };
