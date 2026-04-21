@@ -1,0 +1,61 @@
+package eu.xfsc.fc.core.service.verification.claims;
+
+import java.util.List;
+
+import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.RdfClaim;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/**
+ * Consolidates RDF claim extraction logic for both credential and non-credential payloads.
+ *
+ * <p>Credential extraction tries {@link CredentialSubjectClaimExtractor} first (Titanium JSON-LD),
+ * falling back to {@link DanubeTechClaimExtractor} (Danube Tech LD library). Non-credential
+ * extraction delegates to {@link JenaAllTriplesExtractor} for generic RDF formats.</p>
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ClaimExtractionService {
+
+    private static final ClaimExtractor[] CREDENTIAL_EXTRACTORS = {
+            new CredentialSubjectClaimExtractor(), new DanubeTechClaimExtractor()
+    };
+
+    private final JenaAllTriplesExtractor jenaExtractor;
+
+    /**
+     * Extracts claims from W3C Verifiable Credential payloads (JSON-LD).
+     * Tries each credential-aware extractor in order until one succeeds.
+     *
+     * @param payload the credential content to extract claims from
+     * @return extracted claims, or {@code null} if all extractors fail
+     */
+    public List<RdfClaim> extractCredentialClaims(ContentAccessor payload) {
+        List<RdfClaim> claims = null;
+        for (ClaimExtractor extractor : CREDENTIAL_EXTRACTORS) {
+            try {
+                claims = extractor.extractClaims(payload);
+                if (claims != null && !claims.isEmpty()) {
+                    break;
+                }
+            } catch (Exception ex) {
+                log.error("extractCredentialClaims.error using {}", extractor.getClass().getName(), ex);
+            }
+        }
+        return claims;
+    }
+
+    /**
+     * Extracts all RDF triples from non-credential RDF content (JSON-LD, Turtle, N-Triples, RDF/XML).
+     *
+     * @param payload the RDF content to extract triples from
+     * @return extracted claims
+     * @throws Exception if parsing fails for all supported formats
+     */
+    public List<RdfClaim> extractAllTriples(ContentAccessor payload) throws Exception {
+        return jenaExtractor.extractClaims(payload);
+    }
+}

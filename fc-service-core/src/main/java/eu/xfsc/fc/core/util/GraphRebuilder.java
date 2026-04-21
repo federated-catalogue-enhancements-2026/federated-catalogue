@@ -5,7 +5,7 @@ import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
-import eu.xfsc.fc.core.service.verification.VerificationService;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -36,7 +36,7 @@ public class GraphRebuilder {
   @Autowired
   private AssetStore assetStore;
   private final GraphStore graphStore;
-  private final VerificationService verificationService;
+    private final ClaimExtractionService claimExtractionService;
   private final ProtectedNamespaceFilter protectedNamespaceFilter;
 
   /**
@@ -122,7 +122,7 @@ public class GraphRebuilder {
 
   private void addAssetToGraph(String hash) {
     AssetMetadata assetMetaData = assetStore.getByHash(hash);
-    List<RdfClaim> claims = verificationService.extractClaims(assetMetaData.getContentAccessor());
+      List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(assetMetaData.getContentAccessor());
     claims = protectedNamespaceFilter.filterClaims(claims, "graph rebuild").claims();
     graphStore.addClaims(claims, assetMetaData.getId());
   }

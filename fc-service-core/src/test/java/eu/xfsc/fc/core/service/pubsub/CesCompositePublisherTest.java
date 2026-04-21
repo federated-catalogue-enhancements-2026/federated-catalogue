@@ -33,6 +33,7 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.FormatDetector;
 import eu.xfsc.fc.core.service.verification.LoireMatcher;
@@ -83,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
         AssetStoreConfig.class,
         CesCompositePublisherTest.TestApplication.class,
         CesTrackerJpaDao.class,
+        ClaimExtractionService.class,
         CredentialVerificationStrategy.class,
         DanubeTechFormatMatcher.class,
         DatabaseConfig.class,

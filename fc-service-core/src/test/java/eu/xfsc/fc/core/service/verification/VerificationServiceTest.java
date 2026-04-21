@@ -43,6 +43,7 @@ import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -69,7 +70,7 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
         VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class, ValidatorCacheJpaDao.class, HttpDocumentResolver.class,
-        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class, JenaAllTriplesExtractor.class})
+        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class, JenaAllTriplesExtractor.class, ClaimExtractionService.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class VerificationServiceTest {
 
@@ -85,6 +86,9 @@ public class VerificationServiceTest {
   private VerificationServiceImpl verificationService;
 
   @Autowired
+  private ClaimExtractionService claimExtractionService;
+
+    @Autowired
   private JdbcTemplate jdbcTemplate;
 
   @MockitoBean
@@ -807,7 +811,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2StandaloneVC_returnsOnlyCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVC2.jsonld");
 
-    List<RdfClaim> claims = verificationService.extractClaims(content);
+      List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(content);
 
     assertNotNull(claims);
     assertFalse(claims.isEmpty(), "VC 2.0 standalone VC should produce non-empty claims");
@@ -830,7 +834,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2VpWithSingleVC_returnsOnlyCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVP2.jsonld");
 
-    List<RdfClaim> claims = verificationService.extractClaims(content);
+      List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(content);
 
     assertNotNull(claims);
     assertFalse(claims.isEmpty(), "VC 2.0 VP should produce non-empty claims");
@@ -848,7 +852,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2VpWithMultipleVCs_returnsAllCredentialSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVP2_multi.jsonld");
 
-    List<RdfClaim> claims = verificationService.extractClaims(content);
+      List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(content);
 
     assertNotNull(claims);
     Set<String> subjects = new HashSet<>();
@@ -863,7 +867,7 @@ public class VerificationServiceTest {
   void extractClaims_vc2MultipleCredentialSubjects_returnsAllSubjectTriples() {
     ContentAccessor content = getAccessor("Claims-Tests/participantVC2_multi_cs.jsonld");
 
-    List<RdfClaim> claims = verificationService.extractClaims(content);
+      List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(content);
 
     assertNotNull(claims);
     Set<String> subjects = new HashSet<>();

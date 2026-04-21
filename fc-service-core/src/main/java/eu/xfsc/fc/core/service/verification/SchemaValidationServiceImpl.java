@@ -17,9 +17,7 @@ import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
-import eu.xfsc.fc.core.service.verification.claims.ClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.CredentialSubjectClaimExtractor;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,14 +33,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class SchemaValidationServiceImpl implements SchemaValidationService {
 
-    /**
-     * Ordered array of claim extractors tried in sequence until one succeeds.
-     * {@link CredentialSubjectClaimExtractor} is tried first (Titanium JSON-LD processor),
-     * falling back to {@link DanubeTechClaimExtractor} (Danube Tech LD library).
-     */
-    private static final ClaimExtractor[] EXTRACTORS = new ClaimExtractor[]{
-        new CredentialSubjectClaimExtractor(), new DanubeTechClaimExtractor()
-    };
+    @Autowired
+    private ClaimExtractionService claimExtractionService;
 
     @Autowired
     private SchemaStore schemaStore;
@@ -123,26 +115,7 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
         streamManager = clone;
     }
 
-    /**
-     * Extracts RDF claims from a credential payload by trying each
-     * {@link ClaimExtractor} in order. Returns the first successful extraction
-     * result, or {@code null} if all extractors fail.
-     *
-     * @param payload the credential to extract claims from
-     * @return extracted claims, or {@code null} if extraction fails
-     */
     private List<RdfClaim> extractClaims(ContentAccessor payload) {
-        List<RdfClaim> claims = null;
-        for (ClaimExtractor extractor : EXTRACTORS) {
-            try {
-                claims = extractor.extractClaims(payload);
-                if (claims != null && !claims.isEmpty()) {
-                    break;
-                }
-            } catch (Exception ex) {
-                log.error("extractClaims.error using {}: {}", extractor.getClass().getName(), ex.getMessage());
-            }
-        }
-        return claims;
+        return claimExtractionService.extractCredentialClaims(payload);
     }
 }

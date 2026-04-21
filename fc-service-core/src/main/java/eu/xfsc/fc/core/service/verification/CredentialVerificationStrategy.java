@@ -37,10 +37,7 @@ import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
-import eu.xfsc.fc.core.service.verification.claims.ClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.CredentialSubjectClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.DanubeTechClaimExtractor;
-import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -93,8 +90,6 @@ import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNO
 @Component
 @RequiredArgsConstructor
 public class CredentialVerificationStrategy implements VerificationStrategy {
-
-    private static final ClaimExtractor[] extractors = new ClaimExtractor[]{new CredentialSubjectClaimExtractor(), new DanubeTechClaimExtractor()};
 
     private final ObjectMapper objectMapper;
 
@@ -161,7 +156,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final FormatDetector formatDetector;
     private final LoireJwtParser loireJwtParser;
-    private final JenaAllTriplesExtractor jenaExtractor;
+    private final ClaimExtractionService claimExtractionService;
 
     @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
     private String trustAnchorAddr;
@@ -218,7 +213,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         // non-credential RDF — UNKNOWN non-JWT bypasses the VC/VP pipeline
         if (ctx.format() == CredentialFormat.UNKNOWN) {
             try {
-                List<RdfClaim> claims = jenaExtractor.extractClaims(ctx.payload());
+                List<RdfClaim> claims = claimExtractionService.extractAllTriples(ctx.payload());
                 FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "non-credential extraction");
                 CredentialVerificationResult result = new CredentialVerificationResult(
                         Instant.now(), AssetStatus.ACTIVE.getValue(), null, null, null, filtered.claims(), null);
@@ -268,24 +263,11 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return result;
     }
 
-    public List<RdfClaim> extractClaims(ContentAccessor payload) {
-        // Make sure our interceptors are in place.
-        initLoaders();
-        List<RdfClaim> claims = null;
-        for (ClaimExtractor extra : extractors) {
-            try {
-                claims = extra.extractClaims(payload);
-                if (claims != null && !claims.isEmpty()) {
-                    break;
-                }
-            } catch (Exception ex) {
-                log.error("extractClaims.error using {}", extra.getClass().getName(), ex);
-            }
-        }
-        return claims;
-    }
-
-    public void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
+    /**
+     * Override URI for one of the Trust Framework base classes.
+     * Package-private — used only in tests.
+     */
+    void setBaseClassUri(TrustFrameworkBaseClass baseClass, String uri) {
         baseClassUris.put(baseClass, List.of(uri));
     }
 
@@ -424,7 +406,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         // EVC wrappers with data: URIs. This is intentionally NOT in detectAndUnwrap()
         // because signature verification needs the original EVC entries intact.
         ContentAccessor claimPayload = resolveInnerEnvelopedCredentials(payload);
-        List<RdfClaim> claims = extractClaims(claimPayload);
+        List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(claimPayload);
         FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
         claims = filtered.claims();
         log.debug("verifyCredential; claims extracted: {}, time taken: {}",

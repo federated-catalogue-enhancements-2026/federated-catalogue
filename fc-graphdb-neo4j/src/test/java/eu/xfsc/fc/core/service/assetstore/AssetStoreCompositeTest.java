@@ -52,10 +52,11 @@ import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
-import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
+import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
@@ -72,7 +73,7 @@ import lombok.extern.slf4j.Slf4j;
   AssetStoreImpl.class, AssetJpaDao.class, AssetAuditRepository.class, IriGenerator.class, IriValidator.class, AssetStoreCompositeTest.class,
   SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class,
   Neo4jGraphStore.class, DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
-  CredentialVerificationStrategy.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        CredentialVerificationStrategy.class, ClaimExtractionService.class, JenaAllTriplesExtractor.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
   AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
   RdfContentTypeProperties.class, JwtContentPreprocessor.class, Vc2Processor.class,
   JwtSignatureVerifier.class, DidDocumentResolver.class,  FormatDetector.class, LoireJwtParser.class})
@@ -90,7 +91,10 @@ public class AssetStoreCompositeTest {
   }
 
   @Autowired
-  private VerificationService verificationService;
+  private VerificationServiceImpl verificationService;
+
+    @Autowired
+    private ClaimExtractionService claimExtractionService;
 
   @Autowired
   private AssetStore assetStorePublisher;
@@ -179,7 +183,7 @@ public class AssetStoreCompositeTest {
         new GraphQuery("MATCH (n) RETURN n", null)).getResults();
     Assertions.assertEquals(1, claims.size());
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter);
+      GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, claimExtractionService, protectedNamespaceFilter);
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     claims = graphStore.queryData(
@@ -220,7 +224,7 @@ public class AssetStoreCompositeTest {
     // Delete graph claims, then rebuild — simulates a graph rebuild from stored raw credentials
     graphStore.deleteClaims(assetId);
 
-    GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, verificationService, protectedNamespaceFilter);
+      GraphRebuilder reBuilder = new GraphRebuilder(assetStorePublisher, graphStore, claimExtractionService, protectedNamespaceFilter);
     reBuilder.rebuildGraphDb(1, 0, 1, 1);
 
     // Verify fcmeta claims are still filtered after rebuild
