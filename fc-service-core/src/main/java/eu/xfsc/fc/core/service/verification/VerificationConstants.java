@@ -36,6 +36,7 @@ public final class VerificationConstants {
     public static final String MEDIA_TYPE_TURTLE = "text/turtle";
     public static final String MEDIA_TYPE_NTRIPLES = "application/n-triples";
     public static final String MEDIA_TYPE_RDF_XML = "application/rdf+xml";
+    public static final String MEDIA_TYPE_N3 = "text/n3";
 
   private VerificationConstants() {
   }

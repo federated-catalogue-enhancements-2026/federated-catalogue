@@ -161,7 +161,8 @@ public class GraphRebuilder {
         String contentType = assetMetaData.getContentType();
         if (VerificationConstants.MEDIA_TYPE_NTRIPLES.equals(contentType)
                 || VerificationConstants.MEDIA_TYPE_TURTLE.equals(contentType)
-                || VerificationConstants.MEDIA_TYPE_RDF_XML.equals(contentType)) {
+                || VerificationConstants.MEDIA_TYPE_RDF_XML.equals(contentType)
+                || VerificationConstants.MEDIA_TYPE_N3.equals(contentType)) {
             return claimExtractionService.extractAllTriples(assetMetaData.getContentAccessor());
         }
         List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(assetMetaData.getContentAccessor());
