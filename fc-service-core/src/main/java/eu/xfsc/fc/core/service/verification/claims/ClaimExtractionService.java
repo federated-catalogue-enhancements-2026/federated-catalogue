@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.verification.claims;
 
+import java.util.Collections;
 import java.util.List;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -31,14 +32,15 @@ public class ClaimExtractionService {
      * Tries each credential-aware extractor in order until one succeeds.
      *
      * @param payload the credential content to extract claims from
-     * @return extracted claims, or {@code null} if all extractors fail
+     * @return extracted claims, or an empty list if all extractors fail
      */
     public List<RdfClaim> extractCredentialClaims(ContentAccessor payload) {
-        List<RdfClaim> claims = null;
+        List<RdfClaim> claims = Collections.emptyList();
         for (ClaimExtractor extractor : CREDENTIAL_EXTRACTORS) {
             try {
-                claims = extractor.extractClaims(payload);
-                if (claims != null && !claims.isEmpty()) {
+                List<RdfClaim> result = extractor.extractClaims(payload);
+                if (result != null && !result.isEmpty()) {
+                    claims = result;
                     break;
                 }
             } catch (Exception ex) {
