@@ -217,6 +217,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (ctx.format() == CredentialFormat.UNKNOWN) {
             try {
                 List<RdfClaim> claims = claimExtractionService.extractAllTriples(ctx.payload());
+                if (claims.isEmpty()) {
+                    throw new ClientException("Non-credential RDF content contains no triples");
+                }
                 FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "non-credential extraction");
                 CredentialVerificationResult result = new NonCredentialVerificationResult(
                         Instant.now(), AssetStatus.ACTIVE.getValue(), filtered.claims());
@@ -226,6 +229,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 log.debug("verifyCredential.exit; non-credential RDF, claims: {}",
                         filtered.claims() == null ? "null" : filtered.claims().size());
                 return result;
+            } catch (ClientException ex) {
+                throw ex;
             } catch (RiotException ex) {
                 throw new ClientException("Non-credential RDF parse failed: " + ex.getMessage(), ex);
             } catch (Exception ex) {
@@ -314,12 +319,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         payload = switch (format) {
             case GAIAX_V2_LOIRE -> loireJwtParser.unwrap(payload);
             case VC2_DANUBETECH -> vc2Processor.preProcess(payload);
-            default -> {
-                // UNKNOWN non-JWT: non-credential RDF — payload already normalized at method start;
-                // no unwrapping needed. verifyCredential() routes UNKNOWN to JenaAllTriplesExtractor
-                // before parseContent().
-                yield payload;
-            }
+            // UNKNOWN non-JWT: non-credential RDF — payload already normalized at method start;
+            // no unwrapping needed. verifyCredential() routes UNKNOWN to JenaAllTriplesExtractor
+            // before parseContent().
+            default -> payload;
         };
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);

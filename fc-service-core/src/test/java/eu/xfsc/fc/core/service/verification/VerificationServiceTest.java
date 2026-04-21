@@ -174,6 +174,21 @@ public class VerificationServiceTest {
       assertFalse(result.getClaims().isEmpty(), "Plain JSON-LD must extract triples as non-credential RDF");
   }
 
+    @Test
+    void verifyCredential_emptyRdf_throwsClientException() {
+        // Valid JSON-LD that produces zero triples → UNKNOWN path → empty-triples guard
+        ContentAccessor content = new ContentAccessorDirect("""
+                {
+                  "@context": {"ex": "http://example.org/"},
+                  "@graph": []
+                }
+                """);
+
+        Exception ex = assertThrowsExactly(ClientException.class, ()
+                -> verificationService.verifyCredential(content, false, false, false, false));
+        assertEquals("Non-credential RDF content contains no triples", ex.getMessage());
+    }
+
   @Test
   void validVCnoVP() {
     // Standalone Loire VC JWT (not wrapped in VP) — LegalPerson resolves to PARTICIPANT
