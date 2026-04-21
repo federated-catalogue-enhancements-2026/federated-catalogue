@@ -98,19 +98,28 @@ public class RdfClaim {
     return "Claim[" + subject + " " + predicate + " " + object + "]";
   }
 
+    /**
+     * Serializes an RDF node to a string in the internal claim format:
+     * blank nodes as their raw label, literals as a JSON-quoted string of the lexical form,
+     * and IRIs wrapped in angle brackets ({@code <uri>}).
+     *
+     * <p>If JSON serialization of a literal fails, falls back to wrapping the lexical form
+     * in double quotes directly, avoiding a {@link ClassCastException} from calling
+     * {@code asResource()} on a literal node.</p>
+     */
   private String rdf2String(RDFNode node, ObjectMapper objectMapper) {
     if (node.isAnon()) {
       return node.asResource().getId().getLabelString();
-    }
-    try {
-      if (node.isLiteral()) {
+    } else if (node.isLiteral()) {
+      try {
         return objectMapper.writeValueAsString(node.asLiteral().getLexicalForm());
+      } catch (JsonProcessingException e) {
+          log.error("rdf2String error for node {}", node, e);
+          return "\"" + node.asLiteral().getLexicalForm() + "\"";
       }
-    } catch (JsonProcessingException e) {
-      log.error("rdf2String error for node {}", node, e);
+    } else {
+        return "<" + node.asResource().getURI() + ">";
     }
-    // node is IRI
-    return "<" + node.asResource().getURI() + ">";
   }
 
   private String nodeValue(RDFNode node) {
