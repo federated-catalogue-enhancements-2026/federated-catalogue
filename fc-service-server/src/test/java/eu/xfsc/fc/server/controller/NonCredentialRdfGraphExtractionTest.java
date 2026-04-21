@@ -11,7 +11,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 import com.c4_soft.springaddons.security.oauth2.test.annotations.Claims;
@@ -127,7 +126,7 @@ public class NonCredentialRdfGraphExtractionTest {
 
     assertFalse(resultsAfter.getItems().isEmpty(), "Graph must contain at least one extracted triple");
 
-    Map<String, Object> triple = resultsAfter.getItems().get(0);
+    Map<String, Object> triple = resultsAfter.getItems().getFirst();
     assertEquals(TEST_ASSET_SUBJECT, triple.get("s"),
         "Subject must match the @id from the uploaded JSON-LD");
     assertEquals(TEST_ASSET_PREDICATE, triple.get("p"),
