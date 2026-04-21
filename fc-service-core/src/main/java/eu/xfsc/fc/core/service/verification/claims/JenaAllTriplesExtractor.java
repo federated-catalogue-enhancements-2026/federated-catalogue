@@ -41,7 +41,7 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
      * {@inheritDoc}
      */
     @Override
-    public List<RdfClaim> extractClaims(ContentAccessor content) throws Exception {
+    public List<RdfClaim> extractClaims(ContentAccessor content) {
         String body = content.getContentAsString();
         Lang lang = detectLang(content.getContentType());
         Model model = parseWithFallback(body, lang);

@@ -125,7 +125,7 @@ class JenaAllTriplesExtractorTest {
         assertNotNull(claims);
         assertFalse(claims.isEmpty());
         assertEquals(1, claims.size());
-        assertEquals("<http://example.org/item1>", claims.get(0).getSubjectString());
+        assertEquals("<http://example.org/item1>", claims.getFirst().getSubjectString());
     }
 
     @Test
