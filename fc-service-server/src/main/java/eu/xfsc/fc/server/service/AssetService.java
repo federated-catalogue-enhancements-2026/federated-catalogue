@@ -23,11 +23,14 @@ import eu.xfsc.fc.core.service.assetstore.LinkedAssetRef;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.server.generated.controller.AssetsApiDelegate;
+import eu.xfsc.fc.server.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -57,6 +60,7 @@ import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AssetService implements AssetsApiDelegate {
 
   private static final int DEFAULT_VERSION_PAGE_SIZE = 20;
@@ -76,19 +80,7 @@ public class AssetService implements AssetsApiDelegate {
   private final AssetStore assetStorePublisher;
   private final HttpServletRequest httpServletRequest;
   private final AssetUploadService assetUploadService;
-  private final FileStore assetFileStore;
-
-  AssetService(VerificationService verificationService,
-      AssetStore assetStorePublisher,
-      HttpServletRequest httpServletRequest,
-      AssetUploadService assetUploadService,
-      @Qualifier("assetFileStore") FileStore assetFileStore) {
-    this.verificationService = verificationService;
-    this.assetStorePublisher = assetStorePublisher;
-    this.httpServletRequest = httpServletRequest;
-    this.assetUploadService = assetUploadService;
-    this.assetFileStore = assetFileStore;
-  }
+  @Qualifier("assetFileStore") private final FileStore assetFileStore;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -375,7 +367,7 @@ public class AssetService implements AssetsApiDelegate {
     }
 
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
-    final String safeFilename = sanitizeFilename(file.getOriginalFilename());
+    final String safeFilename = StringUtils.sanitizeFilename(file.getOriginalFilename());
     log.debug("uploadHumanReadable.enter; parentId: {}, filename: {}, contentType: {}",
         decodedId, safeFilename, file.getContentType());
 
@@ -424,7 +416,7 @@ public class AssetService implements AssetsApiDelegate {
    * @return 200 with binary content and correct Content-Type, or 404 if no link exists
    */
   @Override
-  public ResponseEntity<org.springframework.core.io.Resource> getHumanReadable(String id) {
+  public ResponseEntity<Resource> getHumanReadable(String id) {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getHumanReadable.enter; id: {}", decodedId);
 
@@ -443,7 +435,7 @@ public class AssetService implements AssetsApiDelegate {
    * @return 200 with binary content and correct Content-Type, or 404 if no link exists
    */
   @Override
-  public ResponseEntity<org.springframework.core.io.Resource> getMachineReadable(String id) {
+  public ResponseEntity<Resource> getMachineReadable(String id) {
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     log.debug("getMachineReadable.enter; id: {}", decodedId);
 
@@ -461,7 +453,7 @@ public class AssetService implements AssetsApiDelegate {
    * @param assetIri IRI of the asset to stream
    * @return response entity with binary body and Content-Type header
    */
-  private ResponseEntity<org.springframework.core.io.Resource> streamAssetContent(String assetIri) {
+  private ResponseEntity<Resource> streamAssetContent(String assetIri) {
     final AssetMetadata meta = assetStorePublisher.getById(assetIri);
 
     final ContentAccessor content;
@@ -503,24 +495,6 @@ public class AssetService implements AssetsApiDelegate {
     }
   }
 
-  /**
-   * Sanitize an untrusted filename from a multipart upload.
-   *
-   * <p>Strips path separators ({@code /} and {@code \}) to prevent path traversal,
-   * removes ASCII control characters that could enable log injection,
-   * and truncates to a safe maximum length of 255 characters.</p>
-   *
-   * @param filename raw value from {@link MultipartFile#getOriginalFilename()}
-   * @return sanitized filename, or {@code null} if input is null
-   */
-  static String sanitizeFilename(String filename) {
-    if (filename == null) {
-      return null;
-    }
-    // Strip path separators and control characters
-    String name = filename.replaceAll("[/\\\\]", "").replaceAll("[\\x00-\\x1F\\x7F]", "");
-    return name.length() > 255 ? name.substring(0, 255) : name;
-  }
 
   /**
    * Verify a credential body, check participant access, and store it.

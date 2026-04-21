@@ -17,6 +17,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -39,6 +40,7 @@ import java.util.Optional;
 @Slf4j
 @Component("assetStore")
 @Transactional
+@RequiredArgsConstructor
 public class AssetStoreImpl implements AssetStore {
 
   private static final String PREDICATE_HAS_HUMAN_READABLE = "hasHumanReadable";
@@ -46,22 +48,10 @@ public class AssetStoreImpl implements AssetStore {
 
   private final AssetDao dao;
   private final GraphStore graphDb;
-  private final FileStore fileStore;
+  @Qualifier("assetFileStore") private final FileStore fileStore;
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
-
-  public AssetStoreImpl(AssetDao dao, GraphStore graphDb,
-      @Qualifier("assetFileStore") FileStore fileStore,
-      IriGenerator iriGenerator, AssetRepository assetRepository,
-      ProtectedNamespaceProperties namespaceProperties) {
-    this.dao = dao;
-    this.graphDb = graphDb;
-    this.fileStore = fileStore;
-    this.iriGenerator = iriGenerator;
-    this.assetRepository = assetRepository;
-    this.namespaceProperties = namespaceProperties;
-  }
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
