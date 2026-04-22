@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.provenance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import java.util.List;
 import java.util.stream.Stream;

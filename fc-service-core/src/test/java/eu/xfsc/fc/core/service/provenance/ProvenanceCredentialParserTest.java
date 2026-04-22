@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import java.util.stream.Stream;

@@ -1,4 +1,4 @@
-package eu.xfsc.fc.core.service.provenance;
+package eu.xfsc.fc.core.dao.provenance;
 
 /**
  * Provenance relation types, each mapped to a W3C PROV-O predicate.

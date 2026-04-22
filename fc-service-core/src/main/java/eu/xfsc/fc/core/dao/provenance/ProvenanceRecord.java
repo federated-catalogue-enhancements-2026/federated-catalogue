@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.dao.provenance;
 
-import eu.xfsc.fc.core.service.provenance.ProvenanceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

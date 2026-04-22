@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.provenance;
 
+import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import java.util.List;
 import lombok.AccessLevel;

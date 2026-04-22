@@ -14,7 +14,7 @@ import eu.xfsc.fc.core.dao.provenance.ProvenanceCredentialRepository;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
-import eu.xfsc.fc.core.service.provenance.ProvenanceType;
+import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import jakarta.persistence.EntityManager;

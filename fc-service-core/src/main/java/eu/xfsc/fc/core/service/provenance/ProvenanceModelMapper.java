@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.ProvenanceCredential;
 import eu.xfsc.fc.api.generated.model.ProvenanceVerificationResult;
 import eu.xfsc.fc.core.dao.provenance.ProvenanceRecord;
+import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import eu.xfsc.fc.core.exception.ServerException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
