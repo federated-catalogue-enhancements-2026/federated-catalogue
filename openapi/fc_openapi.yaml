@@ -715,9 +715,9 @@ components:
       required: [id, assetId, assetVersion, issuer, issuedAt, provenanceType, credentialFormat]
       properties:
         id:
-          type: string
-          format: uuid
-          description: Internal UUID of the persisted provenance credential.
+          type: integer
+          format: int64
+          description: Internal surrogate key of the persisted provenance credential.
         assetId:
           type: string
           description: IRI of the asset this credential is attached to.

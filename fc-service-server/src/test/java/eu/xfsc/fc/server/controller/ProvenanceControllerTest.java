@@ -32,7 +32,6 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -434,7 +433,7 @@ public class ProvenanceControllerTest {
 
   private static ProvenanceCredential provenanceCredentialStub() {
     ProvenanceCredential cred = new ProvenanceCredential();
-    cred.setId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+    cred.setId(1L);
     cred.setAssetId(ASSET_IRI);
     cred.setAssetVersion(1);
     cred.setCredentialId(CREDENTIAL_ID);

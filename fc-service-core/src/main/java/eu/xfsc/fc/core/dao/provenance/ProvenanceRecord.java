@@ -9,9 +9,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,9 +27,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 /**
  * JPA entity representing an append-only provenance credential attached to a specific
  * version of an asset. Stored in the {@code provenance_credentials} table.
- *
- * <p>This entity is intentionally NOT annotated with {@code @Audited} to ensure that
- * provenance writes do not create new Envers revisions on the parent {@code Asset} entity.</p>
  */
 @Entity
 @Table(name = "provenance_credentials")
@@ -42,9 +39,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class ProvenanceRecord {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "provenance_credentials_seq")
+  @SequenceGenerator(name = "provenance_credentials_seq", sequenceName = "provenance_credentials_id_seq")
   @Column(name = "id", nullable = false)
-  private UUID id;
+  private Long id;
 
   /**
    * Logical FK to {@code assets.subjectid}. Not a database-level FK to avoid coupling.

@@ -1,7 +1,6 @@
 package eu.xfsc.fc.core.dao.provenance;
 
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * <p>All query methods are read-only by intention; writes go through the service layer
  * under {@code REQUIRES_NEW} transaction semantics to remain independent of Envers auditing.</p>
  */
-public interface ProvenanceCredentialRepository extends JpaRepository<ProvenanceRecord, UUID> {
+public interface ProvenanceCredentialRepository extends JpaRepository<ProvenanceRecord, Long> {
 
   /**
    * Returns all provenance credentials for a given asset, ordered by {@code issuedAt} descending.
