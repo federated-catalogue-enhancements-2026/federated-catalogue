@@ -57,8 +57,9 @@ class ProvenanceServiceTest {
   private static final String ASSET_IRI = ASSET_ID + ":v1";
   private static final String CREDENTIAL_ID = "did:vc:prov-test-001";
   private static final String ISSUER = "did:web:issuer.example";
-  private static final String PROTECTED_ISSUER =
+  private static final String PROTECTED_OBJECT =
       "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#attacker";
+  private static final String ACTIVITY_IRI = "did:web:issuer.example:activity-creation";
   private static final String CRED_SUBJECT_URI = "https://www.w3.org/2018/credentials#credentialSubject";
   private static final String PROV_WAS_GENERATED_BY = "http://www.w3.org/ns/prov#wasGeneratedBy";
   private static final Instant ISSUED_AT = Instant.parse("2024-01-01T00:00:00Z");
@@ -69,21 +70,32 @@ class ProvenanceServiceTest {
         "@context": ["https://www.w3.org/2018/credentials/v1"],
         "credentialSubject": {
           "id": "%s",
-          "provenanceType": "CREATION"
+          "prov:wasGeneratedBy": "%s"
         }
       }
-      """.formatted(CREDENTIAL_ID, ASSET_IRI);
+      """.formatted(CREDENTIAL_ID, ASSET_IRI, ACTIVITY_IRI);
 
-  private static final String INVALID_TYPE_VC = """
+  private static final String NO_PREDICATE_VC = """
       {
-        "id": "did:vc:prov-invalid-type",
+        "id": "did:vc:prov-no-predicate",
         "@context": ["https://www.w3.org/2018/credentials/v1"],
         "credentialSubject": {
           "id": "%s",
-          "provenanceType": "UNKNOWN_TYPE"
+          "provenanceType": "CREATION"
         }
       }
       """.formatted(ASSET_IRI);
+
+  private static final String PROTECTED_OBJECT_VC = """
+      {
+        "id": "did:vc:prov-protected",
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "credentialSubject": {
+          "id": "%s",
+          "prov:wasAttributedTo": "%s"
+        }
+      }
+      """.formatted(ASSET_IRI, PROTECTED_OBJECT);
 
   @MockitoBean
   private VerificationService verificationService;
@@ -156,7 +168,7 @@ class ProvenanceServiceTest {
     assertEquals(1, rows.size());
     assertEquals(ASSET_IRI, rows.getFirst().get("s"));
     assertEquals(PROV_WAS_GENERATED_BY, rows.getFirst().get("p"));
-    assertEquals(ISSUER, rows.getFirst().get("o"));
+    assertEquals(ACTIVITY_IRI, rows.getFirst().get("o"));
   }
 
   @Test
@@ -169,12 +181,12 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void add_unknownProvenanceType_throwsClientException() {
+  void add_noPredicate_throwsClientException() {
     when(verificationService.verifyCredential(any()))
         .thenReturn(successResult(ASSET_IRI, ISSUER));
 
     assertThrows(ClientException.class, () ->
-        provenanceService.add(ASSET_ID, null, INVALID_TYPE_VC, null));
+        provenanceService.add(ASSET_ID, null, NO_PREDICATE_VC, null));
   }
 
   @Test
@@ -188,12 +200,12 @@ class ProvenanceServiceTest {
   }
 
   @Test
-  void add_protectedNamespaceIssuer_throwsClientException() {
+  void add_protectedNamespaceObject_throwsClientException() {
     when(verificationService.verifyCredential(any()))
-        .thenReturn(successResult(ASSET_IRI, PROTECTED_ISSUER));
+        .thenReturn(successResult(ASSET_IRI, ISSUER));
 
     assertThrows(ClientException.class, () ->
-        provenanceService.add(ASSET_ID, null, VALID_VC, null));
+        provenanceService.add(ASSET_ID, null, PROTECTED_OBJECT_VC, null));
   }
 
   @Test

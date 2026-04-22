@@ -736,8 +736,11 @@ components:
           description: issuedDateTime extracted from the VC.
         provenanceType:
           type: string
-          enum: [CREATION, DERIVATION, ATTRIBUTION, MODIFICATION, APPROVAL]
-          description: Provenance relation type, mapped to a PROV-O predicate.
+          enum: [CREATION, DERIVATION, ATTRIBUTION, MODIFICATION]
+          description: >
+            Provenance relation type, derived by detecting the PROV-O predicate present in
+            credentialSubject. CREATION=wasGeneratedBy, DERIVATION=wasDerivedFrom,
+            ATTRIBUTION=wasAttributedTo, MODIFICATION=wasRevisionOf.
         credentialFormat:
           type: string
           enum: [JSONLD, JSONLD_JWT, JWT]
@@ -1862,9 +1865,12 @@ paths:
       description: >
         Stores a VC 2.0 JSON-LD or VC-JWT provenance credential against the given asset version.
         If version is omitted the current version is used. credentialSubject.id MUST equal
-        {assetId}:v{N}. VC 1.1 payloads or credentials using the CAT-internal namespace are
-        rejected with 400. Duplicate credentialId returns 409. Required permission: ASSET_UPDATE
-        or ADMIN_ALL
+        {assetId}:v{N}. The credentialSubject MUST contain exactly one of the supported W3C PROV-O
+        predicates: prov:wasGeneratedBy, prov:wasDerivedFrom, prov:wasAttributedTo, or
+        prov:wasRevisionOf (compact or expanded IRI form). The predicate value becomes the PROV-O
+        triple object stored in the graph. VC 1.1 payloads or credentials using the CAT-internal
+        namespace are rejected with 400. Duplicate credentialId returns 409.
+        Required permission: ASSET_UPDATE or ADMIN_ALL
       operationId: addProvenanceCredential
       security:
         - jwt: []

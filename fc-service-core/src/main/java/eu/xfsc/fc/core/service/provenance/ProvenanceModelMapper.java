@@ -68,7 +68,6 @@ public class ProvenanceModelMapper {
       case DERIVATION -> ProvenanceCredential.ProvenanceTypeEnum.DERIVATION;
       case ATTRIBUTION -> ProvenanceCredential.ProvenanceTypeEnum.ATTRIBUTION;
       case MODIFICATION -> ProvenanceCredential.ProvenanceTypeEnum.MODIFICATION;
-      case APPROVAL -> ProvenanceCredential.ProvenanceTypeEnum.APPROVAL;
     };
   }
 

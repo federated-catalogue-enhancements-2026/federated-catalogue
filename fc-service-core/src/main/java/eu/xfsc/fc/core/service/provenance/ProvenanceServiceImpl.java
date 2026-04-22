@@ -72,7 +72,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
           "credentialSubject.id '" + subjectId + "' must equal '" + expectedSubjectId + "'");
     }
 
-    ProvenanceType provenanceType = parser.extractProvenanceType(rawVc);
+    ProvenanceInfo provenance = parser.extractProvenance(rawVc);
     String credentialId = parser.extractCredentialId(rawVc);
 
     if (credentialId != null && repository.existsByCredentialId(credentialId)) {
@@ -80,7 +80,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
     }
 
     List<CredentialClaim> provTriples = ProvOTripleBuilder.build(
-        expectedSubjectId, provenanceType, verificationResult.getIssuer());
+        expectedSubjectId, provenance.type(), provenance.objectValue());
     FilteredClaims filtered = namespaceFilter.filterClaims(provTriples, "provenance add");
     if (filtered.hasWarning()) {
       throw new ClientException(
@@ -94,7 +94,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
         .credentialId(credentialId)
         .issuer(verificationResult.getIssuer())
         .issuedAt(verificationResult.getIssuedDateTime())
-        .provenanceType(provenanceType)
+        .provenanceType(provenance.type())
         .credentialContent(rawVc)
         .credentialFormat(parser.detectFormatLabel(rawVc))
         .build();

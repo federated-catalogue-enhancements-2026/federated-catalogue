@@ -18,8 +18,5 @@ public enum ProvenanceType {
   ATTRIBUTION,
 
   /** {@code prov:wasRevisionOf} — asset is a revision of another entity. */
-  MODIFICATION,
-
-  /** {@code prov:wasAssociatedWith} — activity was associated with an agent. */
-  APPROVAL
+  MODIFICATION
 }
