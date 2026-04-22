@@ -44,7 +44,8 @@ public class ClaimExtractionService {
           break;
         }
       } catch (Exception ex) {
-        log.error("extractCredentialClaims.error using {}", extractor.getClass().getName(), ex);
+        log.debug("extractCredentialClaims; {} did not extract claims: {}", extractor.getClass().getSimpleName(),
+            ex.getMessage());
       }
     }
     return claims;
@@ -55,9 +56,8 @@ public class ClaimExtractionService {
    *
    * @param payload the RDF content to extract triples from
    * @return extracted claims
-   * @throws Exception if parsing fails for all supported formats
    */
-  public List<RdfClaim> extractAllTriples(ContentAccessor payload) throws Exception {
+  public List<RdfClaim> extractAllTriples(ContentAccessor payload) {
     return jenaExtractor.extractClaims(payload);
   }
 }

@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.RDFNode;
 
@@ -12,10 +13,8 @@ import org.apache.jena.rdf.model.RDFNode;
  * the lexical form; IRIs are wrapped in angle brackets ({@code <uri>}).</p>
  */
 @Slf4j
-public final class RdfNodeMapper {
-
-  private RdfNodeMapper() {
-  }
+@UtilityClass
+public class RdfNodeMapper {
 
   /**
    * Serializes an RDF node to a string in the internal claim format:
