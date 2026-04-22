@@ -6,6 +6,10 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
+import eu.xfsc.fc.api.generated.model.ProvenanceCredential;
+import eu.xfsc.fc.api.generated.model.ProvenanceCredentials;
+import eu.xfsc.fc.api.generated.model.ProvenanceVerificationResult;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -51,6 +55,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
 
 import static eu.xfsc.fc.server.util.AssetHelper.parseTimeRange;
 import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
@@ -71,6 +76,7 @@ public class AssetService implements AssetsApiDelegate {
   private final AssetUploadService assetUploadService;
   @Qualifier("assetFileStore") private final FileStore assetFileStore;
   private final AssetProperties assetProperties;
+  private final ProvenanceService provenanceService;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -555,6 +561,99 @@ public class AssetService implements AssetsApiDelegate {
     } catch (ValidationException exception) {
       throw new ClientException("Asset credential isn't parsed due to: " + exception.getMessage());
     }
+  }
+
+  /**
+   * POST /assets/{id}/provenance — attach a provenance credential to an asset version.
+   *
+   * @param id      URL-encoded asset IRI
+   * @param body    raw VC content (JSON-LD string or JWT compact serialisation)
+   * @param version 1-based version ordinal, or {@code null} for the current version
+   * @return 201 with the persisted credential record
+   */
+  @Override
+  public ResponseEntity<ProvenanceCredential> addProvenanceCredential(String id, String body, Integer version) {
+    log.debug("addProvenanceCredential; id={}, version={}", id, version);
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    final String format = httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE);
+
+    // Participant-scoping: the caller must own the asset
+    checkParticipantAccess(assetStorePublisher.getById(decodedId).getIssuer());
+
+    ProvenanceCredential result = provenanceService.add(decodedId, version, body, format);
+    return ResponseEntity.status(HttpStatus.CREATED).body(result);
+  }
+
+  /**
+   * GET /assets/{id}/provenance — list provenance credentials for an asset.
+   *
+   * @param id      URL-encoded asset IRI
+   * @param version 1-based version ordinal to filter, or {@code null} for all versions
+   * @param page    0-based page index (optional)
+   * @param size    page size (optional)
+   * @return 200 with paginated credential list
+   */
+  @Override
+  public ResponseEntity<ProvenanceCredentials> listProvenanceCredentials(
+      String id, Integer version, Integer page, Integer size) {
+    log.debug("listProvenanceCredentials; id={}, version={}, page={}, size={}", id, version, page, size);
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    int pageNum = page != null ? page : 0;
+    int pageSize = size != null ? size : DEFAULT_VERSION_PAGE_SIZE;
+    PageRequest pageable = PageRequest.of(pageNum, pageSize);
+    ProvenanceCredentials result = provenanceService.list(decodedId, version, pageable);
+    return ResponseEntity.ok(result);
+  }
+
+  /**
+   * GET /assets/{id}/provenance/{credentialId} — get a single provenance credential.
+   *
+   * @param id           URL-encoded asset IRI
+   * @param credentialId VC {@code id} URI
+   * @return 200 with the credential record
+   */
+  @Override
+  public ResponseEntity<ProvenanceCredential> getProvenanceCredential(String id, String credentialId) {
+    log.debug("getProvenanceCredential; id={}, credentialId={}", id, credentialId);
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    final String decodedCredentialId = UriUtils.decode(credentialId, StandardCharsets.UTF_8);
+    ProvenanceCredential result = provenanceService.get(decodedId, decodedCredentialId);
+    return ResponseEntity.ok(result);
+  }
+
+  /**
+   * POST /assets/{id}/provenance/{credentialId}/verify — verify a single provenance credential.
+   *
+   * @param id           URL-encoded asset IRI
+   * @param credentialId VC {@code id} URI
+   * @return 200 with the extended verification result
+   */
+  @Override
+  public ResponseEntity<ProvenanceVerificationResult> verifyProvenanceCredential(
+      String id, String credentialId) {
+    log.debug("verifyProvenanceCredential; id={}, credentialId={}", id, credentialId);
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    final String decodedCredentialId = UriUtils.decode(credentialId, StandardCharsets.UTF_8);
+    checkParticipantAccess(assetStorePublisher.getById(decodedId).getIssuer());
+    ProvenanceVerificationResult result = provenanceService.verifyOne(decodedId, decodedCredentialId);
+    return ResponseEntity.ok(result);
+  }
+
+  /**
+   * POST /assets/{id}/provenance/verify — verify all provenance credentials for an asset.
+   *
+   * @param id      URL-encoded asset IRI
+   * @param version 1-based version ordinal to scope, or {@code null} for all versions
+   * @return 200 with the aggregated verification result
+   */
+  @Override
+  public ResponseEntity<ProvenanceVerificationResult> verifyAllProvenanceCredentials(
+      String id, Integer version) {
+    log.debug("verifyAllProvenanceCredentials; id={}, version={}", id, version);
+    final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
+    checkParticipantAccess(assetStorePublisher.getById(decodedId).getIssuer());
+    ProvenanceVerificationResult result = provenanceService.verifyAll(decodedId, version);
+    return ResponseEntity.ok(result);
   }
 
   private AssetVersion toAssetVersion(AssetRecord record) {

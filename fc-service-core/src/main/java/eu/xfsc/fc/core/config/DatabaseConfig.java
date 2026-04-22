@@ -32,6 +32,7 @@ public class DatabaseConfig {
     HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
     vendorAdapter.setGenerateDdl(false);
     emf.setJpaVendorAdapter(vendorAdapter);
+    emf.getJpaPropertyMap().put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
     emf.getJpaPropertyMap().put("hibernate.hbm2ddl.auto", "validate");
     emf.getJpaPropertyMap().put("org.hibernate.envers.audit_table_suffix", "_aud");
     emf.getJpaPropertyMap().put("org.hibernate.envers.revision_field_name", "rev");
