@@ -2,18 +2,15 @@ package eu.xfsc.fc.core.pojo;
 
 import java.util.Objects;
 
+import eu.xfsc.fc.core.util.RdfNodeMapper;
 import lombok.Getter;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Statement;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * POJO Class for holding a Claim. A Claim is a triple represented by a subject, predicate, and object.
  */
-@Slf4j
 public class RdfClaim {
 
   @Getter
@@ -24,9 +21,9 @@ public class RdfClaim {
 
   public RdfClaim(Statement triple, ObjectMapper objectMapper) {
     this.triple = triple;
-    this.subject = rdf2String(triple.getSubject(), objectMapper);
-    this.predicate = rdf2String(triple.getPredicate(), objectMapper);
-    this.object = rdf2String(triple.getObject(), objectMapper);
+    this.subject = RdfNodeMapper.rdf2String(triple.getSubject(), objectMapper);
+    this.predicate = RdfNodeMapper.rdf2String(triple.getPredicate(), objectMapper);
+    this.object = RdfNodeMapper.rdf2String(triple.getObject(), objectMapper);
   }
 
   public RdfClaim(String subject, String predicate, String object) {
@@ -94,30 +91,6 @@ public class RdfClaim {
     @Override
   public String toString() {
     return "Claim[" + subject + " " + predicate + " " + object + "]";
-  }
-
-    /**
-     * Serializes an RDF node to a string in the internal claim format:
-     * blank nodes as their raw label, literals as a JSON-quoted string of the lexical form,
-     * and IRIs wrapped in angle brackets ({@code <uri>}).
-     *
-     * <p>If JSON serialization of a literal fails, falls back to wrapping the lexical form
-     * in double quotes directly, avoiding a {@link ClassCastException} from calling
-     * {@code asResource()} on a literal node.</p>
-     */
-    public static String rdf2String(RDFNode node, ObjectMapper objectMapper) {
-    if (node.isAnon()) {
-      return node.asResource().getId().getLabelString();
-    } else if (node.isLiteral()) {
-      try {
-        return objectMapper.writeValueAsString(node.asLiteral().getLexicalForm());
-      } catch (JsonProcessingException e) {
-          log.error("rdf2String error for node {}", node, e);
-          return "\"" + node.asLiteral().getLexicalForm() + "\"";
-      }
-    } else {
-        return "<" + node.asResource().getURI() + ">";
-    }
   }
 
     private static String extractValue(String encoded) {

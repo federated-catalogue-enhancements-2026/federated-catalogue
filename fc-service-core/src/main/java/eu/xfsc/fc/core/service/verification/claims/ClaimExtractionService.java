@@ -7,7 +7,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * Consolidates RDF claim extraction logic for both credential and non-credential payloads.
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * extraction delegates to {@link JenaAllTriplesExtractor} for generic RDF formats.</p>
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class ClaimExtractionService {
 

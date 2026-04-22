@@ -34,7 +34,7 @@ class JenaAllTriplesExtractorTest {
     extractor = new JenaAllTriplesExtractor(objectMapper);
   }
 
-  // --- nodeToString: output must match RdfClaim.rdf2String ---
+  // --- nodeToString: output must match RdfNodeMapper.rdf2String ---
 
   @Test
   void nodeToString_iriNode_matchesRdfClaimFormat() {
@@ -140,5 +140,6 @@ class JenaAllTriplesExtractorTest {
 
     assertNotNull(claims);
     assertEquals(1, claims.size());
+    assertEquals("<http://example.org/item1>", claims.getFirst().getSubjectString());
   }
 }

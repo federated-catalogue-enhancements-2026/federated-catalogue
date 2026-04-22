@@ -42,9 +42,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * Integration test for CAT-FR-GD-02: non-credential RDF claims extraction.
+ * Integration test for non-credential RDF claims extraction.
  *
- * <p>SRS verification: Upload an RDF/JSON-LD asset that contains one triple.
+ * <p>Upload an RDF/JSON-LD asset that contains one triple.
  * Expect this triple to be extracted to the graph database.</p>
  */
 @SpringBootTest
@@ -90,7 +90,7 @@ public class NonCredentialRdfGraphExtractionTest {
   }
 
   /**
-   * SRS verification: upload a JSON-LD asset with one triple → triple is queryable via SPARQL.
+   * Upload a JSON-LD asset with one triple → triple is queryable via SPARQL.
    */
   @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, PREFIX + QUERY_EXECUTE},

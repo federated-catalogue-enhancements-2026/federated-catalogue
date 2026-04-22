@@ -2,8 +2,8 @@ package eu.xfsc.fc.core.service.verification;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.system.stream.StreamManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -31,20 +31,14 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SchemaValidationServiceImpl implements SchemaValidationService {
 
-    @Autowired
-    private ClaimExtractionService claimExtractionService;
-
-    @Autowired
-    private SchemaStore schemaStore;
-
-    @Autowired
+  private final ClaimExtractionService claimExtractionService;
+  private final SchemaStore schemaStore;
     @Qualifier("contextCacheFileStore")
-    private FileStore fileStore;
-
-    @Autowired
-    private DocumentLoader documentLoader;
+    private final FileStore fileStore;
+  private final DocumentLoader documentLoader;
 
     private StreamManager streamManager;
 

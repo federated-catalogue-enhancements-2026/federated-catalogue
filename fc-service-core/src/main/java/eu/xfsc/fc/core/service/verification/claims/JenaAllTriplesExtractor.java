@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.service.verification.VerificationConstants;
+import eu.xfsc.fc.core.util.RdfNodeMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +66,7 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
     RiotException lastException = null;
     for (Lang lang : toTry) {
       try {
+        assertNoDoctype(body, lang);
         Model model = ModelFactory.createDefaultModel();
         RDFParser.fromString(body, lang).parse(model);
         return model;
@@ -73,7 +75,22 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
         lastException = ex;
       }
     }
-    throw lastException;
+    if (lastException != null) {
+      throw lastException;
+    }
+    throw new RiotException("RDF parsing failed: no supported format matched");
+  }
+
+  /**
+   * XXE prevention: rejects RDF/XML content containing DOCTYPE declarations.
+   * Apache Jena's RDF/XML reader uses a SAX parser; DOCTYPE declarations can introduce
+   * external entity references that lead to XXE attacks. Valid RDF/XML content does not
+   * require DOCTYPE declarations, so any occurrence is treated as hostile input.
+   */
+  private static void assertNoDoctype(String body, Lang lang) {
+    if (lang == Lang.RDFXML && body.contains("<!DOCTYPE")) {
+      throw new RiotException("RDF/XML input must not contain DOCTYPE declarations");
+    }
   }
 
   /**
@@ -102,10 +119,10 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
 
   /**
    * Formats an RDF node as a string in the internal claim format.
-   * Delegates to {@link eu.xfsc.fc.core.pojo.RdfClaim#rdf2String} — the single source of truth
+   * Delegates to {@link eu.xfsc.fc.core.util.RdfNodeMapper#rdf2String} — the single source of truth
    * for blank node, literal, and IRI serialization.
    */
   String nodeToString(RDFNode node) {
-    return RdfClaim.rdf2String(node, objectMapper);
+    return RdfNodeMapper.rdf2String(node, objectMapper);
   }
 }
