@@ -19,6 +19,11 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
 
 /**
  * Unit tests for {@link JenaAllTriplesExtractor}.
@@ -80,38 +85,28 @@ class JenaAllTriplesExtractorTest {
 
   // --- detectLang ---
 
-  @Test
-  void detectLang_nullContentType_returnsJsonLd() {
-    assertEquals(Lang.JSONLD, JenaAllTriplesExtractor.detectLang(null));
+  @ParameterizedTest(name = "{index} => contentType: {0}, expected: {1}")
+  @MethodSource("detectLangTestCases")
+  void detectLang_returnsCorrectLanguage(String contentType, Lang expected) {
+    assertEquals(expected, JenaAllTriplesExtractor.detectLang(contentType));
   }
 
-  @Test
-  void detectLang_turtleContentType_returnsTurtle() {
-    assertEquals(Lang.TURTLE, JenaAllTriplesExtractor.detectLang("text/turtle"));
-  }
-
-  @Test
-  void detectLang_nTriplesContentType_returnsNTriples() {
-    assertEquals(Lang.NTRIPLES, JenaAllTriplesExtractor.detectLang("application/n-triples"));
-  }
-
-  @Test
-  void detectLang_rdfXmlContentType_returnsRdfXml() {
-    assertEquals(Lang.RDFXML, JenaAllTriplesExtractor.detectLang("application/rdf+xml"));
-    assertEquals(Lang.RDFXML, JenaAllTriplesExtractor.detectLang("application/xml"));
-  }
-
-  @Test
-  void detectLang_jsonLdContentType_returnsJsonLd() {
-    assertEquals(Lang.JSONLD, JenaAllTriplesExtractor.detectLang("application/ld+json"));
-    assertEquals(Lang.JSONLD, JenaAllTriplesExtractor.detectLang("application/json"));
-    assertEquals(Lang.JSONLD, JenaAllTriplesExtractor.detectLang("unknown/type"));
+  private static Stream<Arguments> detectLangTestCases() {
+    return Stream.of(
+        Arguments.of(null, Lang.JSONLD),
+        Arguments.of("text/turtle", Lang.TURTLE),
+        Arguments.of("application/n-triples", Lang.NTRIPLES),
+        Arguments.of("application/rdf+xml", Lang.RDFXML),
+        Arguments.of("application/ld+json", Lang.JSONLD),
+        Arguments.of("application/json", Lang.JSONLD),
+        Arguments.of("unknown/type", Lang.JSONLD)
+    );
   }
 
   // --- extractClaims: parse formats ---
 
   @Test
-  void extractClaims_inlineJsonLd_returnsTriples() throws Exception {
+  void extractClaims_inlineJsonLd_returnsTriples() {
     String jsonLd = """
         {
           "@context": {"ex": "http://example.org/"},
@@ -129,7 +124,7 @@ class JenaAllTriplesExtractorTest {
   }
 
   @Test
-  void extractClaims_turtle_returnsTriples() throws Exception {
+  void extractClaims_turtle_returnsTriples() {
     String turtle = """
         @prefix ex: <http://example.org/> .
         <http://example.org/item1> ex:name "Test" .
