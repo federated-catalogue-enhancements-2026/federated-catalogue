@@ -1,13 +1,14 @@
 package eu.xfsc.fc.core.service.provenance;
 
 import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import java.util.List;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
- * Builds PROV-O {@link CredentialClaim} triples for a provenance credential.
+ * Builds PROV-O {@link RdfClaim} triples for a provenance credential.
  *
  * <p>Maps each {@link ProvenanceType} to its corresponding W3C PROV-O predicate URI, producing a
  * single triple in N-Triples form: {@code <assetId> <prov:predicate> <objectValue> .}</p>
@@ -32,9 +33,9 @@ public final class ProvOTripleBuilder {
    * @param assetId        versioned asset identifier used as the triple subject (e.g. {@code did:example:abc:v1})
    * @param provenanceType the provenance relation type to map to a PROV-O predicate
    * @param objectValue    IRI value of the PROV-O predicate from {@code credentialSubject}
-   * @return a single-element list with the corresponding {@link CredentialClaim}
+   * @return a single-element list with the corresponding {@link RdfClaim}
    */
-  public static List<CredentialClaim> build(
+  public static List<RdfClaim> build(
       String assetId, ProvenanceType provenanceType, String objectValue) {
     String predicate = switch (provenanceType) {
       case CREATION -> PROV_WAS_GENERATED_BY;
@@ -42,7 +43,7 @@ public final class ProvOTripleBuilder {
       case ATTRIBUTION -> PROV_WAS_ATTRIBUTED_TO;
       case MODIFICATION -> PROV_WAS_REVISION_OF;
     };
-    CredentialClaim triple = new CredentialClaim(
+    RdfClaim triple = new RdfClaim(
         "<" + assetId + ">",
         predicate,
         "<" + objectValue + ">");

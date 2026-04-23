@@ -1,14 +1,15 @@
 package eu.xfsc.fc.core.service.provenance;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
-import java.util.List;
-import java.util.stream.Stream;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ProvOTripleBuilderTest {
 
@@ -28,10 +29,10 @@ class ProvOTripleBuilderTest {
   @ParameterizedTest
   @MethodSource("provenanceTypeMappings")
   void build_provenanceType_mapsToCorrectPredicate(ProvenanceType type, String expectedPredicate) {
-    List<CredentialClaim> triples = ProvOTripleBuilder.build(ASSET_ID, type, OBJECT_VALUE);
+    List<RdfClaim> triples = ProvOTripleBuilder.build(ASSET_ID, type, OBJECT_VALUE);
 
     assertEquals(1, triples.size());
-    CredentialClaim triple = triples.getFirst();
+    RdfClaim triple = triples.getFirst();
     assertEquals("<" + ASSET_ID + ">", triple.getSubjectString());
     assertEquals("<" + expectedPredicate + ">", triple.getPredicateString());
     assertEquals("<" + OBJECT_VALUE + ">", triple.getObjectString());

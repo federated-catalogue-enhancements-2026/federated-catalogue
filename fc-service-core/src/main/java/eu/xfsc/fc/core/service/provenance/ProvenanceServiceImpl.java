@@ -12,17 +12,13 @@ import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.VerificationService;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +26,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Business-logic implementation for provenance credential operations.
@@ -79,7 +80,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
       throw new ConflictException("Provenance credential already exists: credentialId=" + credentialId);
     }
 
-    List<CredentialClaim> provTriples = ProvOTripleBuilder.build(
+    List<RdfClaim> provTriples = ProvOTripleBuilder.build(
         expectedSubjectId, provenance.type(), provenance.objectValue());
     FilteredClaims filtered = namespaceFilter.filterClaims(provTriples, "provenance add");
     if (filtered.hasWarning()) {
