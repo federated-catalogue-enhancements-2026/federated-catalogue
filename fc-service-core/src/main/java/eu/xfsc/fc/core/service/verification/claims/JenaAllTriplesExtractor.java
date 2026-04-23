@@ -104,7 +104,7 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
     return switch (contentType.strip().toLowerCase()) {
       case VerificationConstants.MEDIA_TYPE_TURTLE -> Lang.TURTLE;
       case VerificationConstants.MEDIA_TYPE_NTRIPLES -> Lang.NTRIPLES;
-      case VerificationConstants.MEDIA_TYPE_RDF_XML, "application/xml" -> Lang.RDFXML;
+      case VerificationConstants.MEDIA_TYPE_RDF_XML -> Lang.RDFXML;
       default -> Lang.JSONLD;
     };
   }
