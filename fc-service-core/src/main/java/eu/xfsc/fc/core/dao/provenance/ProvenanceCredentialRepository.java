@@ -4,6 +4,9 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Spring Data JPA repository for {@link ProvenanceRecord} records.
@@ -48,4 +51,13 @@ public interface ProvenanceCredentialRepository extends JpaRepository<Provenance
    * @return {@code true} if the credential is already stored
    */
   boolean existsByCredentialId(String credentialId);
+
+  /**
+   * Deletes all provenance credentials for the given asset (cascade on asset deletion).
+   *
+   * @param assetId logical asset identifier
+   */
+  @Modifying
+  @Query("DELETE FROM ProvenanceRecord p WHERE p.assetId = :assetId")
+  void deleteByAssetId(@Param("assetId") String assetId);
 }

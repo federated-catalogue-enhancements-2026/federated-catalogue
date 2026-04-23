@@ -4,6 +4,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
+import eu.xfsc.fc.core.dao.provenance.ProvenanceCredentialRepository;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;
@@ -52,6 +53,7 @@ public class AssetStoreImpl implements AssetStore {
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
+  private final ProvenanceCredentialRepository provenanceCredentialRepository;
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
@@ -206,6 +208,8 @@ public class AssetStoreImpl implements AssetStore {
     if (ssr == null) {
       throw new NotFoundException("no asset found for hash " + hash);
     }
+
+    provenanceCredentialRepository.deleteByAssetId(ssr.subjectId());
 
     if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
