@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.validation.ValidationResult;
 import eu.xfsc.fc.core.dao.validation.ValidatorType;
-import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import java.time.Instant;
 import java.util.List;
@@ -54,11 +54,11 @@ class ValidationResultGraphWriterTest {
 
     writer.write(result, graphStore);
 
-    ArgumentCaptor<List<CredentialClaim>> claimsCaptor = forClass(List.class);
+    ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
     ArgumentCaptor<String> subjectCaptor = forClass(String.class);
     verify(graphStore).addClaims(claimsCaptor.capture(), subjectCaptor.capture());
 
-    List<CredentialClaim> claims = claimsCaptor.getValue();
+    List<RdfClaim> claims = claimsCaptor.getValue();
     assertEquals(5, claims.size(), "Single asset + 1 validatorId: 1 hasValidationResult + 1 validatorId + 3 property triples = 5");
   }
 
@@ -69,10 +69,10 @@ class ValidationResultGraphWriterTest {
 
     writer.write(result, graphStore);
 
-    ArgumentCaptor<List<CredentialClaim>> claimsCaptor = forClass(List.class);
+    ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
     verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
 
-    List<CredentialClaim> claims = claimsCaptor.getValue();
+    List<RdfClaim> claims = claimsCaptor.getValue();
     String expectedSubject = "<https://example.org/asset/1>";
     String expectedPredicate = "<" + FCMETA + "hasValidationResult>";
     boolean linkFound = claims.stream()
@@ -93,10 +93,10 @@ class ValidationResultGraphWriterTest {
 
     writer.write(result, graphStore);
 
-    ArgumentCaptor<List<CredentialClaim>> claimsCaptor = forClass(List.class);
+    ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
     verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
 
-    List<CredentialClaim> claims = claimsCaptor.getValue();
+    List<RdfClaim> claims = claimsCaptor.getValue();
     assertEquals(6, claims.size(), "Two assets + 1 validatorId: 2 hasValidationResult + 1 validatorId + 3 property triples = 6");
   }
 
@@ -125,7 +125,7 @@ class ValidationResultGraphWriterTest {
 
     writer.write(result, graphStore);
 
-    ArgumentCaptor<List<CredentialClaim>> claimsCaptor = forClass(List.class);
+    ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
     verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
 
     String expectedPredicate = "<" + FCMETA + "validatorId>";
@@ -147,7 +147,7 @@ class ValidationResultGraphWriterTest {
 
     writer.write(result, graphStore);
 
-    ArgumentCaptor<List<CredentialClaim>> claimsCaptor = forClass(List.class);
+    ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
     verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
 
     // 1 hasValidationResult + 2 validatorId + 3 property triples = 6

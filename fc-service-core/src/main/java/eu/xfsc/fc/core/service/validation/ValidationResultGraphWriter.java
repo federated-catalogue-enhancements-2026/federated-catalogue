@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.validation;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.validation.ValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,7 @@ public class ValidationResultGraphWriter {
   public void write(ValidationResult result, GraphStore graphStore) {
     String fcmeta = namespaceProperties.getNamespace();
     String resultIri = buildResultIri(result.getId(), fcmeta);
-    List<CredentialClaim> claims = new ArrayList<>();
+    List<RdfClaim> claims = new ArrayList<>();
 
     // Link each asset subject IRI → this validation result
     for (String assetId : result.getAssetIds()) {
