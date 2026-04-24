@@ -90,12 +90,16 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.PUT, "/assets/*/human-readable").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
           .requestMatchers(HttpMethod.GET, "/assets/*/human-readable").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.GET, "/assets/*/machine-readable").hasAnyRole(ASSET_READ, ADMIN_ALL)
+          .requestMatchers(HttpMethod.GET, "/assets/*/validations").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.POST, "/assets/*/provenance").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
           .requestMatchers(HttpMethod.GET, "/assets/*/provenance", "/assets/*/provenance/*").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.POST, "/assets/*/provenance/*/verify", "/assets/*/provenance/verify").hasAnyRole(ASSET_UPDATE, ADMIN_ALL)
           .requestMatchers(HttpMethod.GET, "/assets", "/assets/*").hasAnyRole(ASSET_READ, ADMIN_ALL)
           .requestMatchers(HttpMethod.POST, "/assets").hasAnyRole(ASSET_CREATE, ADMIN_ALL)
           .requestMatchers(HttpMethod.DELETE, "/assets/*").hasAnyRole(ASSET_DELETE, ADMIN_ALL)
+
+          // Validation result read APIs
+          .requestMatchers(HttpMethod.GET, "/validations/**").hasAnyRole(ASSET_READ, ADMIN_ALL)
 
           // Participants API
           .requestMatchers(HttpMethod.POST, "/participants").hasRole(CATALOGUE_ADMIN_ROLE)
