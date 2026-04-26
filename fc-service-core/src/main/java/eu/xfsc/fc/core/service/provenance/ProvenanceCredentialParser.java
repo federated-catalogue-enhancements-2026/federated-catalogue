@@ -118,8 +118,8 @@ public class ProvenanceCredentialParser {
       if (!context.isMissingNode()) {
         return "JSONLD";
       }
-    } catch (JsonProcessingException ignored) {
-      // fall through to JSONLD_JWT
+    } catch (JsonProcessingException ex) {
+      throw new ClientException("Unrecognized provenance credential format: not a JWT and not valid JSON", ex);
     }
     return "JSONLD_JWT";
   }
