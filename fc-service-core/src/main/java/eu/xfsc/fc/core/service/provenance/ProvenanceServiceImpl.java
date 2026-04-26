@@ -201,10 +201,6 @@ public class ProvenanceServiceImpl implements ProvenanceService {
         .warnings(warnings);
   }
 
-  // -------------------------------------------------------------------------
-  // Private helpers
-  // -------------------------------------------------------------------------
-
   private int resolveVersion(String assetId, Integer requestedVersion) {
     if (requestedVersion != null) {
       Optional<AssetRecord> record = assetDao.selectVersion(assetId, requestedVersion);
