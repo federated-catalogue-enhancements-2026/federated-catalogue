@@ -14,7 +14,7 @@ import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
-import eu.xfsc.fc.core.service.provenance.ProvenanceServiceImpl;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -27,6 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -47,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ContextConfiguration(classes = {AssetStoreCascadeDeleteTest.TestConfig.class, AssetStoreImpl.class,
     AssetJpaDao.class, AssetAuditRepository.class, DatabaseConfig.class, SecurityAuditorAware.class,
     DummyGraphStore.class, FileStoreConfig.class, IriGenerator.class,
-    ProtectedNamespaceProperties.class, IriValidator.class, ProvenanceServiceImpl.class})
+    ProtectedNamespaceProperties.class, IriValidator.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 class AssetStoreCascadeDeleteTest {
 
@@ -58,6 +59,9 @@ class AssetStoreCascadeDeleteTest {
   @EnableAutoConfiguration
   static class TestConfig {
   }
+
+  @MockitoBean
+  private ProvenanceService provenanceService;
 
   @Autowired
   private AssetStore assetStore;

@@ -25,7 +25,7 @@ import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import eu.xfsc.fc.core.service.provenance.ProvenanceServiceImpl;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -45,6 +45,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -82,8 +83,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         JwtSignatureVerifier.class,
         ProtectedNamespaceProperties.class,
         RdfContentTypeProperties.class,
-        SecurityAuditorAware.class,
-        ProvenanceServiceImpl.class
+        SecurityAuditorAware.class
 })
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
@@ -96,6 +96,9 @@ public class AssetStoreTest {
             SpringApplication.run(TestApplication.class, args);
         }
     }
+
+    @MockitoBean
+    private ProvenanceService provenanceService;
 
     @Autowired
     private AssetStore assetStorePublisher;
