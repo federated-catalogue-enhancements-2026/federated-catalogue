@@ -7,13 +7,13 @@ import org.springframework.context.annotation.Configuration;
 
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
-import eu.xfsc.fc.core.dao.provenance.ProvenanceCredentialRepository;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStoreImpl;
 import eu.xfsc.fc.core.service.assetstore.IriGenerator;
 import eu.xfsc.fc.core.service.assetstore.PublishingAssetStore;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,15 +29,15 @@ public class AssetStoreConfig {
       @Qualifier("assetFileStore") FileStore fileStore,
       IriGenerator iriGenerator, AssetRepository assetRepository,
       ProtectedNamespaceProperties namespaceProperties,
-      ProvenanceCredentialRepository provenanceCredentialRepository,
+      ProvenanceService provenanceService,
       AssetPublisher assetPublisher) {
     AssetStore assetStore;
     if ("none".equals(pubImpl)) {
       assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, provenanceCredentialRepository);
+          namespaceProperties, provenanceService);
     } else {
       assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, provenanceCredentialRepository, assetPublisher);
+          namespaceProperties, provenanceService, assetPublisher);
     }
     log.debug("getAssetStore; returning {} for impl {}", assetStore, pubImpl);
     return assetStore;

@@ -638,7 +638,6 @@ public class AssetService implements AssetsApiDelegate {
     log.debug("verifyProvenanceCredential; id={}, credentialId={}", id, credentialId);
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
     final String decodedCredentialId = UriUtils.decode(credentialId, StandardCharsets.UTF_8);
-    checkParticipantAccess(assetStorePublisher.getById(decodedId).getIssuer());
     ProvenanceVerificationResult result = provenanceService.verifyOne(decodedId, decodedCredentialId);
     return ResponseEntity.ok(result);
   }
@@ -655,7 +654,6 @@ public class AssetService implements AssetsApiDelegate {
       String id, Integer version) {
     log.debug("verifyAllProvenanceCredentials; id={}, version={}", id, version);
     final String decodedId = UriUtils.decode(id, StandardCharsets.UTF_8);
-    checkParticipantAccess(assetStorePublisher.getById(decodedId).getIssuer());
     ProvenanceVerificationResult result = provenanceService.verifyAll(decodedId, version);
     return ResponseEntity.ok(result);
   }

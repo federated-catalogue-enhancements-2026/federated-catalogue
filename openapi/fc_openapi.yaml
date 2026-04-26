@@ -2120,7 +2120,7 @@ paths:
       summary: Verify all provenance credentials for an asset.
       description: >
         Verifies all provenance credentials for the asset (optionally filtered by version).
-        Returns an aggregated result with per-credential status. Required permission: ASSET_READ
+        Returns an aggregated result with per-credential status. Required permission: ASSET_UPDATE
         or ADMIN_ALL
       operationId: verifyAllProvenanceCredentials
       security:
@@ -2202,7 +2202,7 @@ paths:
       summary: Verify a single provenance credential.
       description: >
         Validates the signature and DID of the given provenance credential and persists the
-        extended verification result. Required permission: ASSET_READ or ADMIN_ALL
+        extended verification result. Required permission: ASSET_UPDATE or ADMIN_ALL
       operationId: verifyProvenanceCredential
       security:
         - jwt: []
