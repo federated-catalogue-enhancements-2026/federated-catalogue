@@ -272,4 +272,9 @@ public class ProvenanceServiceImpl implements ProvenanceService {
     mapper.applyVerificationResult(entity, result);
     repository.save(entity);
   }
+
+  @Override
+  public void deleteByAssetId(String assetId) {
+    repository.deleteByAssetId(assetId);
+  }
 }

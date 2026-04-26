@@ -90,4 +90,13 @@ public interface ProvenanceService {
    * @return aggregated verification result
    */
   ProvenanceVerificationResult verifyAll(String assetId, Integer version);
+
+  /**
+   * Deletes all provenance credentials associated with the given asset.
+   *
+   * <p>Intended for cascade deletion when an asset is removed.</p>
+   *
+   * @param assetId logical asset IRI
+   */
+  void deleteByAssetId(String assetId);
 }
