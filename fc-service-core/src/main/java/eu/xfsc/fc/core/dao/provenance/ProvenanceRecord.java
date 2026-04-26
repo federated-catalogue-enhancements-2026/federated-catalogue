@@ -25,7 +25,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * JPA entity representing an append-only provenance credential attached to a specific
- * version of an asset. Stored in the {@code provenance_credentials} table.
+ * version of an asset.
  */
 @Entity
 @Table(name = "provenance_credentials")
