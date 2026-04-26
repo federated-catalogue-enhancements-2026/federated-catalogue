@@ -13,10 +13,10 @@ import org.springframework.data.domain.Pageable;
  *
  * <p>Error semantics:</p>
  * <ul>
- *   <li>{@link eu.xfsc.fc.core.exception.NotFoundException} — asset or credential not found (404)</li>
+ *   <li>{@link eu.xfsc.fc.core.exception.NotFoundException} — asset or credential not found</li>
  *   <li>{@link eu.xfsc.fc.core.exception.ClientException} — malformed input, VC version mismatch,
- *       wrong {@code credentialSubject.id}, or protected namespace usage (400)</li>
- *   <li>{@link eu.xfsc.fc.core.exception.ConflictException} — duplicate {@code credentialId} (409)</li>
+ *       wrong {@code credentialSubject.id}, or protected namespace usage</li>
+ *   <li>{@link eu.xfsc.fc.core.exception.ConflictException} — duplicate {@code credentialId}</li>
  * </ul>
  */
 public interface ProvenanceService {
@@ -24,12 +24,12 @@ public interface ProvenanceService {
   /**
    * Parses and stores a provenance credential against a specific asset version.
    *
-   * <p>Validation rules (400 on violation):</p>
+   * <p>Validation rules:</p>
    * <ul>
    *   <li>VC 1.1 payloads are rejected; only VC 2.0 JSON-LD and VC-JWT are accepted.</li>
    *   <li>{@code credentialSubject.id} must equal {@code {assetId}:v{N}}.</li>
    *   <li>The VC payload must not use the catalogue's protected internal namespace.</li>
-   *   <li>Duplicate {@code credentialId} (VC {@code id} field) → 409.</li>
+   *   <li>Duplicate {@code credentialId} (VC {@code id} field) throws {@link eu.xfsc.fc.core.exception.ConflictException}.</li>
    * </ul>
    *
    * <p>When the graph store is active, the corresponding PROV-O triple is written as a
