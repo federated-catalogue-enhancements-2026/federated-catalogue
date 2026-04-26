@@ -36,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -247,6 +248,18 @@ class ProvenanceServiceTest {
     var result = provenanceService.verifyOne(ASSET_ID, CREDENTIAL_ID);
 
     assertTrue(result.getIsValid());
+  }
+
+  @Test
+  void list_thirtyCredentials_firstPageReturnsPageSizeItems() {
+    for (int i = 1; i <= 30; i++) {
+      insertRecord("did:vc:prov-page-" + i, 1, ISSUED_AT.plusSeconds(i));
+    }
+
+    ProvenanceCredentials page = provenanceService.list(ASSET_ID, null, PageRequest.of(0, 10));
+
+    assertEquals(Integer.valueOf(30), page.getTotalCount());
+    assertEquals(10, page.getItems().size());
   }
 
   @Test

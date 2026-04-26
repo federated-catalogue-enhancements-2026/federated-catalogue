@@ -198,6 +198,21 @@ public class ProvenanceControllerTest {
         .andExpect(status().isForbidden());
   }
 
+  // ===== POST /assets/{id}/provenance — boundary tests =====
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void addProvenanceCredential_versionZero_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .post(String.format(PROVENANCE_URL, encode(ASSET_IRI)))
+            .param("version", "0")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{}")
+            .with(csrf()))
+        .andExpect(status().isBadRequest());
+  }
+
   // ===== GET /assets/{id}/provenance — happy path =====
 
   @Test
@@ -232,6 +247,56 @@ public class ProvenanceControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  // ===== GET /assets/{id}/provenance — boundary tests =====
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void listProvenanceCredentials_versionZero_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .get(String.format(PROVENANCE_URL, encode(ASSET_IRI)))
+            .param("version", "0")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void listProvenanceCredentials_negativePageIndex_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .get(String.format(PROVENANCE_URL, encode(ASSET_IRI)))
+            .param("page", "-1")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void listProvenanceCredentials_sizeZero_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .get(String.format(PROVENANCE_URL, encode(ASSET_IRI)))
+            .param("size", "0")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void listProvenanceCredentials_sizeAboveMaximum_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .get(String.format(PROVENANCE_URL, encode(ASSET_IRI)))
+            .param("size", "101")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -420,6 +485,20 @@ public class ProvenanceControllerTest {
             .with(csrf())
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isUnauthorized());
+  }
+
+  // ===== POST /assets/{id}/provenance/verify — boundary tests =====
+
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_UPDATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(
+      stringClaims = {@StringClaim(name = PARTICIPANT_ID, value = TEST_ISSUER)})))
+  void verifyAllProvenanceCredentials_versionZero_returnsBadRequest() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders
+            .post(String.format(VERIFY_ALL_URL, encode(ASSET_IRI)))
+            .param("version", "0")
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   // ===== Helpers =====
