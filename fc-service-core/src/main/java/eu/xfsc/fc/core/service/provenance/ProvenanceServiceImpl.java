@@ -73,15 +73,16 @@ public class ProvenanceServiceImpl implements ProvenanceService {
           "credentialSubject.id '" + subjectId + "' must equal '" + expectedSubjectId + "'");
     }
 
-    ProvenanceInfo provenance = parser.extractProvenance(rawVc);
-    Optional<String> credentialId = parser.extractCredentialId(rawVc);
+    ProvenanceCredentialInfo credentialInfo = parser.extractCredentialInfo(rawVc);
 
-    if (credentialId.isPresent() && repository.existsByCredentialId(credentialId.get())) {
-      throw new ConflictException("Provenance credential already exists: credentialId=" + credentialId.get());
+    if (credentialInfo.credentialId() != null
+        && repository.existsByCredentialId(credentialInfo.credentialId())) {
+      throw new ConflictException(
+          "Provenance credential already exists: credentialId=" + credentialInfo.credentialId());
     }
 
     List<RdfClaim> provTriples = ProvOTripleBuilder.build(
-        expectedSubjectId, provenance.type(), provenance.objectValue());
+        expectedSubjectId, credentialInfo.provenance().type(), credentialInfo.provenance().objectValue());
     FilteredClaims filtered = namespaceFilter.filterClaims(provTriples, "provenance add");
     if (filtered.hasWarning()) {
       throw new ClientException(
@@ -92,12 +93,12 @@ public class ProvenanceServiceImpl implements ProvenanceService {
     ProvenanceRecord entity = ProvenanceRecord.builder()
         .assetId(assetId)
         .assetVersion(resolvedVersion)
-        .credentialId(credentialId.orElse(null))
+        .credentialId(credentialInfo.credentialId())
         .issuer(verificationResult.getIssuer())
         .issuedAt(verificationResult.getIssuedDateTime())
-        .provenanceType(provenance.type())
+        .provenanceType(credentialInfo.provenance().type())
         .credentialContent(rawVc)
-        .credentialFormat(parser.detectFormatLabel(rawVc))
+        .credentialFormat(credentialInfo.formatLabel())
         .build();
 
     entity = repository.save(entity);

@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.provenance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,8 +37,6 @@ class ProvenanceCredentialParserTest {
     parser = new ProvenanceCredentialParser(verificationService, new ObjectMapper());
   }
 
-  // --- extractProvenance: compact predicates ---
-
   static Stream<Arguments> compactPredicates() {
     return Stream.of(
         Arguments.of("prov:wasGeneratedBy", ProvenanceType.CREATION),
@@ -49,16 +48,12 @@ class ProvenanceCredentialParserTest {
 
   @ParameterizedTest
   @MethodSource("compactPredicates")
-  void extractProvenance_compactPredicate_returnsCorrectType(String predicate, ProvenanceType expected) {
-    String vc = vcWithPredicate(predicate, OBJECT_VALUE);
+  void extractCredentialInfo_compactPredicate_returnsCorrectProvenance(String predicate, ProvenanceType expected) {
+    ProvenanceCredentialInfo info = parser.extractCredentialInfo(vcWith(predicate, OBJECT_VALUE));
 
-    ProvenanceInfo result = parser.extractProvenance(vc);
-
-    assertEquals(expected, result.type());
-    assertEquals(OBJECT_VALUE, result.objectValue());
+    assertEquals(expected, info.provenance().type());
+    assertEquals(OBJECT_VALUE, info.provenance().objectValue());
   }
-
-  // --- extractProvenance: full IRI predicates ---
 
   static Stream<Arguments> fullIriPredicates() {
     return Stream.of(
@@ -71,28 +66,61 @@ class ProvenanceCredentialParserTest {
 
   @ParameterizedTest
   @MethodSource("fullIriPredicates")
-  void extractProvenance_fullIriPredicate_returnsCorrectType(String predicate, ProvenanceType expected) {
-    String vc = vcWithPredicate(predicate, OBJECT_VALUE);
+  void extractCredentialInfo_fullIriPredicate_returnsCorrectProvenance(String predicate, ProvenanceType expected) {
+    ProvenanceCredentialInfo info = parser.extractCredentialInfo(vcWith(predicate, OBJECT_VALUE));
 
-    ProvenanceInfo result = parser.extractProvenance(vc);
-
-    assertEquals(expected, result.type());
-    assertEquals(OBJECT_VALUE, result.objectValue());
+    assertEquals(expected, info.provenance().type());
+    assertEquals(OBJECT_VALUE, info.provenance().objectValue());
   }
 
-  // --- extractProvenance: error paths ---
+  @Test
+  void extractCredentialInfo_withCredentialId_returnsPresent() {
+    ProvenanceCredentialInfo info = parser.extractCredentialInfo(vcWith("prov:wasGeneratedBy", OBJECT_VALUE));
+
+    assertEquals("did:vc:test-001", info.credentialId());
+  }
 
   @Test
-  void extractProvenance_missingCredentialSubject_throwsClientException() {
+  void extractCredentialInfo_withoutCredentialId_returnsEmpty() {
+    ProvenanceCredentialInfo info = parser.extractCredentialInfo(vcWithoutId("prov:wasGeneratedBy", OBJECT_VALUE));
+
+    assertNull(info.credentialId());
+  }
+
+  @Test
+  void extractCredentialInfo_withContext_returnsJsonldFormat() {
+    String vc = """
+        {
+          "@context": ["https://www.w3.org/2018/credentials/v1"],
+          "credentialSubject": {"prov:wasGeneratedBy": "%s"}
+        }
+        """.formatted(OBJECT_VALUE);
+
+    assertEquals("JSONLD", parser.extractCredentialInfo(vc).formatLabel());
+  }
+
+  @Test
+  void extractCredentialInfo_withoutContext_returnsJsonldJwtFormat() {
+    assertEquals("JSONLD_JWT", parser.extractCredentialInfo(vcWith("prov:wasGeneratedBy", OBJECT_VALUE)).formatLabel());
+  }
+
+  @Test
+  void extractCredentialInfo_jwtInput_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> parser.extractCredentialInfo("eyJhbGciOiJFZERTQSJ9.e30.sig"));
+  }
+
+  @Test
+  void extractCredentialInfo_missingCredentialSubject_throwsClientException() {
     String vc = """
         {"id": "did:vc:test"}
         """;
 
-    assertThrows(ClientException.class, () -> parser.extractProvenance(vc));
+    assertThrows(ClientException.class, () -> parser.extractCredentialInfo(vc));
   }
 
   @Test
-  void extractProvenance_noPovPredicate_throwsClientException() {
+  void extractCredentialInfo_noProvPredicate_throwsClientException() {
     String vc = """
         {
           "credentialSubject": {
@@ -102,11 +130,11 @@ class ProvenanceCredentialParserTest {
         }
         """.formatted(SUBJECT_ID);
 
-    assertThrows(ClientException.class, () -> parser.extractProvenance(vc));
+    assertThrows(ClientException.class, () -> parser.extractCredentialInfo(vc));
   }
 
   @Test
-  void extractProvenance_predicateWithNullValue_throwsClientException() {
+  void extractCredentialInfo_predicateWithNullValue_throwsClientException() {
     String vc = """
         {
           "credentialSubject": {
@@ -116,60 +144,24 @@ class ProvenanceCredentialParserTest {
         }
         """.formatted(SUBJECT_ID);
 
-    assertThrows(ClientException.class, () -> parser.extractProvenance(vc));
+    assertThrows(ClientException.class, () -> parser.extractCredentialInfo(vc));
   }
 
-  // --- extractCredentialId ---
-
-  @Test
-  void extractCredentialId_present_returnsId() {
-    String vc = """
-        {"id": "did:vc:test-001", "credentialSubject": {}}
-        """;
-
-    assertEquals(Optional.of("did:vc:test-001"), parser.extractCredentialId(vc));
-  }
-
-  @Test
-  void extractCredentialId_absent_returnsEmpty() {
-    String vc = """
-        {"credentialSubject": {}}
-        """;
-
-    assertTrue(parser.extractCredentialId(vc).isEmpty());
-  }
-
-  // --- detectFormatLabel ---
-
-  @Test
-  void detectFormatLabel_jwtString_returnsJwt() {
-    assertEquals("JWT", parser.detectFormatLabel("eyJhbGciOiJFZERTQSJ9.e30.sig"));
-  }
-
-  @Test
-  void detectFormatLabel_jsonWithContext_returnsJsonld() {
-    String vc = """
-        {"@context": ["https://www.w3.org/2018/credentials/v1"], "id": "did:vc:x"}
-        """;
-
-    assertEquals("JSONLD", parser.detectFormatLabel(vc));
-  }
-
-  @Test
-  void detectFormatLabel_jsonWithoutContext_returnsJsonldJwt() {
-    String vc = """
-        {"id": "did:vc:x", "credentialSubject": {}}
-        """;
-
-    assertEquals("JSONLD_JWT", parser.detectFormatLabel(vc));
-  }
-
-  // --- helpers ---
-
-  private static String vcWithPredicate(String predicate, String objectValue) {
+  private static String vcWith(String predicate, String objectValue) {
     return """
         {
           "id": "did:vc:test-001",
+          "credentialSubject": {
+            "id": "%s",
+            "%s": "%s"
+          }
+        }
+        """.formatted(SUBJECT_ID, predicate, objectValue);
+  }
+
+  private static String vcWithoutId(String predicate, String objectValue) {
+    return """
+        {
           "credentialSubject": {
             "id": "%s",
             "%s": "%s"

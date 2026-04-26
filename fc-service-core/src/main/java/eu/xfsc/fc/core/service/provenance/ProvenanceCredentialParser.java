@@ -10,7 +10,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import java.util.Map;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -61,16 +60,27 @@ public class ProvenanceCredentialParser {
   }
 
   /**
-   * Scans {@code credentialSubject} for a supported PROV-O predicate and returns the detected
-   * type and the predicate's value, which becomes the PROV-O triple object.
+   * Parses the raw VC once and extracts all metadata needed for provenance storage.
    *
-   * <p>Both compact ({@code prov:X}) and expanded IRI ({@code http://www.w3.org/ns/prov#X}) forms
-   * are accepted. The first matching predicate wins.</p>
-   *
-   * @throws ClientException if no supported PROV-O predicate is present
+   * @throws ClientException if the JSON is invalid, credentialSubject is absent, or no supported
+   *     PROV-O predicate is found
    */
-  public ProvenanceInfo extractProvenance(String rawVc) {
-    JsonNode root = parseJson(rawVc);
+  public ProvenanceCredentialInfo extractCredentialInfo(String rawVc) {
+    String stripped = rawVc.strip();
+    JsonNode root = parseJson(stripped);
+    String formatLabel = root.path(CONTEXT_KEY).isMissingNode() ? "JSONLD_JWT" : "JSONLD";
+    return new ProvenanceCredentialInfo(
+        extractCredentialId(root),
+        extractProvenance(root),
+        formatLabel);
+  }
+
+  private String extractCredentialId(JsonNode root) {
+    JsonNode idNode = root.path(VC_ID_KEY);
+    return idNode.isTextual() ? idNode.asText() : null;
+  }
+
+  private ProvenanceInfo extractProvenance(JsonNode root) {
     JsonNode subject = root.path(CREDENTIAL_SUBJECT_KEY);
     if (subject.isMissingNode() || subject.isNull()) {
       throw new ClientException(
@@ -93,40 +103,9 @@ public class ProvenanceCredentialParser {
             + ACCEPTED_PREDICATES);
   }
 
-  /**
-   * Returns the top-level {@code id} field of the credential, or empty if absent.
-   */
-  public Optional<String> extractCredentialId(String rawVc) {
-    JsonNode root = parseJson(rawVc);
-    JsonNode idNode = root.path(VC_ID_KEY);
-    return idNode.isTextual() ? Optional.of(idNode.asText()) : Optional.empty();
-  }
-
-  /**
-   * Detects the serialisation format of the raw VC string.
-   *
-   * @return {@code "JWT"}, {@code "JSONLD"}, or {@code "JSONLD_JWT"}
-   */
-  public String detectFormatLabel(String rawVc) {
-    String stripped = rawVc.strip();
-    if (stripped.startsWith("eyJ")) {
-      return "JWT";
-    }
-    try {
-      JsonNode root = objectMapper.readTree(stripped);
-      JsonNode context = root.path(CONTEXT_KEY);
-      if (!context.isMissingNode()) {
-        return "JSONLD";
-      }
-    } catch (JsonProcessingException ex) {
-      throw new ClientException("Unrecognized provenance credential format: not a JWT and not valid JSON", ex);
-    }
-    return "JSONLD_JWT";
-  }
-
   private JsonNode parseJson(String rawVc) {
     try {
-      return objectMapper.readTree(rawVc.strip());
+      return objectMapper.readTree(rawVc);
     } catch (JsonProcessingException ex) {
       throw new ClientException("Invalid JSON in provenance credential: " + ex.getMessage(), ex);
     }
