@@ -23,15 +23,13 @@ import java.util.regex.Pattern;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ProvOTripleBuilder {
 
-  private static final String PROV_NS = "http://www.w3.org/ns/prov#";
-
   // Prevents N-Triples triple injection: rejects chars forbidden in IRIREF per RDF 1.2 N-Triples spec
   private static final Pattern INVALID_IRI_CHARS = Pattern.compile("[\\x00-\\x20<>\"{}|^`\\\\]");
 
-  private static final String PROV_WAS_GENERATED_BY = "<" + PROV_NS + "wasGeneratedBy>";
-  private static final String PROV_WAS_DERIVED_FROM = "<" + PROV_NS + "wasDerivedFrom>";
-  private static final String PROV_WAS_ATTRIBUTED_TO = "<" + PROV_NS + "wasAttributedTo>";
-  private static final String PROV_WAS_REVISION_OF = "<" + PROV_NS + "wasRevisionOf>";
+  private static final String PROV_WAS_GENERATED_BY = "<" + ProvOConstants.NAMESPACE + "wasGeneratedBy>";
+  private static final String PROV_WAS_DERIVED_FROM = "<" + ProvOConstants.NAMESPACE + "wasDerivedFrom>";
+  private static final String PROV_WAS_ATTRIBUTED_TO = "<" + ProvOConstants.NAMESPACE + "wasAttributedTo>";
+  private static final String PROV_WAS_REVISION_OF = "<" + ProvOConstants.NAMESPACE + "wasRevisionOf>";
 
   /**
    * Builds a list containing the single PROV-O triple for the given provenance credential.

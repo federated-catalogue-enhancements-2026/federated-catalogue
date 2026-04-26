@@ -23,7 +23,6 @@ public class ProvenanceCredentialParser {
   private static final String CREDENTIAL_SUBJECT_KEY = "credentialSubject";
   private static final String VC_ID_KEY = "id";
   private static final String CONTEXT_KEY = "@context";
-  private static final String PROV_NS = "http://www.w3.org/ns/prov#";
   private static final String ACCEPTED_PREDICATES =
       "prov:wasGeneratedBy, prov:wasDerivedFrom, prov:wasAttributedTo, prov:wasRevisionOf";
 
@@ -33,13 +32,13 @@ public class ProvenanceCredentialParser {
    */
   private static final Map<String, ProvenanceType> PREDICATE_MAP = Map.of(
       "prov:wasGeneratedBy", ProvenanceType.CREATION,
-      PROV_NS + "wasGeneratedBy", ProvenanceType.CREATION,
+      ProvOConstants.NAMESPACE + "wasGeneratedBy", ProvenanceType.CREATION,
       "prov:wasDerivedFrom", ProvenanceType.DERIVATION,
-      PROV_NS + "wasDerivedFrom", ProvenanceType.DERIVATION,
+      ProvOConstants.NAMESPACE + "wasDerivedFrom", ProvenanceType.DERIVATION,
       "prov:wasAttributedTo", ProvenanceType.ATTRIBUTION,
-      PROV_NS + "wasAttributedTo", ProvenanceType.ATTRIBUTION,
+      ProvOConstants.NAMESPACE + "wasAttributedTo", ProvenanceType.ATTRIBUTION,
       "prov:wasRevisionOf", ProvenanceType.MODIFICATION,
-      PROV_NS + "wasRevisionOf", ProvenanceType.MODIFICATION
+      ProvOConstants.NAMESPACE + "wasRevisionOf", ProvenanceType.MODIFICATION
   );
 
   private final VerificationService verificationService;
