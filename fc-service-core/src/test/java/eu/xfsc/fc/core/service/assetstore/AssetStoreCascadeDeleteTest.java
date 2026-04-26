@@ -1,12 +1,5 @@
 package eu.xfsc.fc.core.service.assetstore;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.FileStoreConfig;
@@ -21,6 +14,7 @@ import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -34,6 +28,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 /**
  * Integration tests for cascade-delete behaviour in {@link AssetStoreImpl}.
  *
@@ -46,7 +47,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(classes = {AssetStoreCascadeDeleteTest.TestConfig.class, AssetStoreImpl.class,
     AssetJpaDao.class, AssetAuditRepository.class, DatabaseConfig.class, SecurityAuditorAware.class,
     DummyGraphStore.class, FileStoreConfig.class, IriGenerator.class,
-    ProtectedNamespaceProperties.class, IriValidator.class})
+    ProtectedNamespaceProperties.class, IriValidator.class, ProvenanceService.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 class AssetStoreCascadeDeleteTest {
 
