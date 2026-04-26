@@ -568,12 +568,11 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * POST /assets/{id}/provenance — attach a provenance credential to an asset version.
+   * Validates and stores a provenance credential for the given asset version.
    *
-   * @param id      URL-encoded asset IRI
-   * @param body    raw VC content (JSON-LD string or JWT compact serialisation)
+   * @param id      asset IRI
+   * @param body    raw VC content
    * @param version 1-based version ordinal, or {@code null} for the current version
-   * @return 201 with the persisted credential record
    */
   @Override
   public ResponseEntity<ProvenanceCredential> addProvenanceCredential(String id, String body, Integer version) {
@@ -589,13 +588,12 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * GET /assets/{id}/provenance — list provenance credentials for an asset.
+   * Returns paginated provenance credentials for the given asset.
    *
-   * @param id      URL-encoded asset IRI
+   * @param id      asset IRI
    * @param version 1-based version ordinal to filter, or {@code null} for all versions
    * @param page    0-based page index (optional)
    * @param size    page size (optional)
-   * @return 200 with paginated credential list
    */
   @Override
   public ResponseEntity<ProvenanceCredentials> listProvenanceCredentials(
@@ -610,11 +608,10 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * GET /assets/{id}/provenance/{credentialId} — get a single provenance credential.
+   * Returns a single provenance credential belonging to the given asset.
    *
-   * @param id           URL-encoded asset IRI
-   * @param credentialId VC {@code id} URI
-   * @return 200 with the credential record
+   * @param id           asset IRI
+   * @param credentialId credential identifier
    */
   @Override
   public ResponseEntity<ProvenanceCredential> getProvenanceCredential(String id, String credentialId) {
@@ -626,11 +623,10 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * POST /assets/{id}/provenance/{credentialId}/verify — verify a single provenance credential.
+   * Verifies a single provenance credential and persists the result.
    *
-   * @param id           URL-encoded asset IRI
-   * @param credentialId VC {@code id} URI
-   * @return 200 with the extended verification result
+   * @param id           asset IRI
+   * @param credentialId credential identifier
    */
   @Override
   public ResponseEntity<ProvenanceVerificationResult> verifyProvenanceCredential(
@@ -643,11 +639,10 @@ public class AssetService implements AssetsApiDelegate {
   }
 
   /**
-   * POST /assets/{id}/provenance/verify — verify all provenance credentials for an asset.
+   * Verifies all provenance credentials for the given asset and persists the results.
    *
-   * @param id      URL-encoded asset IRI
+   * @param id      asset IRI
    * @param version 1-based version ordinal to scope, or {@code null} for all versions
-   * @return 200 with the aggregated verification result
    */
   @Override
   public ResponseEntity<ProvenanceVerificationResult> verifyAllProvenanceCredentials(
