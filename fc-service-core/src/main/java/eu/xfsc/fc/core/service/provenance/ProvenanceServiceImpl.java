@@ -74,10 +74,10 @@ public class ProvenanceServiceImpl implements ProvenanceService {
     }
 
     ProvenanceInfo provenance = parser.extractProvenance(rawVc);
-    String credentialId = parser.extractCredentialId(rawVc);
+    Optional<String> credentialId = parser.extractCredentialId(rawVc);
 
-    if (credentialId != null && repository.existsByCredentialId(credentialId)) {
-      throw new ConflictException("Provenance credential already exists: credentialId=" + credentialId);
+    if (credentialId.isPresent() && repository.existsByCredentialId(credentialId.get())) {
+      throw new ConflictException("Provenance credential already exists: credentialId=" + credentialId.get());
     }
 
     List<RdfClaim> provTriples = ProvOTripleBuilder.build(
@@ -92,7 +92,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
     ProvenanceRecord entity = ProvenanceRecord.builder()
         .assetId(assetId)
         .assetVersion(resolvedVersion)
-        .credentialId(credentialId)
+        .credentialId(credentialId.orElse(null))
         .issuer(verificationResult.getIssuer())
         .issuedAt(verificationResult.getIssuedDateTime())
         .provenanceType(provenance.type())

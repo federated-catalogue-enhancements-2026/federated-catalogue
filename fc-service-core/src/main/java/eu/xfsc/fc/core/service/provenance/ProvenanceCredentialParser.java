@@ -10,6 +10,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -93,12 +94,12 @@ public class ProvenanceCredentialParser {
   }
 
   /**
-   * Returns the top-level {@code id} field of the credential, or {@code null} if absent.
+   * Returns the top-level {@code id} field of the credential, or empty if absent.
    */
-  public String extractCredentialId(String rawVc) {
+  public Optional<String> extractCredentialId(String rawVc) {
     JsonNode root = parseJson(rawVc);
     JsonNode idNode = root.path(VC_ID_KEY);
-    return idNode.isTextual() ? idNode.asText() : null;
+    return idNode.isTextual() ? Optional.of(idNode.asText()) : Optional.empty();
   }
 
   /**

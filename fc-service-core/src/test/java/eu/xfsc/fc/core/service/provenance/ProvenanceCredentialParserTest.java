@@ -1,13 +1,14 @@
 package eu.xfsc.fc.core.service.provenance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.service.verification.VerificationService;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -126,16 +127,16 @@ class ProvenanceCredentialParserTest {
         {"id": "did:vc:test-001", "credentialSubject": {}}
         """;
 
-    assertEquals("did:vc:test-001", parser.extractCredentialId(vc));
+    assertEquals(Optional.of("did:vc:test-001"), parser.extractCredentialId(vc));
   }
 
   @Test
-  void extractCredentialId_absent_returnsNull() {
+  void extractCredentialId_absent_returnsEmpty() {
     String vc = """
         {"credentialSubject": {}}
         """;
 
-    assertNull(parser.extractCredentialId(vc));
+    assertTrue(parser.extractCredentialId(vc).isEmpty());
   }
 
   // --- detectFormatLabel ---
