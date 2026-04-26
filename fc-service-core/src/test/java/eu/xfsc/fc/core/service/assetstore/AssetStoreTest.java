@@ -25,7 +25,7 @@ import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import eu.xfsc.fc.core.service.provenance.ProvenanceService;
+import eu.xfsc.fc.core.service.provenance.ProvenanceServiceImpl;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -83,7 +83,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         ProtectedNamespaceProperties.class,
         RdfContentTypeProperties.class,
         SecurityAuditorAware.class,
-        ProvenanceService.class
+        ProvenanceServiceImpl.class
 })
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
