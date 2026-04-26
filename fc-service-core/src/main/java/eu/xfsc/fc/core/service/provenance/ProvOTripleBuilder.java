@@ -1,11 +1,14 @@
 package eu.xfsc.fc.core.service.provenance;
 
 import eu.xfsc.fc.core.dao.provenance.ProvenanceType;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.net.URI;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Builds PROV-O {@link RdfClaim} triples for a provenance credential.
@@ -22,6 +25,9 @@ public final class ProvOTripleBuilder {
 
   private static final String PROV_NS = "http://www.w3.org/ns/prov#";
 
+  // Prevents N-Triples triple injection: rejects chars forbidden in IRIREF per RDF 1.2 N-Triples spec
+  private static final Pattern INVALID_IRI_CHARS = Pattern.compile("[\\x00-\\x20<>\"{}|^`\\\\]");
+
   private static final String PROV_WAS_GENERATED_BY = "<" + PROV_NS + "wasGeneratedBy>";
   private static final String PROV_WAS_DERIVED_FROM = "<" + PROV_NS + "wasDerivedFrom>";
   private static final String PROV_WAS_ATTRIBUTED_TO = "<" + PROV_NS + "wasAttributedTo>";
@@ -37,6 +43,8 @@ public final class ProvOTripleBuilder {
    */
   public static List<RdfClaim> build(
       String assetId, ProvenanceType provenanceType, String objectValue) {
+    validateIri(assetId, "assetId");
+    validateIri(objectValue, "objectValue");
     String predicate = switch (provenanceType) {
       case CREATION -> PROV_WAS_GENERATED_BY;
       case DERIVATION -> PROV_WAS_DERIVED_FROM;
@@ -48,5 +56,19 @@ public final class ProvOTripleBuilder {
         predicate,
         "<" + objectValue + ">");
     return List.of(triple);
+  }
+
+  private static void validateIri(String value, String field) {
+    if (INVALID_IRI_CHARS.matcher(value).find()) {
+      throw new ClientException(
+          "Invalid IRI for " + field + ": contains characters forbidden in N-Triples IRIREF");
+    }
+    try {
+      if (!URI.create(value).isAbsolute()) {
+        throw new ClientException("Invalid IRI for " + field + ": must be an absolute IRI");
+      }
+    } catch (IllegalArgumentException ex) {
+      throw new ClientException("Invalid IRI for " + field + ": " + ex.getMessage(), ex);
+    }
   }
 }
