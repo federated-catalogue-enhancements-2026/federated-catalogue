@@ -21,10 +21,10 @@ import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -34,10 +34,6 @@ import java.util.Optional;
 
 /**
  * Business-logic implementation for provenance credential operations.
- *
- * <p>All mutating operations ({@link #add}, {@link #verifyOne}, {@link #verifyAll}) run in a
- * {@code REQUIRES_NEW} transaction so they remain isolated from the Envers audit session and
- * do not produce a new asset revision.</p>
  */
 @Slf4j
 @Service
@@ -58,7 +54,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
    * <p>Validates, stores, and optionally mirrors the provenance credential as a PROV-O triple.</p>
    */
   @Override
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional
   public ProvenanceCredential add(String assetId, Integer version, String rawVc, String format) {
     log.debug("add; assetId={}, version={}, format={}", assetId, version, format);
 
@@ -101,7 +97,12 @@ public class ProvenanceServiceImpl implements ProvenanceService {
         .credentialFormat(credentialInfo.formatLabel())
         .build();
 
-    entity = repository.save(entity);
+    try {
+      entity = repository.save(entity);
+    } catch (DataIntegrityViolationException e) {
+      throw new ConflictException(
+          "Provenance credential already exists: credentialId=" + credentialInfo.credentialId());
+    }
     log.info("add; stored provenance credential id={} for asset={} version={}",
         entity.getId(), assetId, resolvedVersion);
 
@@ -141,7 +142,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
 
   /** {@inheritDoc} */
   @Override
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional
   public ProvenanceVerificationResult verifyOne(String assetId, String credentialId) {
     log.debug("verifyOne; assetId={}, credentialId={}", assetId, credentialId);
     ProvenanceRecord entity = requireCredentialBelongsToAsset(assetId, credentialId);
@@ -153,7 +154,7 @@ public class ProvenanceServiceImpl implements ProvenanceService {
 
   /** {@inheritDoc} */
   @Override
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional
   public ProvenanceVerificationResult verifyAll(String assetId, Integer version) {
     log.debug("verifyAll; assetId={}, version={}", assetId, version);
     requireAssetExists(assetId);
