@@ -403,7 +403,7 @@ public class ParticipantsControllerTest {
   public void addParticipantFailWithSameCredentialShouldReturnConflictFromKeyCloakWithoutDBStore() throws Exception {
     String json = getMockFileDataAsString(DEFAULT_PARTICIPANT_FILE);
     ParticipantMetaData partNew = new ParticipantMetaData("did:example:issuer", "did:example:holder", "did:example:holder#key", json);
-    assetStorePublisher.deleteAsset(partNew.getAssetHash());
+    assetStorePublisher.deleteAsset(partNew.getAssetHash(), false);
     setupKeycloak(HttpStatus.SC_CONFLICT, partNew);
 
     mockMvc
@@ -743,7 +743,7 @@ public class ParticipantsControllerTest {
 
   private void deleteParticipantFromAssetStore(ParticipantMetaData part) {
     try {
-      assetStorePublisher.deleteAsset(part.getAssetHash());
+      assetStorePublisher.deleteAsset(part.getAssetHash(), false);
     } catch (Exception ignored) {
     }
   }

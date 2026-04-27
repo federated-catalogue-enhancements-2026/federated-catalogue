@@ -3,8 +3,10 @@ package eu.xfsc.fc.core.dao.validation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Spring Data JPA repository for {@link ValidationResult} entities. */
 public interface ValidationResultRepository extends JpaRepository<ValidationResult, Long> {
@@ -19,5 +21,29 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
       countQuery = "SELECT COUNT(*) FROM validation_result WHERE :assetId = ANY(asset_ids)",
       nativeQuery = true)
   Page<ValidationResult> findByAssetId(@Param("assetId") String assetId, Pageable pageable);
+
+  /**
+   * Mark all validation results for a given asset as outdated with a reason.
+   *
+   * <p>Uses native query to directly update the DB. Called when an asset is updated or
+   * revoked to stale-date its previous validation history.</p>
+   */
+  @Modifying
+  @Transactional
+  @Query(value = "UPDATE validation_result SET outdated = true, outdated_reason = :reason "
+      + "WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
+  void markOutdatedByAssetId(@Param("assetId") String assetId, @Param("reason") String reason);
+
+  /**
+   * Delete all validation results for a given asset.
+   *
+   * <p>Used during asset deletion to clean up validation history when the asset itself
+   * is removed.</p>
+   */
+  @Modifying
+  @Transactional
+  @Query(value = "DELETE FROM validation_result WHERE :assetId = ANY(asset_ids)",
+      nativeQuery = true)
+  void deleteByAssetId(@Param("assetId") String assetId);
 
 }

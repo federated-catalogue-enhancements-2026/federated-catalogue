@@ -28,7 +28,7 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.validation.ValidationResultGraphWriter;
 import eu.xfsc.fc.core.service.validation.ValidationResultHasher;
-import eu.xfsc.fc.core.service.validation.ValidationResultStoreImpl;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
 import eu.xfsc.fc.core.service.verification.FormatDetector;
@@ -114,7 +114,6 @@ import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
         ValidatorCacheJpaDao.class,
         ValidationResultGraphWriter.class,
         ValidationResultHasher.class,
-        ValidationResultStoreImpl.class,
         Vc2Processor.class,
         VerificationServiceImpl.class
 })
@@ -133,6 +132,9 @@ public class AssetStoreCompositeTest {
 
     @MockitoBean
     private ProvenanceService provenanceService;
+
+    @MockitoBean
+    private ValidationResultStore validationResultStore;
 
     @Autowired
     private VerificationServiceImpl verificationService;
@@ -194,7 +196,7 @@ public class AssetStoreCompositeTest {
         List<Map<String, Object>> aNodes = graphStore.queryData(
                 new GraphQuery("MATCH (n) RETURN labels(n), n", Map.of())).getResults();
 
-        assetStorePublisher.deleteAsset(hash);
+        assetStorePublisher.deleteAsset(hash, false);
 
         claims = graphStore.queryData(
                 new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", uri))).getResults();
@@ -233,7 +235,7 @@ public class AssetStoreCompositeTest {
                 new GraphQuery("MATCH (n) RETURN n", null)).getResults();
         Assertions.assertEquals(3, claims.size());
 
-        assetStorePublisher.deleteAsset(hash);
+        assetStorePublisher.deleteAsset(hash, false);
 
         claims = graphStore.queryData(
                 new GraphQuery("MATCH (n) RETURN n", null)).getResults();
@@ -277,7 +279,7 @@ public class AssetStoreCompositeTest {
             Assertions.assertFalse(relType.contains("complianceResult"),
                     "Protected namespace relationship should not exist after rebuild: " + relType);
         }
-        assetStorePublisher.deleteAsset(hash);
+        assetStorePublisher.deleteAsset(hash, false);
     }
 
     @Test
@@ -322,6 +324,6 @@ public class AssetStoreCompositeTest {
         Assertions.assertFalse(nodes.isEmpty(),
                 "Graph must contain non-credential triples after rebuild");
 
-        assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
+        assetStorePublisher.deleteAsset(assetMeta.getAssetHash(), false);
     }
 }

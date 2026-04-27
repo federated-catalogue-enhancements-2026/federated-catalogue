@@ -161,7 +161,7 @@ public class NonCredentialRdfGraphExtractionTest {
     assertEquals(TEST_ASSET_OBJECT, triple.get("o"),
         "Object must match the name literal");
 
-    assetStore.deleteAsset(asset.getAssetHash());
+    assetStore.deleteAsset(asset.getAssetHash(), false);
   }
 
   /**
@@ -205,7 +205,7 @@ public class NonCredentialRdfGraphExtractionTest {
     assertEquals(TEST_ASSET_PREDICATE, triple.get("p"), "Predicate must match ex:name");
     assertEquals(TURTLE_OBJECT, triple.get("o"), "Object must match the name literal");
 
-    assetStore.deleteAsset(asset.getAssetHash());
+    assetStore.deleteAsset(asset.getAssetHash(), false);
   }
 
   /**
@@ -249,7 +249,7 @@ public class NonCredentialRdfGraphExtractionTest {
     assertEquals(TEST_ASSET_PREDICATE, triple.get("p"), "Predicate must match ex:name");
     assertEquals(NTRIPLES_OBJECT, triple.get("o"), "Object must match the name literal");
 
-    assetStore.deleteAsset(asset.getAssetHash());
+    assetStore.deleteAsset(asset.getAssetHash(), false);
   }
 
   /**
@@ -293,7 +293,7 @@ public class NonCredentialRdfGraphExtractionTest {
     assertEquals(TEST_ASSET_PREDICATE, triple.get("p"), "Predicate must match ex:name");
     assertEquals(RDFXML_OBJECT, triple.get("o"), "Object must match the name literal");
 
-    assetStore.deleteAsset(asset.getAssetHash());
+    assetStore.deleteAsset(asset.getAssetHash(), false);
   }
 
   private String sparqlForAsset(String assetIri) {

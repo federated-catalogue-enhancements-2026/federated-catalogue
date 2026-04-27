@@ -94,7 +94,7 @@ public class GraphRebuildLinkRestoreTest {
     assetStore.getActiveAssetHashes(null, 100, 1, 0)
         .forEach(hash -> {
           try {
-            assetStore.deleteAsset(hash);
+            assetStore.deleteAsset(hash, false);
           } catch (eu.xfsc.fc.core.exception.NotFoundException e) {
             // already gone — skip
           }
@@ -188,7 +188,7 @@ public class GraphRebuildLinkRestoreTest {
 
   private void deleteAssetQuietly(String hash) {
     try {
-      assetStore.deleteAsset(hash);
+      assetStore.deleteAsset(hash, false);
     } catch (NotFoundException e) {
       // expected
     }

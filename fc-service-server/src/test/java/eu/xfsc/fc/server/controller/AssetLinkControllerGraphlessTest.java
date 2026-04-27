@@ -157,7 +157,7 @@ public class AssetLinkControllerGraphlessTest {
 
   private void deleteAssetQuietly(String hash) {
     try {
-      assetStore.deleteAsset(hash);
+      assetStore.deleteAsset(hash, false);
     } catch (NotFoundException e) {
       // expected
     }

@@ -5,6 +5,7 @@ import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_UPDATE_WITH_PREFI
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,6 +14,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import com.c4_soft.springaddons.security.oauth2.test.annotations.Claims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.OpenIdClaims;
@@ -22,12 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
+import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -61,6 +66,10 @@ public class AssetLinkPreservationOnUpdateTest {
 
   private static final String TEST_ISSUER = "http://example.org/test-issuer";
   private static final String MR_IRI = "did:web:test:preservation-mr";
+  private static final String FCMETA_NS =
+      "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
+  private static final String FCMETA_HAS_HUMAN_READABLE = FCMETA_NS + "hasHumanReadable";
+  private static final String CRED_SUBJECT_URI = "https://www.w3.org/2018/credentials#credentialSubject";
 
   @Autowired
   private WebApplicationContext context;
@@ -72,6 +81,8 @@ public class AssetLinkPreservationOnUpdateTest {
   private AssetStore assetStore;
   @Autowired
   private AssetRepository assetRepository;
+  @Autowired
+  private GraphStore graphStore;
 
   @BeforeAll
   void setup() {
@@ -136,6 +147,31 @@ public class AssetLinkPreservationOnUpdateTest {
     deleteAssetQuietly(hrV2.getAssetHash());
   }
 
+  @Test
+  @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX},
+      claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+          @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+  void updateMachineReadableAsset_hasHumanReadableTripleRemainsQueryableAfterUpdate() throws Exception {
+    storeMrVersion("MR v1 for SPARQL check");
+    final var hrAsset = uploadHumanReadable(MR_IRI, "HR for SPARQL check", "text/plain", "hr-sparql.txt");
+
+    storeMrVersion("MR v2 for SPARQL check");
+
+    final var sparql = """
+        SELECT ?s ?p ?o WHERE {
+          <<(?s ?p ?o)>> <%s> <%s> .
+          FILTER(?s = <%s> && ?p = <%s>)
+        }
+        """.formatted(CRED_SUBJECT_URI, MR_IRI, MR_IRI, FCMETA_HAS_HUMAN_READABLE);
+    final var results = graphStore.queryData(
+        new GraphQuery(sparql, Map.of(), QueryLanguage.SPARQL, GraphQuery.QUERY_TIMEOUT, false));
+
+    assertTrue(results.getTotalCount() > 0,
+        "fcmeta:hasHumanReadable triple must remain queryable after MR asset update");
+
+    deleteAssetQuietly(hrAsset.getAssetHash());
+  }
+
   private void storeMrVersion(String content) {
     String hash = HashUtils.calculateSha256AsHex(content);
     AssetMetadata meta = new AssetMetadata();
@@ -169,7 +205,7 @@ public class AssetLinkPreservationOnUpdateTest {
 
   private void deleteAssetQuietly(String hash) {
     try {
-      assetStore.deleteAsset(hash);
+      assetStore.deleteAsset(hash, false);
     } catch (NotFoundException e) {
       // expected
     }

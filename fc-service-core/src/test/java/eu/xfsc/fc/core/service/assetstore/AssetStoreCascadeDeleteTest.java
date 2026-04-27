@@ -15,6 +15,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -35,6 +36,7 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 
 /**
  * Integration tests for cascade-delete behaviour in {@link AssetStoreImpl}.
@@ -63,6 +65,9 @@ class AssetStoreCascadeDeleteTest {
   @MockitoBean
   private ProvenanceService provenanceService;
 
+  @MockitoBean
+  private ValidationResultStore validationResultStore;
+
   @Autowired
   private AssetStore assetStore;
 
@@ -83,7 +88,7 @@ class AssetStoreCascadeDeleteTest {
 
     linkAssets(mrMeta.getId(), hrMeta.getId());
 
-    assetStore.deleteAsset(mrMeta.getAssetHash());
+    assetStore.deleteAsset(mrMeta.getAssetHash(), false);
 
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(mrMeta.getAssetHash()),
         "MR asset must be gone after delete");
@@ -100,7 +105,7 @@ class AssetStoreCascadeDeleteTest {
 
     linkAssets(mrMeta.getId(), hrMeta.getId());
 
-    assetStore.deleteAsset(hrMeta.getAssetHash());
+    assetStore.deleteAsset(hrMeta.getAssetHash(), false);
 
     assertNotNull(assetStore.getByHash(mrMeta.getAssetHash()),
         "MR asset must survive when HR asset is deleted directly");
@@ -110,15 +115,55 @@ class AssetStoreCascadeDeleteTest {
     assertNull(mrEntity.getLinkedAsset(), "linked_asset_id must be nulled by DB after HR is deleted");
   }
 
+  // ===== keepHumanReadable=true preserves HR =====
+
+  @Test
+  void deleteAsset_withKeepHumanReadableTrue_machineReadableDeletedHumanReadablePreserved() {
+    final var mrMeta = storeNonRdfAsset(MR_ID, "mr content keep-hr-test");
+    final var hrMeta = storeNonRdfAsset(null, "hr content keep-hr-test");
+
+    linkAssets(mrMeta.getId(), hrMeta.getId());
+
+    assetStore.deleteAsset(mrMeta.getAssetHash(), true);
+
+    assertThrows(NotFoundException.class, () -> assetStore.getByHash(mrMeta.getAssetHash()),
+        "MR asset must be deleted");
+    assertNotNull(assetStore.getByHash(hrMeta.getAssetHash()),
+        "HR asset must survive when keepHumanReadable=true");
+  }
+
   // ===== delete unlinked asset — no cascade side effects =====
 
   @Test
   void deleteAsset_noLinksExist_deletesSuccessfully() {
     final var meta = storeNonRdfAsset(null, "standalone asset no links");
 
-    assetStore.deleteAsset(meta.getAssetHash());
+    assetStore.deleteAsset(meta.getAssetHash(), false);
 
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(meta.getAssetHash()));
+  }
+
+  // ===== ValidationResultStore contract =====
+
+  @Test
+  void deleteAsset_callsValidationResultDeleteForSingleAsset() {
+    final var meta = storeNonRdfAsset(null, "validate-cleanup-single");
+
+    assetStore.deleteAsset(meta.getAssetHash(), false);
+
+    verify(validationResultStore).deleteByAssetId(meta.getId());
+  }
+
+  @Test
+  void deleteAsset_cascadeDelete_callsValidationResultDeleteForBothAssets() {
+    final var mrMeta = storeNonRdfAsset(MR_ID, "mr for validation verify");
+    final var hrMeta = storeNonRdfAsset(null, "hr for validation verify");
+    linkAssets(mrMeta.getId(), hrMeta.getId());
+
+    assetStore.deleteAsset(mrMeta.getAssetHash(), false);
+
+    verify(validationResultStore).deleteByAssetId(mrMeta.getId());
+    verify(validationResultStore).deleteByAssetId(hrMeta.getId());
   }
 
   // ===== helpers =====

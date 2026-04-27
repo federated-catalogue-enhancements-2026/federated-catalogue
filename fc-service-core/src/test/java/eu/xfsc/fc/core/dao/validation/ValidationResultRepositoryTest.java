@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.validation;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -150,6 +151,54 @@ class ValidationResultRepositoryTest {
     Page<ValidationResult> page3 = repository.findAll(PageRequest.of(2, 2));
     assertEquals(1, page3.getNumberOfElements(), "Last page should have 1 element");
     assertTrue(!page3.hasNext(), "Last page should not have next");
+  }
+
+  // ===== markOutdatedByAssetId =====
+
+  @Test
+  void markOutdatedByAssetId_existingResults_marksAllOutdatedWithReason() {
+    final String assetId = "https://example.org/asset/mark-1";
+
+    repository.save(buildResult(
+        new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{assetId, "https://example.org/asset/other"}, new String[]{"ref/2"},
+        true, GraphSyncStatus.SYNCED));
+
+    repository.markOutdatedByAssetId(assetId, "ASSET_UPDATED");
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(2, page.getTotalElements());
+    page.getContent().forEach(r -> {
+      assertTrue(r.isOutdated(), "Result must be marked outdated");
+      assertEquals(OutdatedReason.ASSET_UPDATED, r.getOutdatedReason());
+    });
+  }
+
+  @Test
+  void markOutdatedByAssetId_noMatchingResults_isIdempotent() {
+    assertDoesNotThrow(
+        () -> repository.markOutdatedByAssetId("https://example.org/asset/none", "ASSET_REVOKED"));
+  }
+
+  // ===== deleteByAssetId =====
+
+  @Test
+  void deleteByAssetId_existingResults_deletesAll() {
+    final String assetId = "https://example.org/asset/delete-1";
+
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/2"}, false, GraphSyncStatus.FAILED));
+
+    repository.deleteByAssetId(assetId);
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(0, page.getTotalElements(), "All results for the asset must be deleted");
+  }
+
+  @Test
+  void deleteByAssetId_noMatchingResults_noError() {
+    assertDoesNotThrow(() -> repository.deleteByAssetId("https://example.org/asset/none"));
   }
 
   @Test

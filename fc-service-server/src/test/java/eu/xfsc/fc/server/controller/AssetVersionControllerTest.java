@@ -93,7 +93,7 @@ public class AssetVersionControllerTest {
       PaginatedResults<AssetRecord> page =
           assetStorePublisher.getVersionHistoryPage(ASSET_IRI, 0, 1);
       if (!page.getResults().isEmpty()) {
-        assetStorePublisher.deleteAsset(page.getResults().getFirst().getAssetHash());
+        assetStorePublisher.deleteAsset(page.getResults().getFirst().getAssetHash(), false);
         assertEquals(0, assetStorePublisher.getVersionCount(ASSET_IRI), "asset should be deleted after test");
       }
     } catch (NotFoundException e) {

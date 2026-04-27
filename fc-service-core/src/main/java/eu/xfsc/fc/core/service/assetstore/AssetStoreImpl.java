@@ -18,6 +18,8 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.dao.validation.OutdatedReason;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -54,6 +56,7 @@ public class AssetStoreImpl implements AssetStore {
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
   private final ProvenanceService provenanceService;
+  private final ValidationResultStore validationResultStore;
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
@@ -127,6 +130,15 @@ public class AssetStoreImpl implements AssetStore {
     }
     if (subjectHash != null && subjectHash.subjectId() != null) {
       graphDb.deleteClaims(subjectHash.subjectId());
+      validationResultStore.markOutdatedByAssetId(subjectHash.subjectId(), OutdatedReason.ASSET_UPDATED);
+      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
+      try {
+        assetRepository.findBySubjectIdWithLinkedAsset(assetMetadata.getId())
+            .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
+            .ifPresent(a -> writeAssetLinkTriples(assetMetadata.getId(), a.getLinkedAsset().getSubjectId()));
+      } catch (Exception ex) {
+        log.warn("storeCredentialInternal; failed to re-write link triples after update", ex);
+      }
     }
     graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
     return subjectHash;
@@ -186,10 +198,11 @@ public class AssetStoreImpl implements AssetStore {
     	hash, AssetStatus.ACTIVE, ssr.getAssetStatus()));
     }
     graphDb.deleteClaims(ssr.subjectId());
+    validationResultStore.markOutdatedByAssetId(ssr.subjectId(), OutdatedReason.ASSET_REVOKED);
   }
 
   @Override
-  public void deleteAsset(final String hash) {
+  public void deleteAsset(final String hash, final boolean keepHumanReadable) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
     final String hrHashToCascade = assetOpt
         .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
@@ -210,6 +223,7 @@ public class AssetStoreImpl implements AssetStore {
     }
 
     provenanceService.deleteByAssetId(ssr.subjectId());
+    validationResultStore.deleteByAssetId(ssr.subjectId());
 
     if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
@@ -220,9 +234,9 @@ public class AssetStoreImpl implements AssetStore {
       log.debug("deleteAsset; file store cleanup skipped for hash {}: {}", hash, ex.getMessage());
     }
 
-    if (hrHashToCascade != null) {
+    if (!keepHumanReadable && hrHashToCascade != null) {
       try {
-        deleteAsset(hrHashToCascade);
+        deleteAsset(hrHashToCascade, false);
       } catch (NotFoundException ex) {
         log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }

@@ -204,10 +204,12 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional
-  public ResponseEntity<Void> deleteAsset(String assetHash) {
+  public ResponseEntity<Void> deleteAsset(String assetHash, Boolean keepHumanReadable) {
     AssetMetadata assetMetadata = assetStorePublisher.getByHash(assetHash);
     checkParticipantAccess(assetMetadata.getIssuer());
-    assetStorePublisher.deleteAsset(assetHash);
+    // null means parameter was absent in the request; treat absent == false (keep=false by default)
+    boolean keep = keepHumanReadable != null && keepHumanReadable;
+    assetStorePublisher.deleteAsset(assetHash, keep);
     return new ResponseEntity<>(HttpStatus.OK);
   }
 

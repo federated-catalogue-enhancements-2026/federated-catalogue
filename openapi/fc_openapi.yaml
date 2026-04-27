@@ -1933,6 +1933,15 @@ paths:
           required: true
           schema:
             type: string
+        - name: keepHumanReadable
+          in: query
+          required: false
+          description: >
+            When true, the linked human-readable representation is not deleted.
+            Default false (HR is deleted with the asset).
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: OK

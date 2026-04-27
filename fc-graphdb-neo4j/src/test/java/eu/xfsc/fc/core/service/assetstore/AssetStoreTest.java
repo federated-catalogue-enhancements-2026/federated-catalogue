@@ -25,6 +25,7 @@ import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
@@ -79,6 +80,9 @@ public class AssetStoreTest {
 
   @MockitoBean
   private ProvenanceService provenanceService;
+
+  @MockitoBean
+  private ValidationResultStore validationResultStore;
 
   @Autowired
   private AssetStore assetStorePublisher;
@@ -167,7 +171,7 @@ public class AssetStoreTest {
     final ContentAccessor credentialFileByHash = assetStorePublisher.getFileByHash(hash);
     assertEquals(credentialFileByHash, assetMeta.getContentAccessor(), "Getting the credential file by hash is equal to the stored credential file");
 
-    assetStorePublisher.deleteAsset(hash);
+    assetStorePublisher.deleteAsset(hash, false);
 
     claims = graphStore.queryData(new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
     Assertions.assertEquals(0, claims.size());
@@ -207,7 +211,7 @@ public class AssetStoreTest {
     final AssetStatus status1 = byHash1.getStatus();
     assertEquals(AssetStatus.ACTIVE, status1, "First credential should stay active.");
 
-    assetStorePublisher.deleteAsset(hash1);
+    assetStorePublisher.deleteAsset(hash1, false);
 
     Assertions.assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
   }
@@ -260,7 +264,7 @@ public class AssetStoreTest {
     log.debug("test04ChangeAssetStatus-3; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked credential should not appear in queries");
 
-    assetStorePublisher.deleteAsset(hash);
+    assetStorePublisher.deleteAsset(hash, false);
 
     Assertions.assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
   }

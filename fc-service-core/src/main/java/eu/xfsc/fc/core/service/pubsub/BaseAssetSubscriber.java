@@ -80,7 +80,7 @@ public abstract class BaseAssetSubscriber implements AssetSubscriber {
 				assetStore.changeLifeCycleStatus(hash, AssetStatus.valueOf((String) params.get("status")));
 				break;
 			case DELETE:
-				assetStore.deleteAsset(hash);
+				assetStore.deleteAsset(hash, false);
 				break;
 		}
 	}
