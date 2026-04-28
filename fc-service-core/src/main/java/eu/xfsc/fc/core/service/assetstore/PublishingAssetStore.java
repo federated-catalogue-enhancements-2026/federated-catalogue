@@ -9,6 +9,7 @@ import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher;
+import org.springframework.context.ApplicationEventPublisher;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher.AssetEvent;
 
 public class PublishingAssetStore extends AssetStoreImpl {
@@ -17,8 +18,9 @@ public class PublishingAssetStore extends AssetStoreImpl {
 
   public PublishingAssetStore(AssetDao dao, GraphStore graphDb, FileStore fileStore,
       IriGenerator iriGenerator, AssetRepository assetRepository,
-      ProtectedNamespaceProperties namespaceProperties, AssetPublisher assetPublisher) {
-    super(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties);
+      ProtectedNamespaceProperties namespaceProperties, ApplicationEventPublisher eventPublisher,
+      AssetPublisher assetPublisher) {
+    super(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties, eventPublisher);
     this.assetPublisher = assetPublisher;
   }
 

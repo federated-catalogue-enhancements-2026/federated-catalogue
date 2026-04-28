@@ -6,11 +6,15 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
+import eu.xfsc.fc.api.generated.model.SingleAssetValidationRequest;
 import eu.xfsc.fc.api.generated.model.StoredValidationResult;
+import eu.xfsc.fc.api.generated.model.ValidationRequest;
+import eu.xfsc.fc.api.generated.model.ValidationResponse;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;
+import eu.xfsc.fc.core.service.validation.AssetValidationService;
 import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
@@ -75,6 +79,7 @@ public class AssetService implements AssetsApiDelegate {
   @Qualifier("assetFileStore") private final FileStore assetFileStore;
   private final AssetProperties assetProperties;
   private final ValidationResultStore validationResultStore;
+  private final AssetValidationService assetValidationService;
 
   /**
    * Service method for GET /assets : Get the list of metadata of assets in the Catalogue.
@@ -525,6 +530,35 @@ public class AssetService implements AssetsApiDelegate {
     }
   }
 
+
+  /**
+   * POST /assets/{id}/validate — validates a single stored asset against SHACL, JSON Schema, or XML Schema.
+   *
+   * @param id                         IRI of the asset to validate
+   * @param singleAssetValidationRequest optional schema selection (schemaIds or validateAgainstAllSchemas)
+   * @return validation response with result ID and optional report
+   */
+  @Override
+  public ResponseEntity<ValidationResponse> validateAsset(String id,
+      SingleAssetValidationRequest singleAssetValidationRequest) {
+    log.debug("validateAsset; id={}", id);
+    return ResponseEntity.ok(assetValidationService.validateAsset(id, singleAssetValidationRequest));
+  }
+
+  /**
+   * POST /assets/validate — validates multiple RDF assets as a merged data graph against SHACL shapes.
+   *
+   * @param validationRequest asset IRIs and schema selection
+   * @return validation response with result ID and optional report
+   */
+  @Override
+  public ResponseEntity<ValidationResponse> validateAssets(ValidationRequest validationRequest) {
+    if (validationRequest == null) {
+      throw new ClientException("Request body is required");
+    }
+    log.debug("validateAssets; assetIds={}", validationRequest.getAssetIds());
+    return ResponseEntity.ok(assetValidationService.validateAssets(validationRequest));
+  }
 
   /**
    * Verify a credential body, check participant access, and store it.

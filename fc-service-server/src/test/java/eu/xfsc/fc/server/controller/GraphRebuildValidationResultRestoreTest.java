@@ -96,12 +96,12 @@ class GraphRebuildValidationResultRestoreTest {
    */
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  void testValidationResultGraphSyncStatusUpdatedAfterRebuild() throws Exception {
+  void rebuildValidationResults_failedResult_updatesStatusToSynced() throws Exception {
     Long validationResultId = transactionTemplate.execute(txStatus -> {
       ValidationResult result = new ValidationResult();
       result.setAssetIds(new String[]{"did:example:asset1", "did:example:asset2"});
       result.setValidatorIds(new String[]{"https://example.org/schema/v1"});
-      result.setValidatorType(ValidatorType.SCHEMA);
+      result.setValidatorType(ValidatorType.SHACL);
       result.setConforms(true);
       result.setValidatedAt(Instant.now());
       result.setReport(null);
@@ -143,13 +143,13 @@ class GraphRebuildValidationResultRestoreTest {
    */
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  void testMultipleValidationResultsRestoredInBatch() throws Exception {
+  void rebuildValidationResults_multipleFailedResults_restoresBatch() throws Exception {
     transactionTemplate.executeWithoutResult(txStatus -> {
       for (int i = 1; i <= 5; i++) {
         ValidationResult result = new ValidationResult();
         result.setAssetIds(new String[]{"did:example:asset" + i});
         result.setValidatorIds(new String[]{"https://example.org/schema/v" + i});
-        result.setValidatorType(ValidatorType.SCHEMA);
+        result.setValidatorType(ValidatorType.SHACL);
         result.setConforms(i % 2 == 0);
         result.setValidatedAt(Instant.now());
         result.setReport(i % 2 == 0 ? null : "{\"violations\": []}");
@@ -195,7 +195,7 @@ class GraphRebuildValidationResultRestoreTest {
    */
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  void testRebuildWithNoValidationResults() throws Exception {
+  void rebuildValidationResults_emptyDatabase_completesSuccessfully() throws Exception {
     validationResultRepository.deleteAll();
     assertEquals(0, validationResultRepository.count());
 

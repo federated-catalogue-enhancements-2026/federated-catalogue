@@ -4,6 +4,7 @@ import eu.xfsc.fc.core.dao.validation.GraphSyncStatus;
 import eu.xfsc.fc.core.dao.validation.ValidationResult;
 import eu.xfsc.fc.core.dao.validation.ValidationResultRepository;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +71,23 @@ public class ValidationResultStoreImpl implements ValidationResultStore {
   @Transactional(readOnly = true)
   public Page<ValidationResult> findAll(Pageable pageable) {
     return repository.findAll(pageable);
+  }
+
+  @Override
+  @Transactional
+  public void deleteByAssetId(String assetId) {
+    List<ValidationResult> results = repository.findAllByAssetId(assetId);
+    log.debug("deleteByAssetId; found {} results for assetId={}", results.size(), assetId);
+    for (ValidationResult result : results) {
+      String iri = graphWriter.resultIri(result.getId());
+      try {
+        graphStore.deleteValidationResultClaims(iri);
+      } catch (Exception e) {
+        log.warn("deleteByAssetId; graph cleanup failed for result id={}: {}", result.getId(), e.getMessage());
+      }
+    }
+    repository.deleteAllByAssetId(assetId);
+    log.debug("deleteByAssetId; deleted {} PostgreSQL rows for assetId={}", results.size(), assetId);
   }
 
   @Override

@@ -1,8 +1,10 @@
 package eu.xfsc.fc.core.dao.validation;
 
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,5 +21,14 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
       countQuery = "SELECT COUNT(*) FROM validation_result WHERE :assetId = ANY(asset_ids)",
       nativeQuery = true)
   Page<ValidationResult> findByAssetId(@Param("assetId") String assetId, Pageable pageable);
+
+  /** Returns all validation results referencing {@code assetId}, without pagination. */
+  @Query(value = "SELECT * FROM validation_result WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
+  List<ValidationResult> findAllByAssetId(@Param("assetId") String assetId);
+
+  /** Deletes all validation results that reference {@code assetId} in their {@code asset_ids} array. */
+  @Modifying
+  @Query(value = "DELETE FROM validation_result WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
+  void deleteAllByAssetId(@Param("assetId") String assetId);
 
 }

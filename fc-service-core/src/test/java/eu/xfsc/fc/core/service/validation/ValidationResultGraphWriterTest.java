@@ -1,9 +1,11 @@
 package eu.xfsc.fc.core.service.validation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -30,19 +32,6 @@ class ValidationResultGraphWriterTest {
   void setUp() {
     writer = new ValidationResultGraphWriter(new ProtectedNamespaceProperties());
     graphStore = mock(GraphStore.class);
-  }
-
-  // --- helper ---
-
-  private static ValidationResult buildResult(long id, String[] assetIds) {
-    ValidationResult r = new ValidationResult();
-    r.setAssetIds(assetIds);
-    r.setValidatorIds(new String[]{"https://example.org/schema/1"});
-    r.setValidatorType(ValidatorType.SCHEMA);
-    r.setConforms(true);
-    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
-    r.setId(id);
-    return r;
   }
 
   // ===== write — single asset =====
@@ -165,15 +154,26 @@ class ValidationResultGraphWriterTest {
   void write_graphStoreThrowsException_propagatesException() {
     ValidationResult result = buildResult(1L, new String[]{"https://example.org/asset/1"});
     GraphStore failingStore = mock(GraphStore.class);
-    org.mockito.Mockito.doThrow(new RuntimeException("Graph DB connection failed"))
+    doThrow(new RuntimeException("Graph DB connection failed"))
         .when(failingStore).addClaims(any(), any());
 
-    try {
-      writer.write(result, failingStore);
-      org.junit.jupiter.api.Assertions.fail("Expected RuntimeException to be thrown");
-    } catch (RuntimeException e) {
-      assertEquals("Graph DB connection failed", e.getMessage());
-      verify(failingStore).addClaims(any(), any());
-    }
+    RuntimeException ex = assertThrows(RuntimeException.class,
+        () -> writer.write(result, failingStore));
+
+    assertEquals("Graph DB connection failed", ex.getMessage());
+    verify(failingStore).addClaims(any(), any());
+  }
+
+  // --- helpers ---
+
+  private static ValidationResult buildResult(long id, String[] assetIds) {
+    ValidationResult r = new ValidationResult();
+    r.setAssetIds(assetIds);
+    r.setValidatorIds(new String[]{"https://example.org/schema/1"});
+    r.setValidatorType(ValidatorType.SHACL);
+    r.setConforms(true);
+    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
+    r.setId(id);
+    return r;
   }
 }

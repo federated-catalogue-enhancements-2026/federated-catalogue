@@ -15,6 +15,7 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -29,13 +30,15 @@ public class AssetStoreConfig {
       @Qualifier("assetFileStore") FileStore fileStore,
       IriGenerator iriGenerator, AssetRepository assetRepository,
       ProtectedNamespaceProperties namespaceProperties,
+      ApplicationEventPublisher eventPublisher,
       AssetPublisher assetPublisher) {
     AssetStore assetStore;
     if ("none".equals(pubImpl)) {
-      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties);
+      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties,
+          eventPublisher);
     } else {
       assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, assetPublisher);
+          namespaceProperties, eventPublisher, assetPublisher);
     }
     log.debug("getAssetStore; returning {} for impl {}", assetStore, pubImpl);
     return assetStore;

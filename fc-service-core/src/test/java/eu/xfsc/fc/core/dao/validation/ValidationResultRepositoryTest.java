@@ -42,21 +42,6 @@ class ValidationResultRepositoryTest {
     repository.deleteAll();
   }
 
-  // --- helper ---
-
-  private ValidationResult buildResult(String[] assetIds, String[] schemaIds,
-      boolean conforms, GraphSyncStatus syncStatus) {
-    ValidationResult r = new ValidationResult();
-    r.setAssetIds(assetIds);
-    r.setValidatorIds(schemaIds);
-    r.setValidatorType(ValidatorType.SCHEMA);
-    r.setConforms(conforms);
-    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
-    r.setContentHash("aabbccdd".repeat(8));
-    r.setGraphSyncStatus(syncStatus);
-    return r;
-  }
-
   // ===== findByAssetId =====
 
   @Test
@@ -171,5 +156,20 @@ class ValidationResultRepositoryTest {
         .filter(r -> r.getGraphSyncStatus() == GraphSyncStatus.FAILED)
         .count();
     assertEquals(1, failedCount, "Should include FAILED results for rebuild processing");
+  }
+
+  // --- helpers ---
+
+  private ValidationResult buildResult(String[] assetIds, String[] schemaIds,
+      boolean conforms, GraphSyncStatus syncStatus) {
+    ValidationResult r = new ValidationResult();
+    r.setAssetIds(assetIds);
+    r.setValidatorIds(schemaIds);
+    r.setValidatorType(ValidatorType.SHACL);
+    r.setConforms(conforms);
+    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
+    r.setContentHash("aabbccdd".repeat(8));
+    r.setGraphSyncStatus(syncStatus);
+    return r;
   }
 }

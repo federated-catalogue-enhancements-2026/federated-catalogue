@@ -255,7 +255,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         if (verifySchema) {
             if (!schemaModuleConfigService.isModuleEnabled(SchemaModuleType.SHACL)) {
-                throw new ClientException("Schema validation module '" + SchemaModuleType.SHACL + "' is disabled");
+                throw new VerificationException("Validation module " + SchemaModuleType.SHACL + " is disabled");
             }
             validateSchema(filtered.claims());
         }
