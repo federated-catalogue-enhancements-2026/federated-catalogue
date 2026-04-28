@@ -17,6 +17,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -52,6 +53,7 @@ public class AssetStoreImpl implements AssetStore {
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
@@ -207,6 +209,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new NotFoundException("no asset found for hash " + hash);
     }
 
+    eventPublisher.publishEvent(new AssetDeletedEvent(ssr.subjectId()));
     if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
     }

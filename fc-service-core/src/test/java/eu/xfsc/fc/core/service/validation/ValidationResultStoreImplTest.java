@@ -43,29 +43,6 @@ class ValidationResultStoreImplTest {
   @InjectMocks
   private ValidationResultStoreImpl service;
 
-  // --- helper ---
-
-  private static ValidationResultRecord buildRecord(boolean conforms) {
-    return new ValidationResultRecord(
-        List.of("https://example.org/asset/1"),
-        List.of("https://example.org/schema/1"),
-        ValidatorType.SCHEMA,
-        conforms,
-        Instant.parse("2024-06-01T12:00:00Z"),
-        null);
-  }
-
-  private static ValidationResult entityWithId(long id) {
-    ValidationResult e = new ValidationResult();
-    e.setAssetIds(new String[]{"https://example.org/asset/1"});
-    e.setValidatorIds(new String[]{"https://example.org/schema/1"});
-    e.setValidatorType(ValidatorType.SCHEMA);
-    e.setConforms(true);
-    e.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
-    e.setId(id);
-    return e;
-  }
-
   // ===== store — graph write succeeds =====
 
   @Test
@@ -151,5 +128,28 @@ class ValidationResultStoreImplTest {
     Optional<ValidationResult> result = service.getById(999L);
 
     assertFalse(result.isPresent());
+  }
+
+  // --- helpers ---
+
+  private static ValidationResultRecord buildRecord(boolean conforms) {
+    return new ValidationResultRecord(
+        List.of("https://example.org/asset/1"),
+        List.of("https://example.org/schema/1"),
+        ValidatorType.SHACL,
+        conforms,
+        Instant.parse("2024-06-01T12:00:00Z"),
+        null);
+  }
+
+  private static ValidationResult entityWithId(long id) {
+    ValidationResult e = new ValidationResult();
+    e.setAssetIds(new String[]{"https://example.org/asset/1"});
+    e.setValidatorIds(new String[]{"https://example.org/schema/1"});
+    e.setValidatorType(ValidatorType.SHACL);
+    e.setConforms(true);
+    e.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
+    e.setId(id);
+    return e;
   }
 }

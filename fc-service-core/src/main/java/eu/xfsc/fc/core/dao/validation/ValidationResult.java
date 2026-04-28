@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -77,11 +78,10 @@ public class ValidationResult {
   private Instant validatedAt;
 
   /**
-   * Serialised validation report (JSONB). Null for passing validations.
+   * Serialised validation report. Null for passing validations.
    * For SHACL: Turtle report. For JSON Schema: violation messages. For XML: error message.
    */
-  @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "report", columnDefinition = "jsonb")
+  @Column(name = "report", columnDefinition = "text")
   private String report;
 
   /**
@@ -99,6 +99,7 @@ public class ValidationResult {
   @Column(name = "graph_sync_status", length = 16)
   private GraphSyncStatus graphSyncStatus;
 
+  @Setter(AccessLevel.NONE)
   @CreatedDate
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
