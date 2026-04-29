@@ -54,6 +54,9 @@ public class SparqlGraphStore implements GraphStore {
      */
     protected final Pattern orderByRegex = Pattern.compile("ORDER\\sBY(?=(?:[^'\"`]*(['\"`])[^'\"`]*\1)*[^'\"`]*$)", Pattern.CASE_INSENSITIVE);
 
+    // Rejects characters that break the <iri> token in a SPARQL string context.
+    private static final Pattern SAFE_IRI_PATTERN = Pattern.compile("^[^<>\"\\\\\\s{}|^`\\[\\]]+$");
+
 
     private final ClaimValidator claimValidator;
 
@@ -164,6 +167,7 @@ public class SparqlGraphStore implements GraphStore {
     @Override
     public void deleteValidationResultClaims(String resultIri) {
         log.debug("deleteValidationResultClaims.enter; resultIri={}", resultIri);
+        requireSafeIri(resultIri);
         // Delete all RDF-star annotations where the embedded triple has resultIri as subject or object.
         // Two operations: (1) result property triples <<(resultIri ?p ?o)>>, (2) hasValidationResult links <<(?s ?p resultIri)>>.
         // Note: <<(?s ?p ?o)>> is the annotation-pattern syntax required by Jena SPARQL-star in WHERE/DELETE clauses.
@@ -173,6 +177,12 @@ public class SparqlGraphStore implements GraphStore {
             resultIri, PROP_CREDENTIAL_SUBJECT);
         Txn.executeWrite(rdfConnection, () -> rdfConnection.update(query));
         log.debug("deleteValidationResultClaims.exit");
+    }
+
+    private static void requireSafeIri(String iri) {
+        if (iri == null || !SAFE_IRI_PATTERN.matcher(iri).matches()) {
+            throw new ServerException("IRI contains characters unsafe for SPARQL interpolation: " + iri);
+        }
     }
 
     @Override

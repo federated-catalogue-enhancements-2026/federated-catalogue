@@ -56,19 +56,14 @@ public class XmlSchemaValidator {
 
       try (InputStream contentStream = assetContent.getContentAsStream()) {
         validator.validate(new StreamSource(contentStream));
-        ValidationReport report = new ValidationReport();
-        report.setConforms(true);
-        report.setViolations(List.of());
-        return report;
+        return new ValidationReport().conforms(true).violations(List.of());
       } catch (SAXException e) {
-        ValidationViolation violation = new ValidationViolation();
-        violation.setMessage(e.getMessage());
-        violation.setSeverity(ValidationViolation.SeverityEnum.VIOLATION);
-        ValidationReport report = new ValidationReport();
-        report.setConforms(false);
-        report.setViolations(List.of(violation));
-        report.setRawReport(e.getMessage());
-        return report;
+        return new ValidationReport()
+            .conforms(false)
+            .violations(List.of(new ValidationViolation()
+                .message(e.getMessage())
+                .severity(ValidationViolation.SeverityEnum.VIOLATION)))
+            .rawReport(e.getMessage());
       }
     } catch (ParserConfigurationException e) {
       throw new ServerException("XML parser configuration error: " + e.getMessage(), e);

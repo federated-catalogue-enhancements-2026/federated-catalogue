@@ -9,6 +9,7 @@ import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest
@@ -96,6 +98,70 @@ class ValidationResultRepositoryTest {
         new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
 
     assertNotNull(saved.getCreatedAt(), "createdAt must be set by @CreatedDate");
+  }
+
+  // ===== findAllByAssetId =====
+
+  @Test
+  void findAllByAssetId_matchingEntry_returnsAllResults() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"https://example.org/schema/1"},
+        true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"https://example.org/schema/2"},
+        false, GraphSyncStatus.FAILED));
+
+    List<ValidationResult> results = repository.findAllByAssetId("https://example.org/asset/1");
+
+    assertEquals(2, results.size());
+  }
+
+  @Test
+  void findAllByAssetId_noMatch_returnsEmpty() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/OTHER"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    List<ValidationResult> results = repository.findAllByAssetId("https://example.org/asset/NONE");
+
+    assertTrue(results.isEmpty());
+  }
+
+  // ===== deleteAllByAssetId =====
+
+  @Test
+  @Transactional
+  void deleteAllByAssetId_matchingRows_removesOnlyTargetAsset() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"ref/2"}, false, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/2"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.deleteAllByAssetId("https://example.org/asset/1");
+
+    assertEquals(0, repository.findAllByAssetId("https://example.org/asset/1").size(),
+        "All rows for asset/1 must be removed");
+    assertEquals(1, repository.findAllByAssetId("https://example.org/asset/2").size(),
+        "Row for asset/2 must remain");
+  }
+
+  @Test
+  @Transactional
+  void deleteAllByAssetId_noMatch_performsNoop() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/OTHER"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.deleteAllByAssetId("https://example.org/asset/NONE");
+
+    assertEquals(1, repository.count(), "Unrelated row must remain");
   }
 
   // ===== findAll (used by GraphRebuilder) =====

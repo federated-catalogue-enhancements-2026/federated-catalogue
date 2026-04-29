@@ -160,7 +160,6 @@ public class Neo4jGraphStore implements GraphStore {
             Result rs = session.run("MATCH (n {uri: $uri}) DETACH DELETE n", Map.of("uri", resultIri));
             log.debug("deleteValidationResultClaims; deleted: {}", rs.consume());
         }
-        log.debug("deleteValidationResultClaims.exit");
     }
 
     /**

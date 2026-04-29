@@ -59,7 +59,7 @@ class ValidationResultGraphWriterTest {
     writer.write(result, graphStore);
 
     ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
-    verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+    verify(graphStore).addClaims(claimsCaptor.capture(), any());
 
     List<RdfClaim> claims = claimsCaptor.getValue();
     String expectedSubject = "<https://example.org/asset/1>";
@@ -83,7 +83,7 @@ class ValidationResultGraphWriterTest {
     writer.write(result, graphStore);
 
     ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
-    verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+    verify(graphStore).addClaims(claimsCaptor.capture(), any());
 
     List<RdfClaim> claims = claimsCaptor.getValue();
     assertEquals(6, claims.size(), "Two assets + 1 validatorId: 2 hasValidationResult + 1 validatorId + 3 property triples = 6");
@@ -100,7 +100,7 @@ class ValidationResultGraphWriterTest {
     writer.write(result, graphStore);
 
     ArgumentCaptor<String> subjectCaptor = forClass(String.class);
-    verify(graphStore).addClaims(org.mockito.ArgumentMatchers.any(), subjectCaptor.capture());
+    verify(graphStore).addClaims(any(), subjectCaptor.capture());
 
     assertEquals("https://example.org/asset/FIRST", subjectCaptor.getValue());
   }
@@ -115,7 +115,7 @@ class ValidationResultGraphWriterTest {
     writer.write(result, graphStore);
 
     ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
-    verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+    verify(graphStore).addClaims(claimsCaptor.capture(), any());
 
     String expectedPredicate = "<" + FCMETA + "validatorId>";
     String expectedObject = "<https://example.org/schema/1>";
@@ -137,7 +137,7 @@ class ValidationResultGraphWriterTest {
     writer.write(result, graphStore);
 
     ArgumentCaptor<List<RdfClaim>> claimsCaptor = forClass(List.class);
-    verify(graphStore).addClaims(claimsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+    verify(graphStore).addClaims(claimsCaptor.capture(), any());
 
     // 1 hasValidationResult + 2 validatorId + 3 property triples = 6
     assertEquals(6, claimsCaptor.getValue().size());

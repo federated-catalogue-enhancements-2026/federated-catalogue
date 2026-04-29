@@ -94,6 +94,8 @@ public class AssetControllerTest {
     private final static String PARTICIPANT_ISSUER = "did:example:issuer";
     private final static String RESOURCE_ISSUER = "did:web:compliance.lab.gaia-x.eu";
     private final static String ASSET_FILE_NAME = "default-credential.json";
+    private static final byte[] NON_RDF_PDF_BYTES = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
+    private static final String NON_RDF_PDF_HASH = HashUtils.calculateSha256AsHex(NON_RDF_PDF_BYTES);
 
     @Autowired
     private Neo4j embeddedDatabaseServer;
@@ -135,23 +137,16 @@ public class AssetControllerTest {
     }
     
     @AfterEach
-    public void deleteTestAsset() throws IOException {
-        // Clean up all test assets to avoid cross-test pollution
-        // Try by the default test fixture hash
+    public void deleteTestAsset() {
         try {
             assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
         } catch (NotFoundException e) {
             // expected if not created
         }
-        
-        // Also try to clean up any asset created via API using the default credential
         try {
-            String defaultCredentialHash = HashUtils.calculateSha256AsHex(getMockFileDataAsString(ASSET_FILE_NAME));
-            if (!defaultCredentialHash.equals(assetMeta.getAssetHash())) {
-                assetStorePublisher.deleteAsset(defaultCredentialHash);
-            }
-        } catch (NotFoundException | IOException e) {
-            // expected if not created
+            assetStorePublisher.deleteAsset(NON_RDF_PDF_HASH);
+        } catch (NotFoundException e) {
+            // expected if test did not create a non-RDF PDF asset
         }
         validationResultRepository.deleteAll();
     }
@@ -295,21 +290,17 @@ public class AssetControllerTest {
     @Test
     @WithMockUser(roles = {ASSET_READ})
     public void readNonRdfAssetById_returnsOkWithMetadata() throws Exception {
-        byte[] pdfBytes = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
-        String hash = HashUtils.calculateSha256AsHex(pdfBytes);
         Instant now = Instant.now();
 
-        AssetMetadata nonRdfMeta = new AssetMetadata(hash, null, AssetStatus.ACTIVE,
-                TEST_ISSUER, null, now, now, new ContentAccessorBinary(pdfBytes));
+        AssetMetadata nonRdfMeta = new AssetMetadata(NON_RDF_PDF_HASH, null, AssetStatus.ACTIVE,
+                TEST_ISSUER, null, now, now, new ContentAccessorBinary(NON_RDF_PDF_BYTES));
         nonRdfMeta.setContentType("application/pdf");
-        nonRdfMeta.setFileSize((long) pdfBytes.length);
+        nonRdfMeta.setFileSize((long) NON_RDF_PDF_BYTES.length);
         assetStorePublisher.storeUnverified(nonRdfMeta, "test.pdf");
 
         mockMvc.perform(MockMvcRequestBuilders.get("/assets/{id}", nonRdfMeta.getId())
                 .with(csrf()))
             .andExpect(status().isOk());
-
-        assetStorePublisher.deleteAsset(nonRdfMeta.getAssetHash());
     }
 
     @Test

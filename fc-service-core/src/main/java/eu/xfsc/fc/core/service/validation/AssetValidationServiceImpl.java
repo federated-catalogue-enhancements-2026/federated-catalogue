@@ -18,11 +18,15 @@ import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -44,15 +48,19 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AssetValidationServiceImpl implements AssetValidationService {
-
-  private static final int MAX_ASSETS_PER_REQUEST = 20;
 
   private static final String JSON_LD_CONTENT_PREFIX = "{";
   private static final String RDF_XML_CONTENT_PREFIX_1 = "<?xml";
   private static final String RDF_XML_CONTENT_PREFIX_2 = "<rdf:RDF";
+  private static final String MEDIA_TYPE_SCHEMA_JSON = "application/schema+json";
+
+  @Value("${federated-catalogue.validation.max-assets-per-request:20}")
+  private int maxAssetsPerRequest;
 
   private final AssetStore assetStore;
+  @Qualifier("assetFileStore")
   private final FileStore fileStore;
   private final SchemaStore schemaStore;
   private final SchemaModuleConfigService moduleConfig;
@@ -61,27 +69,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
   private final XmlSchemaValidator xmlSchemaValidator;
   private final ValidationResultStore validationResultStore;
 
-  /** Creates the service with all required collaborators. The FileStore qualifier selects the asset file store. */
-  public AssetValidationServiceImpl(
-      AssetStore assetStore,
-      @Qualifier("assetFileStore") FileStore fileStore,
-      SchemaStore schemaStore,
-      SchemaModuleConfigService moduleConfig,
-      ShaclValidator shaclValidator,
-      JsonSchemaValidator jsonSchemaValidator,
-      XmlSchemaValidator xmlSchemaValidator,
-      ValidationResultStore validationResultStore) {
-    this.assetStore = assetStore;
-    this.fileStore = fileStore;
-    this.schemaStore = schemaStore;
-    this.moduleConfig = moduleConfig;
-    this.shaclValidator = shaclValidator;
-    this.jsonSchemaValidator = jsonSchemaValidator;
-    this.xmlSchemaValidator = xmlSchemaValidator;
-    this.validationResultStore = validationResultStore;
-  }
-
   @Override
+  @Transactional
   public ValidationResponse validateAsset(String assetId, SingleAssetValidationRequest request) {
     log.debug("validateAsset.enter; assetId={}", assetId);
     AssetMetadata asset = assetStore.getById(assetId);
@@ -94,15 +83,16 @@ public class AssetValidationServiceImpl implements AssetValidationService {
   }
 
   @Override
+  @Transactional
   public ValidationResponse validateAssets(ValidationRequest request) {
     log.debug("validateAssets.enter; assetIds={}", request.getAssetIds());
     List<String> assetIds = request.getAssetIds();
     if (assetIds == null || assetIds.isEmpty()) {
       throw new ClientException("assetIds must contain at least one asset ID");
     }
-    if (assetIds.size() > MAX_ASSETS_PER_REQUEST) {
+    if (assetIds.size() > maxAssetsPerRequest) {
       throw new ClientException(
-          "Too many assets in request: " + assetIds.size() + " (maximum: " + MAX_ASSETS_PER_REQUEST + ")");
+          "Too many assets in request: " + assetIds.size() + " (maximum: " + maxAssetsPerRequest + ")");
     }
     requireModuleEnabled(SchemaModuleType.SHACL);
 
@@ -326,10 +316,10 @@ public class AssetValidationServiceImpl implements AssetValidationService {
           "Asset " + asset.getId() + " has no content type. Cannot determine validation schema type. "
               + "Validatable types: application/json, application/xml");
     }
-    if (contentType.contains("application/json") || contentType.contains("application/schema+json")) {
+    if (contentType.contains(MediaType.APPLICATION_JSON_VALUE) || contentType.contains(MEDIA_TYPE_SCHEMA_JSON)) {
       return validateWithJsonSchema(asset, request);
     }
-    if (contentType.contains("application/xml") || contentType.contains("text/xml")) {
+    if (contentType.contains(MediaType.APPLICATION_XML_VALUE) || contentType.contains(MediaType.TEXT_XML_VALUE)) {
       return validateWithXmlSchema(asset, request);
     }
     throw new VerificationException(
@@ -473,7 +463,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
-      throw new VerificationException("Validation module " + moduleType + " is disabled");
+      throw new ClientException("Validation module " + moduleType + " is disabled");
     }
   }
 

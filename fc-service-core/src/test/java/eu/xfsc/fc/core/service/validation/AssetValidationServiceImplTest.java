@@ -43,8 +43,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AssetValidationServiceImplTest {
@@ -66,13 +68,13 @@ class AssetValidationServiceImplTest {
   @Mock
   private ValidationResultStore validationResultStore;
 
+  @InjectMocks
   private AssetValidationServiceImpl service;
 
   @BeforeEach
   void setUp() {
-    service = new AssetValidationServiceImpl(
-        assetStore, fileStore, schemaStore, moduleConfigService,
-        shaclValidator, jsonSchemaValidator, xmlSchemaValidator, validationResultStore);
+    // @Value fields are not injected by @InjectMocks — set to the same default as production config
+    ReflectionTestUtils.setField(service, "maxAssetsPerRequest", 20);
   }
 
   // --- helpers ---
@@ -81,62 +83,55 @@ class AssetValidationServiceImplTest {
   private static final String SCHEMA_ID = "https://example.org/schema/shape/1";
   private static final String JSON_SCHEMA_ID = "https://example.org/schema/json/1";
   private static final String XML_SCHEMA_ID = "https://example.org/schema/xml/1";
+  private static final String RDFXML_HASH = "hash-rdfxml";
 
-  private static AssetMetadata rdfAsset(String id) {
+  private static final ValidationReport CONFORMING_REPORT = new ValidationReport()
+      .conforms(true).violations(List.of());
+
+  private static final ValidationReport NON_CONFORMING_REPORT = new ValidationReport()
+      .conforms(false)
+      .violations(List.of(new ValidationViolation()
+          .message("constraint violation")
+          .severity(ValidationViolation.SeverityEnum.VIOLATION)))
+      .rawReport("constraint violation");
+
+  private static AssetMetadata buildRdfAsset(String id) {
     return new AssetMetadata("hash-rdf", id, AssetStatus.ACTIVE,
         "did:web:issuer", List.of(), Instant.now(), Instant.now(),
         new ContentAccessorDirect("{\"@context\":{}}"));
   }
 
-  private static AssetMetadata rdfXmlAsset(String id) {
-    return new AssetMetadata("hash-rdfxml", id, AssetStatus.ACTIVE,
+  private static AssetMetadata buildRdfXmlAsset(String id) {
+    return new AssetMetadata(RDFXML_HASH, id, AssetStatus.ACTIVE,
         "did:web:issuer", List.of(), Instant.now(), Instant.now(),
         new ContentAccessorDirect("<?xml version=\"1.0\"?><rdf:RDF/>"));
   }
 
-  private static AssetMetadata turtleRdfAsset(String id) {
+  private static AssetMetadata buildTurtleRdfAsset(String id) {
     return new AssetMetadata("hash-turtle", id, AssetStatus.ACTIVE,
         "did:web:issuer", List.of(), Instant.now(), Instant.now(),
         new ContentAccessorDirect("@prefix ex: <https://example.org/> ."));
   }
 
-  private static AssetMetadata nonRdfAsset(String id, String contentType) {
+  private static AssetMetadata buildNonRdfAsset(String id, String contentType) {
     AssetMetadata asset = new AssetMetadata();
     asset.setId(id);
     asset.setAssetHash("hash-nonrdf");
     asset.setContentType(contentType);
-    // contentAccessor stays null — marks this as a non-RDF asset
+    asset.setContentAccessor(null);
     return asset;
   }
 
-  private static ValidationReport conformingReport() {
-    ValidationReport r = new ValidationReport();
-    r.setConforms(true);
-    r.setViolations(List.of());
-    return r;
-  }
-
-  private static ValidationReport nonConformingReport() {
-    ValidationViolation v = new ValidationViolation();
-    v.setMessage("constraint violation");
-    v.setSeverity(ValidationViolation.SeverityEnum.VIOLATION);
-    ValidationReport r = new ValidationReport();
-    r.setConforms(false);
-    r.setViolations(List.of(v));
-    r.setRawReport("constraint violation");
-    return r;
-  }
-
-  private static SchemaRecord shapeRecord(String id) {
+  private static SchemaRecord buildShapeRecord(String id) {
     return new SchemaRecord(id, id, SchemaType.SHAPE, "@prefix sh: <http://www.w3.org/ns/shacl#> .", null);
   }
 
-  private static SchemaRecord jsonRecord(String id) {
+  private static SchemaRecord buildJsonRecord(String id) {
     return new SchemaRecord(id, id, SchemaType.JSON, "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\"}",
         null);
   }
 
-  private static SchemaRecord xmlRecord(String id) {
+  private static SchemaRecord buildXmlRecord(String id) {
     return new SchemaRecord(id, id, SchemaType.XML, "<xs:schema/>", null);
   }
 
@@ -152,24 +147,20 @@ class AssetValidationServiceImplTest {
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(true);
   }
 
-  private Model emptyModel() {
-    return ModelFactory.createDefaultModel();
-  }
-
   // === validateAsset — RDF (SHACL) path ===
 
   @Test
   void validateAsset_rdfAsset_explicitShapeSchema_returnsConformingResponse() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(1L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -186,16 +177,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_nonConforming_reportIncludedInResponse() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape content");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(nonConformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(2L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -211,16 +202,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_validateAll_usesCompositeSchema() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor composite = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID)));
     when(shaclValidator.parseShapeModel(composite)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(3L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -234,8 +225,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_shaclModuleDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(false);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -246,7 +237,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
 
@@ -255,7 +246,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_schemaTypeNotShape_throwsClientException() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     // Schema exists but is ONTOLOGY type — not supported for on-demand validation
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(
@@ -269,7 +260,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_validateAll_shaclEnabledNoShapesAndNoOtherModule_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
     // JSON_SCHEMA not enabled (default false) — nothing runs
@@ -284,7 +275,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_validateAll_allModulesDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     // no module mocked → all return false
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -295,7 +286,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_validateAll_shaclDisabled_runsJsonSchemaOnly() throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -303,7 +294,7 @@ class AssetValidationServiceImplTest {
     givenJsonModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(40L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -323,7 +314,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_validateAll_shaclEnabledNoShapes_runsJsonSchemaOnly() throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -332,7 +323,7 @@ class AssetValidationServiceImplTest {
     givenJsonModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(41L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -353,14 +344,14 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_withExplicitJsonSchema_storesJsonSchemaResult() throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -380,14 +371,14 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfXmlAsset_withExplicitXmlSchema_storesXmlSchemaResult() throws IOException {
-    AssetMetadata asset = rdfXmlAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
     ContentAccessor xmlSchemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(xmlRecord(XML_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(schemaStore.getSchema(XML_SCHEMA_ID)).thenReturn(xmlSchemaContent);
-    when(xmlSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(xmlSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(21L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -407,21 +398,21 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAsset_jsonLdRdfAsset_withShapeAndJsonSchema_storesTwoResultsAndReturnsShaclAsPrimary()
       throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
     givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L, 21L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -438,21 +429,21 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAsset_jsonLdRdfAsset_withShapeAndJsonSchema_jsonFails_overallConformsIsFalse()
       throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape");
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
     givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(nonConformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L, 21L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -466,8 +457,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfXmlAsset_withJsonSchema_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfXmlAsset(ASSET_ID));
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfXmlAsset(ASSET_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
@@ -477,8 +468,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_withXmlSchema_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(xmlRecord(XML_SCHEMA_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
@@ -488,10 +479,10 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_validateAll_runsShaclAndJsonSchema() throws IOException {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor composite = new ContentAccessorDirect("shape composite");
     ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
@@ -500,9 +491,9 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaList()).thenReturn(
         Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID), SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
     when(shaclValidator.parseShapeModel(composite)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
-    when(jsonSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(30L, 31L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -519,10 +510,10 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfXmlAsset_validateAll_runsShaclAndXmlSchema() throws IOException {
-    AssetMetadata asset = rdfXmlAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
     ContentAccessor composite = new ContentAccessorDirect("shape composite");
     ContentAccessor xmlSchemaContent = new ContentAccessorDirect("<xs:schema/>");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
@@ -531,9 +522,9 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaList()).thenReturn(
         Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID), SchemaType.XML, List.of(XML_SCHEMA_ID)));
     when(shaclValidator.parseShapeModel(composite)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(schemaStore.getLatestSchemaByType(SchemaType.XML)).thenReturn(xmlSchemaContent);
-    when(xmlSchemaValidator.validate(any(), any())).thenReturn(conformingReport());
+    when(xmlSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(32L, 33L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -548,16 +539,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_turtleRdfAsset_validateAll_runsShaclOnly() {
-    AssetMetadata asset = turtleRdfAsset(ASSET_ID);
+    AssetMetadata asset = buildTurtleRdfAsset(ASSET_ID);
     ContentAccessor composite = new ContentAccessorDirect("shape composite");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID)));
     when(shaclValidator.parseShapeModel(composite)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(34L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -574,16 +565,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_explicitJsonSchema_returnsConformingResponse() throws IOException {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
     ContentAccessor assetContent = new ContentAccessorDirect("{\"name\":\"test\"}");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(schemaContent);
     when(fileStore.readFile("hash-nonrdf")).thenReturn(assetContent);
-    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(4L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -598,7 +589,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_jsonModuleDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -609,10 +600,10 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_schemaTypeNotJson_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
     // Caller provided a SHAPE schema for a JSON asset — must be rejected
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
     request.setSchemaIds(List.of(SCHEMA_ID));
@@ -622,7 +613,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_multipleExplicitSchemas_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -633,7 +624,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_validateAll_usesLatestSchema() throws IOException {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
     ContentAccessor assetContent = new ContentAccessorDirect("{\"name\":\"test\"}");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
@@ -642,7 +633,7 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(schemaContent);
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
     when(fileStore.readFile("hash-nonrdf")).thenReturn(assetContent);
-    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(5L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -656,7 +647,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
 
     assertThrows(NotFoundException.class,
@@ -665,7 +656,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_validateAll_noSchemaFound_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(null);
 
@@ -679,16 +670,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_explicitXmlSchema_returnsConformingResponse() throws IOException {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, "application/xml");
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/xml");
     ContentAccessor assetContent = new ContentAccessorDirect("<root/>");
     ContentAccessor schemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(xmlRecord(XML_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(schemaStore.getSchema(XML_SCHEMA_ID)).thenReturn(schemaContent);
     when(fileStore.readFile("hash-nonrdf")).thenReturn(assetContent);
-    when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(conformingReport());
+    when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(6L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -703,7 +694,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_xmlModuleDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -714,9 +705,9 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_schemaTypeNotXml_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
     request.setSchemaIds(List.of(SCHEMA_ID));
@@ -726,7 +717,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_multipleExplicitSchemas_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -737,7 +728,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
 
     assertThrows(NotFoundException.class,
@@ -746,7 +737,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_validateAll_noSchemaFound_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.XML)).thenReturn(null);
 
@@ -760,7 +751,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_unsupportedContentType_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(nonRdfAsset(ASSET_ID, "application/pdf"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/pdf"));
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
     request.setSchemaIds(List.of(SCHEMA_ID));
@@ -770,7 +761,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_nonRdfAsset_nullContentType_throwsVerificationException() {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, null);
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, null);
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
 
@@ -786,18 +777,18 @@ class AssetValidationServiceImplTest {
   void validateAssets_multipleRdfAssets_mergedValidation_returnsConformingResponse() {
     String id1 = "https://example.org/asset/1";
     String id2 = "https://example.org/asset/2";
-    AssetMetadata asset1 = rdfAsset(id1);
-    AssetMetadata asset2 = rdfAsset(id2);
+    AssetMetadata asset1 = buildRdfAsset(id1);
+    AssetMetadata asset2 = buildRdfAsset(id2);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape ttl");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(id1)).thenReturn(asset1);
     when(assetStore.getById(id2)).thenReturn(asset2);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(7L);
 
     ValidationRequest request = new ValidationRequest();
@@ -842,7 +833,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_nonRdfAsset_throwsVerificationException() {
-    AssetMetadata nonRdf = nonRdfAsset("https://example.org/asset/pdf", "application/pdf");
+    AssetMetadata nonRdf = buildNonRdfAsset("https://example.org/asset/pdf", "application/pdf");
 
     when(assetStore.getById(nonRdf.getId())).thenReturn(nonRdf);
     givenShaclModuleEnabled();
@@ -868,21 +859,21 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAssets_multipleShapeSchemas_verifyBothShapesParsedAndReturnsConforming() {
     String id2 = "https://example.org/schema/shape/2";
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shape1 = new ContentAccessorDirect("shape1");
     ContentAccessor shape2 = new ContentAccessorDirect("shape2");
-    Model model1 = emptyModel();
-    Model model2 = emptyModel();
+    Model model1 = ModelFactory.createDefaultModel();
+    Model model2 = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(id2)).thenReturn(shapeRecord(id2));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(id2)).thenReturn(buildShapeRecord(id2));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shape1);
     when(schemaStore.getSchema(id2)).thenReturn(shape2);
     when(shaclValidator.parseShapeModel(shape1)).thenReturn(model1);
     when(shaclValidator.parseShapeModel(shape2)).thenReturn(model2);
-    when(shaclValidator.validate(anyList(), any())).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(8L);
 
     ValidationRequest request = new ValidationRequest();
@@ -900,7 +891,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     givenShaclModuleEnabled();
 
     ValidationRequest request = new ValidationRequest();
@@ -911,9 +902,9 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_schemaTypeNotShape_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
@@ -924,7 +915,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_validateAll_noShapesFound_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(rdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
 
@@ -939,16 +930,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_storesResultWithCorrectValidatorIds() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(conformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(9L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -970,16 +961,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_storesResultWithJsonSchemaValidatorType() throws IOException {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
     ContentAccessor assetContent = new ContentAccessorDirect("{\"name\":\"test\"}");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(jsonRecord(JSON_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(schemaContent);
     when(fileStore.readFile("hash-nonrdf")).thenReturn(assetContent);
-    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(conformingReport());
+    when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(10L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -999,16 +990,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_storesResultWithXmlSchemaValidatorType() throws IOException {
-    AssetMetadata asset = nonRdfAsset(ASSET_ID, "application/xml");
+    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/xml");
     ContentAccessor assetContent = new ContentAccessorDirect("<root/>");
     ContentAccessor schemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(xmlRecord(XML_SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(schemaStore.getSchema(XML_SCHEMA_ID)).thenReturn(schemaContent);
     when(fileStore.readFile("hash-nonrdf")).thenReturn(assetContent);
-    when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(conformingReport());
+    when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(11L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();
@@ -1028,16 +1019,16 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_nonConforming_storesRawReport() {
-    AssetMetadata asset = rdfAsset(ASSET_ID);
+    AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape");
-    Model shapesModel = emptyModel();
+    Model shapesModel = ModelFactory.createDefaultModel();
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(shapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
     when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
-    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(nonConformingReport());
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(10L);
 
     SingleAssetValidationRequest request = new SingleAssetValidationRequest();

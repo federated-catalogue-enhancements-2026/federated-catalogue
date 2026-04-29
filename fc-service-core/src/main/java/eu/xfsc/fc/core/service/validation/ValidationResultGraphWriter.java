@@ -47,7 +47,7 @@ public class ValidationResultGraphWriter {
    */
   public void write(ValidationResult result, GraphStore graphStore) {
     String fcmeta = namespaceProperties.getNamespace();
-    String resultIri = buildResultIri(result.getId(), fcmeta);
+    String resultIri = resultIri(result.getId());
     List<RdfClaim> claims = new ArrayList<>();
 
     // Link each asset subject IRI → this validation result
@@ -82,10 +82,6 @@ public class ValidationResultGraphWriter {
    */
   public String resultIri(Long id) {
     return namespaceProperties.getNamespace() + "ValidationResult/" + id;
-  }
-
-  private static String buildResultIri(Long id, String fcmeta) {
-    return fcmeta + "ValidationResult/" + id;
   }
 
   private static CredentialClaim iriTriple(String subject, String predicate, String object) {
