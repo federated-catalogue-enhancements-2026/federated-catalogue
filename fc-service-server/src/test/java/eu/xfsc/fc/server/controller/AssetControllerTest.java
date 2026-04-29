@@ -131,7 +131,7 @@ public class AssetControllerTest {
         // Clean up all test assets to avoid cross-test pollution
         // Try by the default test fixture hash
         try {
-            assetStorePublisher.deleteAsset(assetMeta.getAssetHash(), false);
+            assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
         } catch (NotFoundException e) {
             // expected if not created
         }
@@ -140,7 +140,7 @@ public class AssetControllerTest {
         try {
             String defaultCredentialHash = HashUtils.calculateSha256AsHex(getMockFileDataAsString(ASSET_FILE_NAME));
             if (!defaultCredentialHash.equals(assetMeta.getAssetHash())) {
-                assetStorePublisher.deleteAsset(defaultCredentialHash, false);
+                assetStorePublisher.deleteAsset(defaultCredentialHash);
             }
         } catch (NotFoundException | IOException e) {
             // expected if not created
@@ -301,7 +301,7 @@ public class AssetControllerTest {
                 .with(csrf()))
             .andExpect(status().isOk());
 
-        assetStorePublisher.deleteAsset(nonRdfMeta.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(nonRdfMeta.getAssetHash());
     }
 
     @Test
@@ -360,20 +360,6 @@ public class AssetControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {ASSET_DELETE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void deleteAsset_withKeepHumanReadableTrue_returnsOk() throws Exception {
-        assetStorePublisher.storeCredential(assetMeta, getStaticVerificationResult());
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/assets/{asset_hash}", assetMeta.getAssetHash())
-                        .param("keepHumanReadable", "true")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-    }
-
-    @Test
     public void addAssetShouldReturnUnauthorizedResponse() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/assets")
                         .with(csrf())
@@ -420,7 +406,7 @@ public class AssetControllerTest {
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
         assertTrue(asset.getWarnings() == null || asset.getWarnings().isEmpty(),
             "Clean asset upload should produce no warnings");
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -440,7 +426,7 @@ public class AssetControllerTest {
         assertFalse(asset.getWarnings().isEmpty(), "Warnings list should not be empty when fcmeta triples were filtered");
         assertTrue(asset.getWarnings().getFirst().contains("triple(s)"), "Warning should mention filtered triple count");
         assertTrue(asset.getWarnings().getFirst().contains("federated-catalogue/meta#"), "Warning should contain the reserved namespace URI");
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -456,7 +442,7 @@ public class AssetControllerTest {
             .andReturn();
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -473,7 +459,7 @@ public class AssetControllerTest {
             .andReturn();
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
     
     /**
@@ -496,7 +482,7 @@ public class AssetControllerTest {
             .andReturn();
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test
@@ -519,7 +505,7 @@ public class AssetControllerTest {
               .contentType(MediaType.APPLICATION_JSON)
               .accept(MediaType.APPLICATION_JSON))
           .andExpect(status().isConflict());
-      assetStorePublisher.deleteAsset(hash, false);
+      assetStorePublisher.deleteAsset(hash);
       assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
 
@@ -598,7 +584,7 @@ public class AssetControllerTest {
         String content = getMockFileDataAsString(ASSET_FILE_NAME);
         String hash = HashUtils.calculateSha256AsHex(content);
         try {
-          assetStorePublisher.deleteAsset(hash, false);
+          assetStorePublisher.deleteAsset(hash);
         } catch (NotFoundException ex) {
             // expected
         }
@@ -646,7 +632,7 @@ public class AssetControllerTest {
 
         assertEquals(0, nodes.size());
         
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
     }
     
     /**
@@ -674,7 +660,7 @@ public class AssetControllerTest {
             .andExpect(status().isConflict()).andReturn();
         Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
         assertEquals("The asset status cannot be changed because the asset metadata status is deprecated", error.getMessage());
-        assetStorePublisher.deleteAsset(deprecatedMeta.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(deprecatedMeta.getAssetHash());
     }
 
     @Test
@@ -711,7 +697,7 @@ public class AssetControllerTest {
             .andReturn();
 
         Asset asset = objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
-        assetStorePublisher.deleteAsset(asset.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(asset.getAssetHash());
     }
 
     @Test

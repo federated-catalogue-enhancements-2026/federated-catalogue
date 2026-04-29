@@ -63,12 +63,11 @@ public interface AssetStore {
 
   /**
    * Remove the asset with the given hash from the store.
+   * If the asset has a linked human-readable representation, it is also deleted.
    *
    * @param hash The hash of the asset to work on.
-   * @param keepHumanReadable If true, the linked human-readable asset is not deleted.
-   *                           Default false (HR is deleted with the asset).
    */
-  void deleteAsset(String hash, boolean keepHumanReadable);
+  void deleteAsset(String hash);
 
   /**
    * Invalidate expired assets in the store.

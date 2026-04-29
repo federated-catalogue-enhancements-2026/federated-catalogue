@@ -71,7 +71,7 @@ public class AssetUploadControllerTest {
 
     private void deleteAssetQuietly(String hash) {
         try {
-            assetStorePublisher.deleteAsset(hash, false);
+            assetStorePublisher.deleteAsset(hash);
         } catch (NotFoundException e) {
             // expected
         }

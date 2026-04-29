@@ -202,7 +202,7 @@ public class AssetStoreImpl implements AssetStore {
   }
 
   @Override
-  public void deleteAsset(final String hash, final boolean keepHumanReadable) {
+  public void deleteAsset(final String hash) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
     final String hrHashToCascade = assetOpt
         .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
@@ -234,9 +234,9 @@ public class AssetStoreImpl implements AssetStore {
       log.debug("deleteAsset; file store cleanup skipped for hash {}: {}", hash, ex.getMessage());
     }
 
-    if (!keepHumanReadable && hrHashToCascade != null) {
+    if (hrHashToCascade != null) {
       try {
-        deleteAsset(hrHashToCascade, false);
+        deleteAsset(hrHashToCascade);
       } catch (NotFoundException ex) {
         log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }

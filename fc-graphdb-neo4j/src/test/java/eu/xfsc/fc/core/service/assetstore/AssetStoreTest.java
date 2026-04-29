@@ -171,7 +171,7 @@ public class AssetStoreTest {
     final ContentAccessor credentialFileByHash = assetStorePublisher.getFileByHash(hash);
     assertEquals(credentialFileByHash, assetMeta.getContentAccessor(), "Getting the credential file by hash is equal to the stored credential file");
 
-    assetStorePublisher.deleteAsset(hash, false);
+    assetStorePublisher.deleteAsset(hash);
 
     claims = graphStore.queryData(new GraphQuery("MATCH (n {uri: $uri}) RETURN n", Map.of("uri", assetMeta.getId()))).getResults();
     Assertions.assertEquals(0, claims.size());
@@ -211,7 +211,7 @@ public class AssetStoreTest {
     final AssetStatus status1 = byHash1.getStatus();
     assertEquals(AssetStatus.ACTIVE, status1, "First credential should stay active.");
 
-    assetStorePublisher.deleteAsset(hash1, false);
+    assetStorePublisher.deleteAsset(hash1);
 
     Assertions.assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
   }
@@ -264,7 +264,7 @@ public class AssetStoreTest {
     log.debug("test04ChangeAssetStatus-3; got {} nodes", nodes.size());
     Assertions.assertEquals(0, nodes.size(), "Revoked credential should not appear in queries");
 
-    assetStorePublisher.deleteAsset(hash, false);
+    assetStorePublisher.deleteAsset(hash);
 
     Assertions.assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
   }

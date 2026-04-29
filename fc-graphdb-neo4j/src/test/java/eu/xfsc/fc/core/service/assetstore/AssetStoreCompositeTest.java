@@ -196,7 +196,7 @@ public class AssetStoreCompositeTest {
         List<Map<String, Object>> aNodes = graphStore.queryData(
                 new GraphQuery("MATCH (n) RETURN labels(n), n", Map.of())).getResults();
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         claims = graphStore.queryData(
                 new GraphQuery("MATCH (n {uri: $uri}) RETURN labels(n), n", Map.of("uri", uri))).getResults();
@@ -235,7 +235,7 @@ public class AssetStoreCompositeTest {
                 new GraphQuery("MATCH (n) RETURN n", null)).getResults();
         Assertions.assertEquals(3, claims.size());
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         claims = graphStore.queryData(
                 new GraphQuery("MATCH (n) RETURN n", null)).getResults();
@@ -279,7 +279,7 @@ public class AssetStoreCompositeTest {
             Assertions.assertFalse(relType.contains("complianceResult"),
                     "Protected namespace relationship should not exist after rebuild: " + relType);
         }
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
     }
 
     @Test
@@ -324,6 +324,6 @@ public class AssetStoreCompositeTest {
         Assertions.assertFalse(nodes.isEmpty(),
                 "Graph must contain non-credential triples after rebuild");
 
-        assetStorePublisher.deleteAsset(assetMeta.getAssetHash(), false);
+        assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
     }
 }

@@ -44,8 +44,8 @@ public class PublishingAssetStore extends AssetStoreImpl {
 	  }
 		  
 	  @Override
-	  public void deleteAsset(final String hash, final boolean keepHumanReadable) {
-        super.deleteAsset(hash, keepHumanReadable);
+	  public void deleteAsset(final String hash) {
+        super.deleteAsset(hash);
 	    assetPublisher.publish(hash, AssetEvent.DELETE, null);
 	  }
 	  

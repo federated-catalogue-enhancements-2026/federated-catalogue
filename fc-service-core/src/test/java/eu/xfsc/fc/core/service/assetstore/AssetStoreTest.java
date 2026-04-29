@@ -184,7 +184,7 @@ public class AssetStoreTest {
         assertThatAssetHasTheSameData(assetMeta2, assetStorePublisher.getByHash(hash2), true);
         assertEquals(AssetStatus.ACTIVE, assetStorePublisher.getByHash(hash2).getStatus());
 
-        assetStorePublisher.deleteAsset(hash2, false);
+        assetStorePublisher.deleteAsset(hash2);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
     }
@@ -218,7 +218,7 @@ public class AssetStoreTest {
         final AssetStatus status1 = byHash1.getStatus();
         assertEquals(AssetStatus.ACTIVE, status1, "First asset should stay active.");
 
-        assetStorePublisher.deleteAsset(hash1, false);
+        assetStorePublisher.deleteAsset(hash1);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
     }
@@ -269,7 +269,7 @@ public class AssetStoreTest {
         )).getResults();
         Assertions.assertEquals(0, nodes.size(), "Revoked asset should not appear in queries");
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -327,7 +327,7 @@ public class AssetStoreTest {
         Assertions.assertNull(firstResult.getId(), "SubjectId should not have been returned");
         Assertions.assertNull(firstResult.getContentAccessor(), "Asset content should not have been returned.");
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -354,7 +354,7 @@ public class AssetStoreTest {
         log.info("filter returned {} match(es)", matchCount);
         assertEquals(0, matchCount, "expected 0 filter matches, but got " + matchCount);
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -383,7 +383,7 @@ public class AssetStoreTest {
         assertEquals(1, matchCount, "expected 1 filter match, but got " + matchCount);
         assertEquals(assetMeta.getId(), byFilter.getResults().getFirst().getId());
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -410,7 +410,7 @@ public class AssetStoreTest {
         final int matchCount = byFilter.getResults().size();
         assertEquals(0, matchCount, "expected 0 filter matches, but got " + matchCount);
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
 
     }
@@ -458,9 +458,9 @@ public class AssetStoreTest {
         assertTrue(assetMeta1.getId().equals(filterAssetMeta1.getId()) || assetMeta1.getId().equals(filterAssetMeta2.getId()), "expected filter match assetMeta1 missing in results");
         assertTrue(assetMeta2.getId().equals(filterAssetMeta1.getId()) || assetMeta2.getId().equals(filterAssetMeta2.getId()), "expected filter match assetMeta2 missing in results");
 
-        assetStorePublisher.deleteAsset(hash1, false);
-        assetStorePublisher.deleteAsset(hash2, false);
-        assetStorePublisher.deleteAsset(hash3, false);
+        assetStorePublisher.deleteAsset(hash1);
+        assetStorePublisher.deleteAsset(hash2);
+        assetStorePublisher.deleteAsset(hash3);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
@@ -511,9 +511,9 @@ public class AssetStoreTest {
                 || assetMeta2.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta2 missing in results");
         assertTrue(assetMeta3.getId().equals(filterAssetMeta1.getId()) || assetMeta3.getId().equals(filterAssetMeta2.getId())
                 || assetMeta3.getId().equals(filterAssetMeta3.getId()), "expected filter match assetMeta3 missing in results");
-        assetStorePublisher.deleteAsset(hash1, false);
-        assetStorePublisher.deleteAsset(hash2, false);
-        assetStorePublisher.deleteAsset(hash3, false);
+        assetStorePublisher.deleteAsset(hash1);
+        assetStorePublisher.deleteAsset(hash2);
+        assetStorePublisher.deleteAsset(hash3);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
@@ -543,7 +543,7 @@ public class AssetStoreTest {
         log.info("filter returned {} match(es)", matchCount);
         assertEquals(1, matchCount, "expected 1 filter matches");
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -571,7 +571,7 @@ public class AssetStoreTest {
         log.info("filter returned {} match(es)", matchCount);
         assertEquals(0, matchCount, "expected 0 filter matches");
 
-        assetStorePublisher.deleteAsset(hash, false);
+        assetStorePublisher.deleteAsset(hash);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash));
     }
@@ -612,9 +612,9 @@ public class AssetStoreTest {
         final int matchCount = byFilter.getResults().size();
         log.info("filter returned {} match(es)", matchCount);
         assertEquals(2, matchCount, "expected 2 filter match, but got " + matchCount);
-        assetStorePublisher.deleteAsset(hash1, false);
-        assetStorePublisher.deleteAsset(hash2, false);
-        assetStorePublisher.deleteAsset(hash3, false);
+        assetStorePublisher.deleteAsset(hash1);
+        assetStorePublisher.deleteAsset(hash2);
+        assetStorePublisher.deleteAsset(hash3);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
@@ -666,9 +666,9 @@ public class AssetStoreTest {
         assertEquals(AssetStatus.EOL, assetStorePublisher.getByHash(hash2).getStatus(), "Status should have been changed.");
         assertEquals(AssetStatus.ACTIVE, assetStorePublisher.getByHash(hash3).getStatus(), "Status should not have been changed.");
 
-        assetStorePublisher.deleteAsset(hash1, false);
-        assetStorePublisher.deleteAsset(hash2, false);
-        assetStorePublisher.deleteAsset(hash3, false);
+        assetStorePublisher.deleteAsset(hash1);
+        assetStorePublisher.deleteAsset(hash2);
+        assetStorePublisher.deleteAsset(hash3);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));
@@ -713,9 +713,9 @@ public class AssetStoreTest {
         log.info("filter returned {} match(es)", matchCount);
         assertEquals(1, matchCount, "expected 2 filter match, but got " + matchCount);
         assertEquals(3, byFilter.getTotalCount(), "expected 3 total count, but got " + matchCount);
-        assetStorePublisher.deleteAsset(hash1, false);
-        assetStorePublisher.deleteAsset(hash2, false);
-        assetStorePublisher.deleteAsset(hash3, false);
+        assetStorePublisher.deleteAsset(hash1);
+        assetStorePublisher.deleteAsset(hash2);
+        assetStorePublisher.deleteAsset(hash3);
 
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash1));
         assertThrows(NotFoundException.class, () -> assetStorePublisher.getByHash(hash2));

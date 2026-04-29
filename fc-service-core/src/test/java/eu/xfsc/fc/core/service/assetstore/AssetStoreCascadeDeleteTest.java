@@ -88,7 +88,7 @@ class AssetStoreCascadeDeleteTest {
 
     linkAssets(mrMeta.getId(), hrMeta.getId());
 
-    assetStore.deleteAsset(mrMeta.getAssetHash(), false);
+    assetStore.deleteAsset(mrMeta.getAssetHash());
 
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(mrMeta.getAssetHash()),
         "MR asset must be gone after delete");
@@ -105,7 +105,7 @@ class AssetStoreCascadeDeleteTest {
 
     linkAssets(mrMeta.getId(), hrMeta.getId());
 
-    assetStore.deleteAsset(hrMeta.getAssetHash(), false);
+    assetStore.deleteAsset(hrMeta.getAssetHash());
 
     assertNotNull(assetStore.getByHash(mrMeta.getAssetHash()),
         "MR asset must survive when HR asset is deleted directly");
@@ -115,30 +115,13 @@ class AssetStoreCascadeDeleteTest {
     assertNull(mrEntity.getLinkedAsset(), "linked_asset_id must be nulled by DB after HR is deleted");
   }
 
-  // ===== keepHumanReadable=true preserves HR =====
-
-  @Test
-  void deleteAsset_withKeepHumanReadableTrue_machineReadableDeletedHumanReadablePreserved() {
-    final var mrMeta = storeNonRdfAsset(MR_ID, "mr content keep-hr-test");
-    final var hrMeta = storeNonRdfAsset(null, "hr content keep-hr-test");
-
-    linkAssets(mrMeta.getId(), hrMeta.getId());
-
-    assetStore.deleteAsset(mrMeta.getAssetHash(), true);
-
-    assertThrows(NotFoundException.class, () -> assetStore.getByHash(mrMeta.getAssetHash()),
-        "MR asset must be deleted");
-    assertNotNull(assetStore.getByHash(hrMeta.getAssetHash()),
-        "HR asset must survive when keepHumanReadable=true");
-  }
-
   // ===== delete unlinked asset — no cascade side effects =====
 
   @Test
   void deleteAsset_noLinksExist_deletesSuccessfully() {
     final var meta = storeNonRdfAsset(null, "standalone asset no links");
 
-    assetStore.deleteAsset(meta.getAssetHash(), false);
+    assetStore.deleteAsset(meta.getAssetHash());
 
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(meta.getAssetHash()));
   }
@@ -149,7 +132,7 @@ class AssetStoreCascadeDeleteTest {
   void deleteAsset_callsValidationResultDeleteForSingleAsset() {
     final var meta = storeNonRdfAsset(null, "validate-cleanup-single");
 
-    assetStore.deleteAsset(meta.getAssetHash(), false);
+    assetStore.deleteAsset(meta.getAssetHash());
 
     verify(validationResultStore).deleteByAssetId(meta.getId());
   }
@@ -160,7 +143,7 @@ class AssetStoreCascadeDeleteTest {
     final var hrMeta = storeNonRdfAsset(null, "hr for validation verify");
     linkAssets(mrMeta.getId(), hrMeta.getId());
 
-    assetStore.deleteAsset(mrMeta.getAssetHash(), false);
+    assetStore.deleteAsset(mrMeta.getAssetHash());
 
     verify(validationResultStore).deleteByAssetId(mrMeta.getId());
     verify(validationResultStore).deleteByAssetId(hrMeta.getId());

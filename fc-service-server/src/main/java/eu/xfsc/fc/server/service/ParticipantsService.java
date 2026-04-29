@@ -93,7 +93,7 @@ public class ParticipantsService implements ParticipantsApiDelegate {
     ParticipantMetaData participant = partDao.select(participantId)
         .orElseThrow(() -> new NotFoundException("Participant not found: " + participantId));
     String credentialContent = assetStorePublisher.getByHash(participant.getAssetHash()).getContentAccessor().getContentAsString();
-    assetStorePublisher.deleteAsset(participant.getAssetHash(), false);
+    assetStorePublisher.deleteAsset(participant.getAssetHash());
     participant = partDao.delete(participant.getId()).get();
     log.debug("deleteParticipant.exit; returning: {}", participant);
     participant.setAsset(credentialContent);
