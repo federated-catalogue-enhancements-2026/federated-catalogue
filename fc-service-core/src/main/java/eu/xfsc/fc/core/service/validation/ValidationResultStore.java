@@ -43,4 +43,16 @@ public interface ValidationResultStore {
    * Used during graph rebuild to restore triples from PostgreSQL state.
    */
   void syncToGraph(ValidationResult result, GraphStore graphStore);
+
+  /**
+   * Deletes all validation results that reference the given asset ID, from both the relational DB
+   * and the graph store.
+   *
+   * <p>Must be called before the asset itself is deleted so that graph triples can still
+   * be resolved by result ID. Deleting results for an asset that also appears in multi-asset
+   * validation batches removes the entire result row, not just the reference.</p>
+   *
+   * @param assetId the asset IRI as stored in {@code validation_result.asset_ids}
+   */
+  void deleteByAssetId(String assetId);
 }

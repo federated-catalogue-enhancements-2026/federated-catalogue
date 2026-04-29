@@ -5,8 +5,14 @@ package eu.xfsc.fc.core.dao.validation;
  */
 public enum ValidatorType {
 
-  /** On-demand schema validation (SHACL, JSON Schema, XML Schema). */
-  SCHEMA,
+  /** On-demand SHACL validation of RDF assets. */
+  SHACL,
+
+  /** On-demand JSON Schema validation of non-RDF JSON assets. */
+  JSON_SCHEMA,
+
+  /** On-demand XML Schema validation of non-RDF XML assets. */
+  XML_SCHEMA,
 
   /** External trust framework compliance check. */
   TRUST_FRAMEWORK
