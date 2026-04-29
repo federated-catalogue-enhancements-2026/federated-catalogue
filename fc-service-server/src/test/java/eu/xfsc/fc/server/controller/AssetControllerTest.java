@@ -45,10 +45,13 @@ import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.api.generated.model.ValidationResponse;
+import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
+import eu.xfsc.fc.core.service.validation.AssetValidationService;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.util.HashUtils;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
@@ -60,6 +63,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import org.neo4j.harness.Neo4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -104,6 +110,8 @@ public class AssetControllerTest {
     // can't remove it for some reason, many tests fails with auth error
     @MockitoSpyBean(name = "schemaFileStore")
     private FileStore fileStore;
+    @MockitoSpyBean
+    private AssetValidationService assetValidationService;
 
     @Autowired
     private SchemaStore schemaStore;
@@ -909,6 +917,116 @@ public class AssetControllerTest {
                         .content("{}")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    // ===== validateAssets — input validation =====
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_emptyBody_returnsBadRequest() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_emptyAssetIds_returnsBadRequest() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assetIds\": []}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_tooManyAssetIds_returnsBadRequest() throws Exception {
+        List<String> twentyOneIds = java.util.stream.IntStream.range(0, 21)
+                .mapToObj(i -> "urn:uuid:00000000-0000-0000-0000-" + String.format("%012d", i))
+                .collect(Collectors.toList());
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("assetIds", twentyOneIds)))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_missingContentType_returnsBadRequest() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-000000000001\"]}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError());
+    }
+
+    // ===== validateAsset / validateAssets — boundary responses =====
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_storedRdfAsset_returnsOk() throws Exception {
+        ValidationResponse mockedResponse = new ValidationResponse();
+        mockedResponse.setConforms(true);
+        doReturn(mockedResponse).when(assetValidationService).validateAssets(any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-000000000001\"]}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAssets_nonExistentAsset_returnsNotFound() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-does-not-exist\"]}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAsset_nonExistentAsset_returnsNotFound() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate",
+                        "urn:uuid:00000000-0000-0000-0000-does-not-exist")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void validateAsset_unsupportedContentType_returnsUnprocessableEntity() throws Exception {
+        doThrow(new VerificationException("unsupported content type for asset"))
+            .when(assetValidationService).validateAsset(any(), any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate", assetMeta.getId())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"validateAgainstAllSchemas\": true}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnprocessableEntity());
     }
 
     // ===== Helpers =====

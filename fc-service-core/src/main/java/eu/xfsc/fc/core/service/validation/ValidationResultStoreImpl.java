@@ -17,11 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Implements {@link ValidationResultStore} and provides
  * validation result persistence with graph DB sync.
  *
- * <p>Write sequence: PostgreSQL INSERT + graph DB write both happen inside the {@code @Transactional}
- * boundary; PostgreSQL commits only when {@code store()} returns. If PostgreSQL fails to commit after a
- * successful graph write, graph triples will exist without a corresponding PostgreSQL row.
+ * <p>Write sequence: relational DB INSERT + graph DB write both happen inside the {@code @Transactional}
+ * boundary; the DB commits only when {@code store()} returns. If the DB fails to commit after a
+ * successful graph write, graph triples will exist without a corresponding DB row.
  * If the graph write itself fails, the row is marked
- * {@code FAILED} and no retry is attempted. PostgreSQL is the system of record.</p>
+ * {@code FAILED} and no retry is attempted. The relational DB is the system of record.</p>
  */
 @Slf4j
 @Service
@@ -36,8 +36,8 @@ public class ValidationResultStoreImpl implements ValidationResultStore {
   /**
    * {@inheritDoc}
    *
-   * <p>Persists the result to PostgreSQL (with tamper-proof hash), then attempts a
-   * graph DB write (best-effort). The PostgreSQL row is the source of truth; a failed graph
+   * <p>Persists the result to the relational DB (with tamper-proof hash), then attempts a
+   * graph DB write (best-effort). The DB row is the source of truth; a failed graph
    * write marks the row {@code FAILED} and is not retried.</p>
    */
   @Override
@@ -87,7 +87,7 @@ public class ValidationResultStoreImpl implements ValidationResultStore {
       }
     }
     repository.deleteAllByAssetId(assetId);
-    log.debug("deleteByAssetId; deleted {} PostgreSQL rows for assetId={}", results.size(), assetId);
+    log.debug("deleteByAssetId; deleted {} DB rows for assetId={}", results.size(), assetId);
   }
 
   @Override

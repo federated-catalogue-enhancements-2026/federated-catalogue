@@ -16,6 +16,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.StmtIterator;
@@ -116,7 +117,6 @@ public class ShaclValidator {
    * @return validation report with conforms flag, violations, and raw Turtle report
    */
   public ValidationReport validate(List<AssetMetadata> assets, Model shapesModel) {
-    log.debug("validate.enter; validating {} assets", assets.size());
     Model dataModel = buildMergedDataModel(assets);
     return runValidationWithTimeout(dataModel, shapesModel);
   }
@@ -172,10 +172,8 @@ public class ShaclValidator {
       if (contentType.contains("rdf+xml")) {
         return Lang.RDFXML;
       }
-      if (contentType.contains("application/vc+ld+json") || contentType.contains("application/vp+ld+json")) {
-        return Lang.JSONLD11;
-      }
-      if (contentType.contains("application/ld+json") || contentType.contains("application/json")) {
+      if (contentType.contains("application/vc+ld+json") || contentType.contains("application/vp+ld+json")
+          || contentType.contains("application/ld+json") || contentType.contains("application/json")) {
         return Lang.JSONLD11;
       }
     }
@@ -249,7 +247,7 @@ public class ShaclValidator {
     return report;
   }
 
-  private String getStringProperty(Resource resource, org.apache.jena.rdf.model.Property property) {
+  private String getStringProperty(Resource resource, Property property) {
     var stmt = resource.getProperty(property);
     if (stmt == null) {
       return null;

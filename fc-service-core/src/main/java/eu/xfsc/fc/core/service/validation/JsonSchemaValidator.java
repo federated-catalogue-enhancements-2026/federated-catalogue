@@ -8,6 +8,7 @@ import com.networknt.schema.SchemaRegistry;
 import com.networknt.schema.SpecificationVersion;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.api.generated.model.ValidationViolation;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +40,10 @@ public class JsonSchemaValidator {
    * @return validation report with conforms flag, violations, and error messages
    */
   public ValidationReport validate(ContentAccessor assetContent, ContentAccessor schemaContent) {
-    log.debug("validate.enter; JSON Schema validation");
     try {
       JsonNode schemaNode = objectMapper.readTree(schemaContent.getContentAsString());
+      validateNoExternalRefs(schemaNode);
+
       JsonNode contentNode = objectMapper.readTree(assetContent.getContentAsStream());
 
       SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
@@ -50,7 +52,26 @@ public class JsonSchemaValidator {
       List<Error> errors = schema.validate(contentNode);
       return toValidationReport(errors);
     } catch (IOException e) {
-      throw new ServerException("Failed to parse JSON asset for validation: " + e.getMessage(), e);
+      throw new ClientException("Invalid JSON schema or asset content: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Rejects schemas containing external {@code $ref} URIs — prevents SSRF via uploaded schemas.
+   * Only data: URIs and relative references (no scheme) are permitted.
+   */
+  private void validateNoExternalRefs(JsonNode node) {
+    if (node.isObject()) {
+      JsonNode ref = node.get("$ref");
+      if (ref != null && ref.isTextual()) {
+        String value = ref.asText();
+        if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("ftp://")) {
+          throw new ClientException("Schema contains external $ref '" + value + "' which is not permitted");
+        }
+      }
+      node.fields().forEachRemaining(entry -> validateNoExternalRefs(entry.getValue()));
+    } else if (node.isArray()) {
+      node.elements().forEachRemaining(this::validateNoExternalRefs);
     }
   }
 

@@ -45,7 +45,7 @@ public interface ValidationResultStore {
   void syncToGraph(ValidationResult result, GraphStore graphStore);
 
   /**
-   * Deletes all validation results that reference the given asset ID, from both PostgreSQL
+   * Deletes all validation results that reference the given asset ID, from both the relational DB
    * and the graph store.
    *
    * <p>Must be called before the asset itself is deleted so that graph triples can still

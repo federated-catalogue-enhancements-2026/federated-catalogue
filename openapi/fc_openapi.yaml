@@ -781,6 +781,13 @@ components:
 
     SingleAssetValidationRequest:
       type: object
+      description: >
+        Request body for POST /assets/{id}/validate. The asset to validate is identified by the
+        path parameter {id} — it must already be stored in the catalogue. This schema carries
+        only the optional schema selection; it does not contain asset content.
+        Contrast with ValidationRequest (POST /assets/validate), which accepts a list of asset
+        IRIs for combined multi-asset SHACL validation.
+        Contrast with StoredValidationResult / ValidationResponse, which are the response types.
       properties:
         schemaIds:
           type: array

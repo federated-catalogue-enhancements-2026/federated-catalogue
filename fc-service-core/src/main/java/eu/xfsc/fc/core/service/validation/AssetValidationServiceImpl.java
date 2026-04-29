@@ -35,8 +35,7 @@ import java.util.Map;
  * Default implementation of {@link AssetValidationService}.
  *
  * <p>Orchestrates on-demand validation of stored assets against stored schemas.
- * Handles all asset input cases (A–F), module toggles, schema resolution, and
- * result storage via {@link ValidationResultStore}.</p>
+ * Handles module toggles, schema resolution, and result storage via {@link ValidationResultStore}.</p>
  *
  * <p>Cross-paradigm validation: JSON Schema applies to RDF assets serialized as JSON-LD;
  * XML Schema applies to RDF assets serialized as RDF/XML. When an RDF asset is validated,
@@ -48,6 +47,10 @@ import java.util.Map;
 public class AssetValidationServiceImpl implements AssetValidationService {
 
   private static final int MAX_ASSETS_PER_REQUEST = 20;
+
+  private static final String JSON_LD_CONTENT_PREFIX = "{";
+  private static final String RDF_XML_CONTENT_PREFIX_1 = "<?xml";
+  private static final String RDF_XML_CONTENT_PREFIX_2 = "<rdf:RDF";
 
   private final AssetStore assetStore;
   private final FileStore fileStore;
@@ -125,7 +128,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return buildResponse(assetIds, schemas.schemaIds(), report, resultId, validatedAt);
   }
 
-  // --- RDF asset routing (Cases A, B, C + cross-paradigm) ---
+  // --- RDF asset routing ---
 
   private ValidationResponse validateRdfAsset(AssetMetadata asset, SingleAssetValidationRequest request) {
     List<String> schemaIds = request != null ? request.getSchemaIds() : null;
@@ -248,6 +251,9 @@ public class AssetValidationServiceImpl implements AssetValidationService {
    * that ran. Response report is the first failing one, or the first result if all passed.</p>
    */
   private ValidationResponse validateRdfAssetAgainstAll(AssetMetadata asset, Instant validatedAt) {
+    // Load schema list once — avoids repeated DB calls (one per schema type below)
+    Map<SchemaType, List<String>> schemasByType = schemaStore.getSchemaList();
+
     List<String> allSchemaIds = new ArrayList<>();
     boolean overallConforms = true;
     Long primaryResultId = null;
@@ -258,7 +264,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       ContentAccessor composite = schemaStore.getCompositeSchema(SchemaType.SHAPE);
       if (composite != null) {
         Model shapesModel = shaclValidator.parseShapeModel(composite);
-        List<String> shaclIds = getSchemaIdsByType(SchemaType.SHAPE);
+        List<String> shaclIds = schemasByType.getOrDefault(SchemaType.SHAPE, List.of());
         ValidationReport shaclReport = shaclValidator.validate(List.of(asset), shapesModel);
         primaryResultId = storeResult(
             List.of(asset.getId()), shaclIds, ValidatorType.SHACL, shaclReport, validatedAt);
@@ -272,7 +278,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     if (isJsonLdContent(asset) && moduleConfig.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)) {
       ContentAccessor jsonSchema = schemaStore.getLatestSchemaByType(SchemaType.JSON);
       if (jsonSchema != null) {
-        List<String> jsonIds = getSchemaIdsByType(SchemaType.JSON);
+        List<String> jsonIds = schemasByType.getOrDefault(SchemaType.JSON, List.of());
         ValidationReport jsonReport = jsonSchemaValidator.validate(asset.getContentAccessor(), jsonSchema);
         Long resultId = storeResult(
             List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, jsonReport, validatedAt);
@@ -287,7 +293,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     if (isRdfXmlContent(asset) && moduleConfig.isModuleEnabled(SchemaModuleType.XML_SCHEMA)) {
       ContentAccessor xmlSchema = schemaStore.getLatestSchemaByType(SchemaType.XML);
       if (xmlSchema != null) {
-        List<String> xmlIds = getSchemaIdsByType(SchemaType.XML);
+        List<String> xmlIds = schemasByType.getOrDefault(SchemaType.XML, List.of());
         ValidationReport xmlReport = xmlSchemaValidator.validate(asset.getContentAccessor(), xmlSchema);
         Long resultId = storeResult(
             List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, xmlReport, validatedAt);
@@ -311,7 +317,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, primaryResultId, validatedAt);
   }
 
-  // --- Non-RDF asset (Cases D, E, F) ---
+  // --- Non-RDF asset ---
 
   private ValidationResponse validateNonRdfAsset(AssetMetadata asset, SingleAssetValidationRequest request) {
     String contentType = asset.getContentType();
@@ -456,16 +462,13 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return grouped;
   }
 
-  /** Returns true if the RDF asset's raw content is JSON-LD (starts with '{'). */
   private boolean isJsonLdContent(AssetMetadata asset) {
-    String content = asset.getContentAccessor().getContentAsString();
-    return content.startsWith("{");
+    return asset.getContentAccessor().getContentAsString().startsWith(JSON_LD_CONTENT_PREFIX);
   }
 
-  /** Returns true if the RDF asset's raw content is RDF/XML. */
   private boolean isRdfXmlContent(AssetMetadata asset) {
     String content = asset.getContentAccessor().getContentAsString();
-    return content.startsWith("<?xml") || content.startsWith("<rdf:RDF");
+    return content.startsWith(RDF_XML_CONTENT_PREFIX_1) || content.startsWith(RDF_XML_CONTENT_PREFIX_2);
   }
 
   private void requireModuleEnabled(String moduleType) {

@@ -3,7 +3,7 @@ package eu.xfsc.fc.core.service.validation;
 import eu.xfsc.fc.core.service.assetstore.AssetDeletedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -14,7 +14,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * validation result cleanup is atomic with the asset row removal.</p>
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class ValidationResultCleanupListener {
 

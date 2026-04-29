@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.validation;
 
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.api.generated.model.ValidationViolation;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import lombok.NoArgsConstructor;
@@ -15,7 +16,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -43,11 +46,10 @@ public class XmlSchemaValidator {
    * @return validation report with conforms flag and SAX error on violation
    */
   public ValidationReport validate(ContentAccessor assetContent, ContentAccessor schemaContent) {
-    log.debug("validate.enter; XML Schema validation");
     try {
-      javax.xml.validation.Schema xsdSchema = loadXsdSchema(schemaContent);
+      Schema xsdSchema = loadXsdSchema(schemaContent);
       // A new Validator instance per call: Validator is not thread-safe
-      javax.xml.validation.Validator validator = xsdSchema.newValidator();
+      Validator validator = xsdSchema.newValidator();
       // XXE prevention on the content validator
       validator.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
       validator.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
@@ -68,12 +70,14 @@ public class XmlSchemaValidator {
         report.setRawReport(e.getMessage());
         return report;
       }
-    } catch (IOException | ParserConfigurationException | SAXException e) {
-      throw new ServerException("XML Schema validation failed: " + e.getMessage(), e);
+    } catch (ParserConfigurationException e) {
+      throw new ServerException("XML parser configuration error: " + e.getMessage(), e);
+    } catch (SAXException | IOException e) {
+      throw new ClientException("Invalid XML schema or asset content: " + e.getMessage(), e);
     }
   }
 
-  private javax.xml.validation.Schema loadXsdSchema(ContentAccessor schemaContent)
+  private Schema loadXsdSchema(ContentAccessor schemaContent)
       throws ParserConfigurationException, SAXException, IOException {
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setNamespaceAware(true);
@@ -91,7 +95,9 @@ public class XmlSchemaValidator {
     }
 
     SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-    // XXE prevention on the schema factory itself
+    // XXE prevention — FEATURE_SECURE_PROCESSING disables inline schemas and limits entity expansion;
+    // ACCESS_EXTERNAL_* blocks all URI-based DTD and schema loading.
+    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
     factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
     factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
     return factory.newSchema(new DOMSource(schemaDoc));
