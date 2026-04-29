@@ -132,13 +132,7 @@ public class AssetStoreImpl implements AssetStore {
       graphDb.deleteClaims(subjectHash.subjectId());
       validationResultStore.markOutdatedByAssetId(subjectHash.subjectId(), OutdatedReason.ASSET_UPDATED);
       // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
-      try {
-        assetRepository.findBySubjectIdWithLinkedAsset(assetMetadata.getId())
-            .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
-            .ifPresent(a -> writeAssetLinkTriples(assetMetadata.getId(), a.getLinkedAsset().getSubjectId()));
-      } catch (Exception ex) { // best-effort: deleteClaims already ran; don't fail the update if triple re-write fails
-        log.warn("storeCredentialInternal; failed to re-write link triples after update", ex);
-      }
+      tryRewriteLinkTriples(assetMetadata.getId());
     }
     graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
     return subjectHash;
@@ -346,6 +340,16 @@ public class AssetStoreImpl implements AssetStore {
   @Override
   public void writeAssetLinkTriples(String mrIri, String hrIri) {
     writeLinkTriples(mrIri, hrIri);
+  }
+
+  private void tryRewriteLinkTriples(String assetId) {
+    try {
+      assetRepository.findBySubjectIdWithLinkedAsset(assetId)
+          .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
+          .ifPresent(a -> writeAssetLinkTriples(assetId, a.getLinkedAsset().getSubjectId()));
+    } catch (Exception ex) {
+      log.warn("tryRewriteLinkTriples; failed to restore link triples after graph rebuild for asset {}", assetId, ex);
+    }
   }
 
   private void writeLinkTriples(String mrIri, String hrIri) {
