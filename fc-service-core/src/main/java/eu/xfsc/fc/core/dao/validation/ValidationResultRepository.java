@@ -26,7 +26,7 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
    * <p>Uses native query to directly update the DB. Called when an asset is updated or
    * revoked to stale-date its previous validation history.</p>
    */
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query(value = "UPDATE validation_result SET outdated = true, outdated_reason = :reason "
       + "WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
   void markOutdatedByAssetId(@Param("assetId") String assetId, @Param("reason") String reason);

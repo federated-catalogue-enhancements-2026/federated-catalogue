@@ -13,6 +13,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -154,6 +155,7 @@ class ValidationResultRepositoryTest {
   }
 
   @Test
+  @Transactional
   void markOutdatedByAssetId_existingResults_marksAllOutdatedWithReason() {
     final String assetId = "https://example.org/asset/mark-1";
 
@@ -174,12 +176,14 @@ class ValidationResultRepositoryTest {
   }
 
   @Test
+  @Transactional
   void markOutdatedByAssetId_noMatchingResults_isIdempotent() {
     assertDoesNotThrow(
         () -> repository.markOutdatedByAssetId("https://example.org/asset/none", "ASSET_REVOKED"));
   }
 
   @Test
+  @Transactional
   void deleteByAssetId_existingResults_deletesAll() {
     final String assetId = "https://example.org/asset/delete-1";
 
@@ -193,6 +197,7 @@ class ValidationResultRepositoryTest {
   }
 
   @Test
+  @Transactional
   void deleteByAssetId_noMatchingResults_noError() {
     assertDoesNotThrow(() -> repository.deleteByAssetId("https://example.org/asset/none"));
   }
