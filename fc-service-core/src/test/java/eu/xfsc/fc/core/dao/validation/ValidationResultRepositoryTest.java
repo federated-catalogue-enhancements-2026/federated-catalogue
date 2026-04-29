@@ -153,8 +153,6 @@ class ValidationResultRepositoryTest {
     assertTrue(!page3.hasNext(), "Last page should not have next");
   }
 
-  // ===== markOutdatedByAssetId =====
-
   @Test
   void markOutdatedByAssetId_existingResults_marksAllOutdatedWithReason() {
     final String assetId = "https://example.org/asset/mark-1";
@@ -180,8 +178,6 @@ class ValidationResultRepositoryTest {
     assertDoesNotThrow(
         () -> repository.markOutdatedByAssetId("https://example.org/asset/none", "ASSET_REVOKED"));
   }
-
-  // ===== deleteByAssetId =====
 
   @Test
   void deleteByAssetId_existingResults_deletesAll() {

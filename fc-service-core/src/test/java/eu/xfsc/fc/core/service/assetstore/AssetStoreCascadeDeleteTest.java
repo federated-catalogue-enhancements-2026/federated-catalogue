@@ -126,8 +126,6 @@ class AssetStoreCascadeDeleteTest {
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(meta.getAssetHash()));
   }
 
-  // ===== ValidationResultStore contract =====
-
   @Test
   void deleteAsset_callsValidationResultDeleteForSingleAsset() {
     final var meta = storeNonRdfAsset(null, "validate-cleanup-single");
@@ -149,8 +147,6 @@ class AssetStoreCascadeDeleteTest {
     verify(validationResultStore).deleteByAssetId(hrMeta.getId());
   }
 
-  // ===== helpers =====
-
   private void linkAssets(String mrId, String hrId) {
     Asset mrEntity = assetRepository.findBySubjectIdWithLinkedAsset(mrId).orElseThrow();
     Asset hrEntity = assetRepository.findBySubjectIdWithLinkedAsset(hrId).orElseThrow();
@@ -170,6 +166,6 @@ class AssetStoreCascadeDeleteTest {
     meta.setContentType("application/octet-stream");
     meta.setFileSize((long) content.length);
 
-    return assetStore.storeUnverified(meta, contentText.replaceAll(" ", "_") + ".bin");
+    return assetStore.storeUnverified(meta, contentText.replace(" ", "_") + ".bin");
   }
 }
