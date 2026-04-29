@@ -6,8 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
-
 /** Spring Data JPA repository for {@link ValidationResult} entities. */
 public interface ValidationResultRepository extends JpaRepository<ValidationResult, Long> {
 
@@ -29,7 +27,6 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
    * revoked to stale-date its previous validation history.</p>
    */
   @Modifying
-  @Transactional
   @Query(value = "UPDATE validation_result SET outdated = true, outdated_reason = :reason "
       + "WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
   void markOutdatedByAssetId(@Param("assetId") String assetId, @Param("reason") String reason);
@@ -41,7 +38,6 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
    * is removed.</p>
    */
   @Modifying
-  @Transactional
   @Query(value = "DELETE FROM validation_result WHERE :assetId = ANY(asset_ids)",
       nativeQuery = true)
   void deleteByAssetId(@Param("assetId") String assetId);

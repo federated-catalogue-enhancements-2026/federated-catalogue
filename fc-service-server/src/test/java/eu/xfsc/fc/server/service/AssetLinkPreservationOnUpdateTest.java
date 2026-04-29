@@ -95,6 +95,19 @@ public class AssetLinkPreservationOnUpdateTest {
   }
 
   @Test
+  void uploadHumanReadable_withoutAuthentication_returnsUnauthorized() throws Exception {
+    final var file = new MockMultipartFile("file", "test.txt", "text/plain",
+        "content".getBytes(StandardCharsets.UTF_8));
+
+    mockMvc.perform(MockMvcRequestBuilders
+            .multipart("/assets/" + URLEncoder.encode(MR_IRI, StandardCharsets.UTF_8) + "/human-readable")
+            .file(file)
+            .with(csrf())
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_UPDATE_WITH_PREFIX},
       claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
           @StringClaim(name = "participant_id", value = TEST_ISSUER)})))

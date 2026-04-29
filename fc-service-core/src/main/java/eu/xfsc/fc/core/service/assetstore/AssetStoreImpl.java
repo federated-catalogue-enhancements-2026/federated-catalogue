@@ -136,7 +136,7 @@ public class AssetStoreImpl implements AssetStore {
         assetRepository.findBySubjectIdWithLinkedAsset(assetMetadata.getId())
             .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
             .ifPresent(a -> writeAssetLinkTriples(assetMetadata.getId(), a.getLinkedAsset().getSubjectId()));
-      } catch (Exception ex) {
+      } catch (Exception ex) { // best-effort: deleteClaims already ran; don't fail the update if triple re-write fails
         log.warn("storeCredentialInternal; failed to re-write link triples after update", ex);
       }
     }
@@ -203,8 +203,13 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public void deleteAsset(final String hash) {
+    deleteAsset(hash, false);
+  }
+
+  private void deleteAsset(final String hash, final boolean cascading) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
-    final String hrHashToCascade = assetOpt
+    // Only cascade from MR → HR once; a cascading call never triggers a further cascade.
+    final String hrHashToCascade = cascading ? null : assetOpt
         .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
         .map(a -> a.getLinkedAsset().getAssetHash())
         .orElse(null);
@@ -236,7 +241,7 @@ public class AssetStoreImpl implements AssetStore {
 
     if (hrHashToCascade != null) {
       try {
-        deleteAsset(hrHashToCascade);
+        deleteAsset(hrHashToCascade, true);
       } catch (NotFoundException ex) {
         log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }

@@ -91,7 +91,7 @@ public class ValidationResultStoreImpl implements ValidationResultStore {
   @Transactional
   public void markOutdatedByAssetId(String assetId, OutdatedReason reason) {
     repository.markOutdatedByAssetId(assetId, reason.name());
-    log.debug("markOutdatedByAssetId; marked outdated assetId={}, reason={}", assetId, reason);
+    log.debug("markOutdatedByAssetId; marked outdated assetId={}, reason={}", assetId, reason.name());
   }
 
   @Override
