@@ -62,8 +62,8 @@ public class ValidationResult {
   private String[] validatorIds;
 
   /**
-   * {@code SCHEMA} or {@code TRUST_FRAMEWORK} — distinguishes on-demand schema validation
-   * from external trust framework check results.
+   * Validator type — distinguishes schema validation ({@code SHACL}, {@code JSON_SCHEMA},
+   * {@code XML_SCHEMA}) from external trust framework checks ({@code TRUST_FRAMEWORK}).
    */
   @Enumerated(EnumType.STRING)
   @Column(name = "validator_type", length = 64, nullable = false)

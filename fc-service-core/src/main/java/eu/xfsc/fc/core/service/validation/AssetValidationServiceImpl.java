@@ -11,6 +11,7 @@ import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
@@ -149,13 +150,17 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     List<String> jsonIds = grouped.getOrDefault(SchemaType.JSON, List.of());
     List<String> xmlIds = grouped.getOrDefault(SchemaType.XML, List.of());
 
-    if (!jsonIds.isEmpty() && !isJsonLdContent(asset)) {
+    // Read asset content once — avoids repeated file/S3 reads across format checks and validators
+    String contentStr = asset.getContentAccessor().getContentAsString();
+    ContentAccessorDirect assetContent = new ContentAccessorDirect(contentStr);
+
+    if (!jsonIds.isEmpty() && !isJsonLdContent(contentStr)) {
       throw new ClientException(
           "JSON Schema validation requires a JSON-LD serialized RDF asset, "
               + "but asset " + asset.getId() + " is not JSON-LD. "
               + "JSON Schema is applicable to JSON-LD and application/vc+ld+json assets.");
     }
-    if (!xmlIds.isEmpty() && !isRdfXmlContent(asset)) {
+    if (!xmlIds.isEmpty() && !isRdfXmlContent(contentStr)) {
       throw new ClientException(
           "XML Schema validation requires an RDF/XML serialized asset, "
               + "but asset " + asset.getId() + " is not RDF/XML. "
@@ -187,7 +192,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
       requireModuleEnabled(SchemaModuleType.JSON_SCHEMA);
       ContentAccessor jsonSchema = schemaStore.getSchema(jsonIds.get(0));
-      ValidationReport report = jsonSchemaValidator.validate(asset.getContentAccessor(), jsonSchema);
+      ValidationReport report = jsonSchemaValidator.validate(assetContent, jsonSchema);
       allResultIds.add(storeResult(
           List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, report, validatedAt));
       allSchemaIds.addAll(jsonIds);
@@ -203,7 +208,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
       requireModuleEnabled(SchemaModuleType.XML_SCHEMA);
       ContentAccessor xmlSchema = schemaStore.getSchema(xmlIds.get(0));
-      ValidationReport report = xmlSchemaValidator.validate(asset.getContentAccessor(), xmlSchema);
+      ValidationReport report = xmlSchemaValidator.validate(assetContent, xmlSchema);
       allResultIds.add(storeResult(
           List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, report, validatedAt));
       allSchemaIds.addAll(xmlIds);
@@ -241,6 +246,9 @@ public class AssetValidationServiceImpl implements AssetValidationService {
   private ValidationResponse validateRdfAssetAgainstAll(AssetMetadata asset, Instant validatedAt) {
     // Load schema list once — avoids repeated DB calls (one per schema type below)
     Map<SchemaType, List<String>> schemasByType = schemaStore.getSchemaList();
+    // Read asset content once — avoids repeated file/S3 reads across format checks and validators
+    String contentStr = asset.getContentAccessor().getContentAsString();
+    ContentAccessorDirect assetContent = new ContentAccessorDirect(contentStr);
 
     List<String> allSchemaIds = new ArrayList<>();
     List<Long> allResultIds = new ArrayList<>();
@@ -263,11 +271,11 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
     }
 
-    if (isJsonLdContent(asset) && moduleConfig.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)) {
+    if (isJsonLdContent(contentStr) && moduleConfig.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)) {
       ContentAccessor jsonSchema = schemaStore.getLatestSchemaByType(SchemaType.JSON);
       if (jsonSchema != null) {
         List<String> jsonIds = schemasByType.getOrDefault(SchemaType.JSON, List.of());
-        ValidationReport jsonReport = jsonSchemaValidator.validate(asset.getContentAccessor(), jsonSchema);
+        ValidationReport jsonReport = jsonSchemaValidator.validate(assetContent, jsonSchema);
         allResultIds.add(storeResult(
             List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, jsonReport, validatedAt));
         allSchemaIds.addAll(jsonIds);
@@ -277,11 +285,11 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
     }
 
-    if (isRdfXmlContent(asset) && moduleConfig.isModuleEnabled(SchemaModuleType.XML_SCHEMA)) {
+    if (isRdfXmlContent(contentStr) && moduleConfig.isModuleEnabled(SchemaModuleType.XML_SCHEMA)) {
       ContentAccessor xmlSchema = schemaStore.getLatestSchemaByType(SchemaType.XML);
       if (xmlSchema != null) {
         List<String> xmlIds = schemasByType.getOrDefault(SchemaType.XML, List.of());
-        ValidationReport xmlReport = xmlSchemaValidator.validate(asset.getContentAccessor(), xmlSchema);
+        ValidationReport xmlReport = xmlSchemaValidator.validate(assetContent, xmlSchema);
         allResultIds.add(storeResult(
             List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, xmlReport, validatedAt));
         allSchemaIds.addAll(xmlIds);
@@ -386,7 +394,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
         throw new NotFoundException("No SHACL shapes found for validation");
       }
       Model shapesModel = shaclValidator.parseShapeModel(composite);
-      List<String> allIds = getSchemaIdsByType(SchemaType.SHAPE);
+      List<String> allIds = schemaStore.getSchemaList().getOrDefault(SchemaType.SHAPE, List.of());
       return new SchemaResolutionResult(shapesModel, allIds, allIds);
     }
 
@@ -420,7 +428,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       if (schema == null) {
         throw new NotFoundException("No " + expectedType + " schema found for validation");
       }
-      List<String> allIds = getSchemaIdsByType(expectedType);
+      List<String> allIds = schemaStore.getSchemaList().getOrDefault(expectedType, List.of());
       return new SchemaContentResult(schema, allIds, allIds);
     }
 
@@ -448,12 +456,11 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return grouped;
   }
 
-  private boolean isJsonLdContent(AssetMetadata asset) {
-    return asset.getContentAccessor().getContentAsString().startsWith(JSON_LD_CONTENT_PREFIX);
+  private boolean isJsonLdContent(String content) {
+    return content.startsWith(JSON_LD_CONTENT_PREFIX);
   }
 
-  private boolean isRdfXmlContent(AssetMetadata asset) {
-    String content = asset.getContentAccessor().getContentAsString();
+  private boolean isRdfXmlContent(String content) {
     return content.startsWith(RDF_XML_CONTENT_PREFIX_1) || content.startsWith(RDF_XML_CONTENT_PREFIX_2);
   }
 
@@ -470,11 +477,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       throw new ServerException(
           "Failed to read asset content from file store for asset " + asset.getId() + ": " + e.getMessage(), e);
     }
-  }
-
-  private List<String> getSchemaIdsByType(SchemaType type) {
-    Map<SchemaType, List<String>> all = schemaStore.getSchemaList();
-    return all.getOrDefault(type, List.of());
   }
 
   private Long storeResult(List<String> assetIds, List<String> validatorIds,

@@ -71,6 +71,9 @@ public class ShaclValidator {
   @Value("${federated-catalogue.validation.shacl.timeout-seconds:10}")
   private int shaclTimeoutSeconds;
 
+  @Value("${federated-catalogue.validation.shacl.pool-size:4}")
+  private int shaclPoolSize;
+
   private StreamManager streamManager;
   // Application-scoped pool — avoids per-call thread creation; threads are reused across requests.
   private ExecutorService shaclExecutor;
@@ -95,7 +98,7 @@ public class ShaclValidator {
     clone.clearLocators();
     clone.addLocator(new CachingLocator(fileStore));
     streamManager = clone;
-    shaclExecutor = Executors.newCachedThreadPool();
+    shaclExecutor = Executors.newFixedThreadPool(shaclPoolSize);
   }
 
   @PreDestroy
