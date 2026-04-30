@@ -809,7 +809,7 @@ components:
         - schemaIds
         - conforms
         - validatedAt
-        - validationResultId
+        - validationResultIds
       properties:
         assetIds:
           type: array
@@ -828,10 +828,14 @@ components:
           type: string
           format: date-time
           description: Timestamp of the validation run
-        validationResultId:
-          type: integer
-          format: int64
-          description: ID of the stored validation result (retrievable via GET /validations/{id})
+        validationResultIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+          description: >
+            IDs of all ValidationResult records stored for this request, one per validator paradigm that ran.
         report:
           $ref: '#/components/schemas/ValidationReport'
 

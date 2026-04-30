@@ -56,10 +56,28 @@ class JsonSchemaValidatorTest {
   }
 
   @Test
-  void validate_externalRefInSchema_throwsClientException() {
+  void validate_fileRefInSchema_throwsClientException() {
     ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_JSON);
     ContentAccessorDirect schema = new ContentAccessorDirect(
-        "{\"$ref\":\"https://example.com/schema\"}");
+        "{\"$ref\":\"file:///etc/passwd\"}");
+
+    assertThrows(ClientException.class, () -> validator.validate(asset, schema));
+  }
+
+  @Test
+  void validate_httpRefInSchema_throwsClientException() {
+    ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_JSON);
+    ContentAccessorDirect schema = new ContentAccessorDirect(
+        "{\"$ref\":\"http://169.254.169.254/latest/meta-data\"}");
+
+    assertThrows(ClientException.class, () -> validator.validate(asset, schema));
+  }
+
+  @Test
+  void validate_gopherRefInSchema_throwsClientException() {
+    ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_JSON);
+    ContentAccessorDirect schema = new ContentAccessorDirect(
+        "{\"$ref\":\"gopher://internal/resource\"}");
 
     assertThrows(ClientException.class, () -> validator.validate(asset, schema));
   }

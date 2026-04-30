@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.Error;
 import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaException;
 import com.networknt.schema.SchemaRegistry;
 import com.networknt.schema.SpecificationVersion;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
@@ -53,20 +54,23 @@ public class JsonSchemaValidator {
       return toValidationReport(errors);
     } catch (IOException e) {
       throw new ClientException("Invalid JSON schema or asset content: " + e.getMessage(), e);
+    } catch (SchemaException e) {
+      throw new ClientException("Schema could not be loaded: " + e.getMessage(), e);
     }
   }
 
   /**
-   * Rejects schemas containing external {@code $ref} URIs — prevents SSRF via uploaded schemas.
-   * Only data: URIs and relative references (no scheme) are permitted.
+   * Rejects schemas containing $ref URIs that enable SSRF — file://, http://, gopher://, ftp://.
+   * https:// is permitted as it is standard JSON Schema practice for referencing public schemas.
    */
   private void validateNoExternalRefs(JsonNode node) {
     if (node.isObject()) {
       JsonNode ref = node.get("$ref");
       if (ref != null && ref.isTextual()) {
         String value = ref.asText();
-        if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("ftp://")) {
-          throw new ClientException("Schema contains external $ref '" + value + "' which is not permitted");
+        if (value.startsWith("file://") || value.startsWith("http://")
+            || value.startsWith("gopher://") || value.startsWith("ftp://")) {
+          throw new ClientException("Schema contains $ref '" + value + "' which is not permitted");
         }
       }
       node.fields().forEachRemaining(entry -> validateNoExternalRefs(entry.getValue()));

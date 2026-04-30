@@ -115,7 +115,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     Long resultId = storeResult(assetIds, schemas.validatorIds(), ValidatorType.SHACL, report, validatedAt);
 
     log.debug("validateAssets.exit; conforms={}", report.getConforms());
-    return buildResponse(assetIds, schemas.schemaIds(), report, resultId, validatedAt);
+    return buildResponse(assetIds, schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
 
   // --- RDF asset routing ---
@@ -163,8 +163,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     }
 
     List<String> allSchemaIds = new ArrayList<>();
+    List<Long> allResultIds = new ArrayList<>();
     boolean overallConforms = true;
-    Long primaryResultId = null;
     ValidationReport firstReport = null;
     ValidationReport failingReport = null;
 
@@ -172,8 +172,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       requireModuleEnabled(SchemaModuleType.SHACL);
       SchemaResolutionResult shaclSchemas = resolveShaclSchemas(shapeIds, null);
       ValidationReport report = shaclValidator.validate(List.of(asset), shaclSchemas.shapesModel());
-      primaryResultId = storeResult(
-          List.of(asset.getId()), shaclSchemas.validatorIds(), ValidatorType.SHACL, report, validatedAt);
+      allResultIds.add(storeResult(
+          List.of(asset.getId()), shaclSchemas.validatorIds(), ValidatorType.SHACL, report, validatedAt));
       allSchemaIds.addAll(shaclSchemas.schemaIds());
       overallConforms = report.getConforms();
       firstReport = report;
@@ -188,11 +188,10 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       requireModuleEnabled(SchemaModuleType.JSON_SCHEMA);
       ContentAccessor jsonSchema = schemaStore.getSchema(jsonIds.get(0));
       ValidationReport report = jsonSchemaValidator.validate(asset.getContentAccessor(), jsonSchema);
-      Long resultId = storeResult(
-          List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, report, validatedAt);
+      allResultIds.add(storeResult(
+          List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, report, validatedAt));
       allSchemaIds.addAll(jsonIds);
       overallConforms = overallConforms && report.getConforms();
-      if (primaryResultId == null) primaryResultId = resultId;
       if (firstReport == null) firstReport = report;
       if (!report.getConforms() && failingReport == null) failingReport = report;
     }
@@ -205,22 +204,21 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       requireModuleEnabled(SchemaModuleType.XML_SCHEMA);
       ContentAccessor xmlSchema = schemaStore.getSchema(xmlIds.get(0));
       ValidationReport report = xmlSchemaValidator.validate(asset.getContentAccessor(), xmlSchema);
-      Long resultId = storeResult(
-          List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, report, validatedAt);
+      allResultIds.add(storeResult(
+          List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, report, validatedAt));
       allSchemaIds.addAll(xmlIds);
       overallConforms = overallConforms && report.getConforms();
-      if (primaryResultId == null) primaryResultId = resultId;
       if (firstReport == null) firstReport = report;
       if (!report.getConforms() && failingReport == null) failingReport = report;
     }
 
-    if (primaryResultId == null) {
+    if (allResultIds.isEmpty()) {
       throw new ClientException("None of the provided schemas are applicable to this RDF asset.");
     }
 
     ValidationReport responseReport = failingReport != null ? failingReport : firstReport;
     log.debug("validateRdfAssetWithExplicitSchemas.exit; assetId={}, conforms={}", asset.getId(), overallConforms);
-    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, primaryResultId, validatedAt);
+    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, allResultIds, validatedAt);
   }
 
   /**
@@ -245,8 +243,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     Map<SchemaType, List<String>> schemasByType = schemaStore.getSchemaList();
 
     List<String> allSchemaIds = new ArrayList<>();
+    List<Long> allResultIds = new ArrayList<>();
     boolean overallConforms = true;
-    Long primaryResultId = null;
     ValidationReport firstReport = null;
     ValidationReport failingReport = null;
 
@@ -256,8 +254,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
         Model shapesModel = shaclValidator.parseShapeModel(composite);
         List<String> shaclIds = schemasByType.getOrDefault(SchemaType.SHAPE, List.of());
         ValidationReport shaclReport = shaclValidator.validate(List.of(asset), shapesModel);
-        primaryResultId = storeResult(
-            List.of(asset.getId()), shaclIds, ValidatorType.SHACL, shaclReport, validatedAt);
+        allResultIds.add(storeResult(
+            List.of(asset.getId()), shaclIds, ValidatorType.SHACL, shaclReport, validatedAt));
         allSchemaIds.addAll(shaclIds);
         overallConforms = shaclReport.getConforms();
         firstReport = shaclReport;
@@ -270,11 +268,10 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       if (jsonSchema != null) {
         List<String> jsonIds = schemasByType.getOrDefault(SchemaType.JSON, List.of());
         ValidationReport jsonReport = jsonSchemaValidator.validate(asset.getContentAccessor(), jsonSchema);
-        Long resultId = storeResult(
-            List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, jsonReport, validatedAt);
+        allResultIds.add(storeResult(
+            List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, jsonReport, validatedAt));
         allSchemaIds.addAll(jsonIds);
         overallConforms = overallConforms && jsonReport.getConforms();
-        if (primaryResultId == null) primaryResultId = resultId;
         if (firstReport == null) firstReport = jsonReport;
         if (!jsonReport.getConforms() && failingReport == null) failingReport = jsonReport;
       }
@@ -285,17 +282,16 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       if (xmlSchema != null) {
         List<String> xmlIds = schemasByType.getOrDefault(SchemaType.XML, List.of());
         ValidationReport xmlReport = xmlSchemaValidator.validate(asset.getContentAccessor(), xmlSchema);
-        Long resultId = storeResult(
-            List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, xmlReport, validatedAt);
+        allResultIds.add(storeResult(
+            List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, xmlReport, validatedAt));
         allSchemaIds.addAll(xmlIds);
         overallConforms = overallConforms && xmlReport.getConforms();
-        if (primaryResultId == null) primaryResultId = resultId;
         if (firstReport == null) firstReport = xmlReport;
         if (!xmlReport.getConforms() && failingReport == null) failingReport = xmlReport;
       }
     }
 
-    if (primaryResultId == null) {
+    if (allResultIds.isEmpty()) {
       throw new VerificationException(
           "No validation module is enabled or applicable for asset " + asset.getId()
               + ". Enable at least one applicable module via admin settings (SHACL, "
@@ -304,7 +300,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
     ValidationReport responseReport = failingReport != null ? failingReport : firstReport;
     log.debug("validateRdfAssetAgainstAll.exit; assetId={}, conforms={}", asset.getId(), overallConforms);
-    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, primaryResultId, validatedAt);
+    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, allResultIds, validatedAt);
   }
 
   // --- Non-RDF asset ---
@@ -339,7 +335,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     Long resultId = storeResult(
       List.of(asset.getId()), schemas.validatorIds(), ValidatorType.JSON_SCHEMA, report, validatedAt);
 
-    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, resultId, validatedAt);
+    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
 
   private ValidationResponse validateWithXmlSchema(AssetMetadata asset, SingleAssetValidationRequest request) {
@@ -354,7 +350,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     Long resultId = storeResult(
       List.of(asset.getId()), schemas.validatorIds(), ValidatorType.XML_SCHEMA, report, validatedAt);
 
-    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, resultId, validatedAt);
+    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
 
   // --- Schema resolution ---
@@ -463,7 +459,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
-      throw new ClientException("Validation module " + moduleType + " is disabled");
+      throw new VerificationException("Validation module " + moduleType + " is disabled");
     }
   }
 
@@ -494,13 +490,13 @@ public class AssetValidationServiceImpl implements AssetValidationService {
   }
 
   private ValidationResponse buildResponse(List<String> assetIds, List<String> schemaIds,
-      ValidationReport report, Long validationResultId, Instant validatedAt) {
+      ValidationReport report, List<Long> validationResultIds, Instant validatedAt) {
     ValidationResponse response = new ValidationResponse();
     response.setAssetIds(assetIds);
     response.setSchemaIds(schemaIds);
     response.setConforms(report.getConforms());
     response.setValidatedAt(validatedAt);
-    response.setValidationResultId(validationResultId);
+    response.setValidationResultIds(validationResultIds);
     if (!report.getConforms()) {
       response.setReport(report);
     }
