@@ -22,6 +22,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.stream.StreamManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,13 +129,17 @@ public class ShaclValidator {
    * @return parsed Jena Model representing the shapes graph
    */
   public Model parseShapeModel(ContentAccessor shape) {
-    Model model = ModelFactory.createDefaultModel();
-    RDFParser.create()
-        .streamManager(streamManager)
-        .source(shape.getContentAsStream())
-        .lang(Lang.TURTLE)
-        .parse(model);
-    return model;
+    try {
+      Model model = ModelFactory.createDefaultModel();
+      RDFParser.create()
+          .streamManager(streamManager)
+          .source(shape.getContentAsStream())
+          .lang(Lang.TURTLE)
+          .parse(model);
+      return model;
+    } catch (RiotException e) {
+      throw new ClientException("Invalid SHACL shape: " + e.getMessage(), e);
+    }
   }
 
   private Model buildMergedDataModel(List<AssetMetadata> assets) {
@@ -191,13 +196,17 @@ public class ShaclValidator {
   }
 
   private Model parseRdfContent(ContentAccessor content, Lang lang) {
-    Model model = ModelFactory.createDefaultModel();
-    RDFParser.create()
-        .streamManager(streamManager)
-        .source(content.getContentAsStream())
-        .lang(lang)
-        .parse(model);
-    return model;
+    try {
+      Model model = ModelFactory.createDefaultModel();
+      RDFParser.create()
+          .streamManager(streamManager)
+          .source(content.getContentAsStream())
+          .lang(lang)
+          .parse(model);
+      return model;
+    } catch (RiotException e) {
+      throw new ClientException("Invalid RDF asset content: " + e.getMessage(), e);
+    }
   }
 
   private ValidationReport runValidationWithTimeout(Model dataModel, Model shapesModel) {

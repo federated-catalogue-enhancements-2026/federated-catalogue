@@ -39,43 +39,39 @@ import java.util.List;
 import java.util.Map;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = AssetValidationServiceImpl.class)
+@TestPropertySource(properties = {"federated-catalogue.validation.max-assets-per-request=20"})
 class AssetValidationServiceImplTest {
 
-  @Mock
+  @MockitoBean
   private AssetStore assetStore;
-  @Mock
+  @MockitoBean(name = "assetFileStore")
   private FileStore fileStore;
-  @Mock
+  @MockitoBean
   private SchemaStore schemaStore;
-  @Mock
+  @MockitoBean
   private SchemaModuleConfigService moduleConfigService;
-  @Mock
+  @MockitoBean
   private ShaclValidator shaclValidator;
-  @Mock
+  @MockitoBean
   private JsonSchemaValidator jsonSchemaValidator;
-  @Mock
+  @MockitoBean
   private XmlSchemaValidator xmlSchemaValidator;
-  @Mock
+  @MockitoBean
   private ValidationResultStore validationResultStore;
 
-  @InjectMocks
+  @Autowired
   private AssetValidationServiceImpl service;
-
-  @BeforeEach
-  void setUp() {
-    // @Value fields are not injected by @InjectMocks — set to the same default as production config
-    ReflectionTestUtils.setField(service, "maxAssetsPerRequest", 20);
-  }
 
   // --- helpers ---
 

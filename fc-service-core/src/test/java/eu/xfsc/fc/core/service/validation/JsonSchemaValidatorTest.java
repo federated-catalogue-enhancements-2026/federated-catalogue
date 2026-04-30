@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.service.validation;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,13 +82,26 @@ class JsonSchemaValidatorTest {
   }
 
   @Test
-  void validate_relativeRefInSchema_doesNotThrow() {
+  void validate_ftpRefInSchema_throwsClientException() {
+    ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_JSON);
+    ContentAccessorDirect schema = new ContentAccessorDirect(
+        "{\"$ref\":\"ftp://internal.example.org/schemas/v1\"}");
+
+    assertThrows(ClientException.class, () -> validator.validate(asset, schema));
+  }
+
+  @Test
+  void validate_conformingJson_withLocalSchemaRef_returnsConforming() {
     ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_JSON);
     ContentAccessorDirect schema = new ContentAccessorDirect(
         "{\"type\":\"object\",\"required\":[\"id\"],"
         + "\"properties\":{\"id\":{\"$ref\":\"#/definitions/IdType\"}},"
         + "\"definitions\":{\"IdType\":{\"type\":\"string\"}}}");
 
-    assertDoesNotThrow(() -> validator.validate(asset, schema));
+    ValidationReport report = validator.validate(asset, schema);
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
   }
 }

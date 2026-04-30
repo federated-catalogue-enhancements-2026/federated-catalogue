@@ -1,11 +1,14 @@
 package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL;
+import static eu.xfsc.fc.server.util.CommonConstants.ASSET_READ;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +18,8 @@ import eu.xfsc.fc.core.dao.validation.ValidationResult;
 import eu.xfsc.fc.core.dao.validation.ValidationResultRepository;
 import eu.xfsc.fc.core.dao.validation.ValidatorType;
 import eu.xfsc.fc.core.service.graphdb.GraphRebuildService;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.service.validation.ValidationResultGraphWriter;
 import eu.xfsc.fc.core.service.validation.ValidationResultHasher;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.server.model.GraphRebuildRequest;
@@ -33,6 +38,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -83,9 +89,33 @@ class GraphRebuildValidationResultRestoreTest {
   @Autowired
   private TransactionTemplate transactionTemplate;
 
+  @MockitoSpyBean
+  private ValidationResultGraphWriter graphWriter;
+
   @AfterEach
   void cleanup() {
     validationResultRepository.deleteAll();
+  }
+
+  @Test
+  void postGraphRebuild_noAuth_returnsUnauthorized() throws Exception {
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
+            .content(jsonMapper.writeValueAsString(rebuildRequest))
+            .contentType(MediaType.APPLICATION_JSON)
+            .with(csrf()))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @WithMockUser(roles = {ASSET_READ})
+  void postGraphRebuild_nonAdminRole_returnsForbidden() throws Exception {
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
+            .content(jsonMapper.writeValueAsString(rebuildRequest))
+            .contentType(MediaType.APPLICATION_JSON)
+            .with(csrf()))
+        .andExpect(status().isForbidden());
   }
 
   /**
@@ -188,16 +218,38 @@ class GraphRebuildValidationResultRestoreTest {
   }
 
   /**
-   * Tests rebuild behavior with no validation results in the database.
+   * Tests that when graph write fails for a result during rebuild, the result stays FAILED
+   * and the overall rebuild does not mark as failed.
    *
-   * <p>Ensures rebuild completes successfully even when there are no validation
-   * results to restore (edge case).</p>
+   * <p>Per-item graph write failures are logged and counted but do not abort the rebuild.
+   * The result's {@code graph_sync_status} remains {@code FAILED} because
+   * {@link eu.xfsc.fc.core.service.validation.ValidationResultStoreImpl#syncToGraph} catches
+   * the exception and re-persists the FAILED status.</p>
    */
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  void rebuildValidationResults_emptyDatabase_completesSuccessfully() throws Exception {
-    validationResultRepository.deleteAll();
-    assertEquals(0, validationResultRepository.count());
+  void rebuildValidationResults_graphWriteThrows_resultRemainsFailedAndRebuildNotFailed() throws Exception {
+    doThrow(new RuntimeException("simulated graph write failure"))
+        .when(graphWriter).write(any(ValidationResult.class), any(GraphStore.class));
+
+    Long validationResultId = transactionTemplate.execute(txStatus -> {
+      ValidationResult result = new ValidationResult();
+      result.setAssetIds(new String[]{"did:example:asset-error"});
+      result.setValidatorIds(new String[]{"https://example.org/schema/error-test"});
+      result.setValidatorType(ValidatorType.SHACL);
+      result.setConforms(false);
+      result.setValidatedAt(Instant.now());
+      result.setReport("{\"violations\":[]}");
+      result.setContentHash(validationResultHasher.hash(result));
+      result.setGraphSyncStatus(GraphSyncStatus.FAILED);
+      return validationResultRepository.saveAndFlush(result).getId();
+    });
+
+    transactionTemplate.executeWithoutResult(txStatus -> {
+      ValidationResult before = validationResultRepository.findById(validationResultId).orElseThrow();
+      assertEquals(GraphSyncStatus.FAILED, before.getGraphSyncStatus(),
+          "Initial graph_sync_status should be FAILED");
+    });
 
     GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
@@ -208,8 +260,12 @@ class GraphRebuildValidationResultRestoreTest {
 
     await().atMost(10, SECONDS).until(() -> !graphRebuildService.isRunning());
     assertFalse(graphRebuildService.getStatus().isFailed(),
-        "Rebuild should not have failed: " + graphRebuildService.getStatus().getErrorMessage());
+        "Per-item graph write failures must not fail the overall rebuild");
 
-    assertEquals(0, validationResultRepository.count());
+    transactionTemplate.executeWithoutResult(txStatus -> {
+      ValidationResult after = validationResultRepository.findById(validationResultId).orElseThrow();
+      assertEquals(GraphSyncStatus.FAILED, after.getGraphSyncStatus(),
+          "graph_sync_status should remain FAILED when graph write throws during rebuild");
+    });
   }
 }

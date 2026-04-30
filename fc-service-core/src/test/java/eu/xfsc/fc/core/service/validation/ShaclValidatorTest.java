@@ -2,9 +2,11 @@ package eu.xfsc.fc.core.service.validation;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
@@ -12,16 +14,17 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import java.util.List;
 import org.apache.jena.rdf.model.Model;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = ShaclValidator.class)
+@TestPropertySource(properties = {"federated-catalogue.validation.shacl.timeout-seconds=10"})
 class ShaclValidatorTest {
 
   private static final String SHAPE_PERSON_NAME_REQUIRED = """
@@ -38,26 +41,15 @@ class ShaclValidatorTest {
   private static final String TURTLE_PERSON_WITHOUT_NAME =
       "@prefix ex: <http://example.org/> . ex:Bob a ex:Person .";
 
-  @Mock
+  @MockitoBean(name = "contextCacheFileStore")
   private FileStore fileStore;
-  @Mock
+  @MockitoBean
   private DocumentLoader documentLoader;
-  @Mock
+  @MockitoBean
   private LoireJwtParser loireJwtParser;
 
-  @InjectMocks
+  @Autowired
   private ShaclValidator shaclValidator;
-
-  @BeforeEach
-  void setUp() {
-    ReflectionTestUtils.setField(shaclValidator, "shaclTimeoutSeconds", 10);
-    shaclValidator.init();
-  }
-
-  @AfterEach
-  void tearDown() throws InterruptedException {
-    shaclValidator.shutdown();
-  }
 
   @Test
   void validate_conformingTurtleAsset_returnsConforming() {
@@ -115,6 +107,23 @@ class ShaclValidatorTest {
 
     assertNotNull(model);
     assertFalse(model.isEmpty(), "Parsed shape model should contain triples");
+  }
+
+  @Test
+  void parseShapeModel_malformedTurtle_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> shaclValidator.parseShapeModel(new ContentAccessorDirect("not valid turtle <<<")));
+  }
+
+  @Test
+  void validate_assetWithNullContentAccessor_throwsClientException() {
+    Model shapesModel = shaclValidator.parseShapeModel(new ContentAccessorDirect(SHAPE_PERSON_NAME_REQUIRED));
+    AssetMetadata asset = new AssetMetadata();
+    asset.setId("http://example.org/non-rdf-asset");
+    asset.setContentAccessor(null);
+
+    assertThrows(ClientException.class,
+        () -> shaclValidator.validate(List.of(asset), shapesModel));
   }
 
   // --- helpers ---

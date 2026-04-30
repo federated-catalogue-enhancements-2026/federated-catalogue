@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.service.validation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,5 +70,16 @@ class XmlSchemaValidatorTest {
 
     assertFalse(report.getConforms());
     assertFalse(report.getViolations().isEmpty());
+  }
+
+  @Test
+  void validate_schemaWithDoctype_throwsClientException() {
+    ContentAccessorDirect asset = new ContentAccessorDirect(CONFORMING_XML);
+    ContentAccessorDirect schema = new ContentAccessorDirect(
+        "<?xml version=\"1.0\"?><!DOCTYPE xs:schema SYSTEM \"http://evil.com/evil.dtd\">"
+        + "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">"
+        + "<xs:element name=\"root\" type=\"xs:string\"/></xs:schema>");
+
+    assertThrows(ClientException.class, () -> validator.validate(asset, schema));
   }
 }
