@@ -12,6 +12,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
+import eu.xfsc.fc.core.util.RdfFormatDetector;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
@@ -165,37 +166,8 @@ public class ShaclValidator {
       ContentAccessor unwrapped = loireJwtParser.unwrap(content);
       return parseRdfContent(unwrapped, Lang.JSONLD11);
     }
-    Lang lang = detectRdfLang(asset.getContentType(), rawContent);
+    Lang lang = RdfFormatDetector.detect(asset.getContentType(), rawContent);
     return parseRdfContent(content, lang);
-  }
-
-  private Lang detectRdfLang(String contentType, String rawContent) {
-    if (contentType != null) {
-      if (contentType.contains("text/turtle")) {
-        return Lang.TURTLE;
-      }
-      if (contentType.contains("n-triples")) {
-        return Lang.NT;
-      }
-      if (contentType.contains("rdf+xml")) {
-        return Lang.RDFXML;
-      }
-      if (contentType.contains("application/vc+ld+json") || contentType.contains("application/vp+ld+json")
-          || contentType.contains("application/ld+json") || contentType.contains("application/json")) {
-        return Lang.JSONLD11;
-      }
-    }
-    // Content inspection fallback for application/ld+json or unknown
-    if (rawContent.startsWith("{")) {
-      return Lang.JSONLD11;
-    }
-    if (rawContent.startsWith("@prefix") || rawContent.startsWith("@base")) {
-      return Lang.TURTLE;
-    }
-    if (rawContent.startsWith("<?xml") || rawContent.startsWith("<rdf:RDF")) {
-      return Lang.RDFXML;
-    }
-    return Lang.NT;
   }
 
   private Model parseRdfContent(ContentAccessor content, Lang lang) {

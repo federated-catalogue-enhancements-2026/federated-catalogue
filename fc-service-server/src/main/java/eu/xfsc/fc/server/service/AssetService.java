@@ -6,7 +6,6 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
 import eu.xfsc.fc.api.generated.model.AssetVersionList;
 import eu.xfsc.fc.api.generated.model.Assets;
-import eu.xfsc.fc.api.generated.model.SingleAssetValidationRequest;
 import eu.xfsc.fc.api.generated.model.StoredValidationResult;
 import eu.xfsc.fc.api.generated.model.ValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationResponse;
@@ -532,21 +531,10 @@ public class AssetService implements AssetsApiDelegate {
 
 
   /**
-   * POST /assets/{id}/validate — validates a single stored asset against SHACL, JSON Schema, or XML Schema.
+   * POST /assets/validate — validates one or more assets against stored schemas.
    *
-   * @param id                         IRI of the asset to validate
-   * @param singleAssetValidationRequest optional schema selection (schemaIds or validateAgainstAllSchemas)
-   * @return validation response with result ID and optional report
-   */
-  @Override
-  public ResponseEntity<ValidationResponse> validateAsset(String id,
-      SingleAssetValidationRequest singleAssetValidationRequest) {
-    log.debug("validateAsset; id={}", id);
-    return ResponseEntity.ok(assetValidationService.validateAsset(id, singleAssetValidationRequest));
-  }
-
-  /**
-   * POST /assets/validate — validates multiple RDF assets as a merged data graph against SHACL shapes.
+   * <p>Single-asset requests run full type-based dispatch (SHACL, JSON Schema, XML Schema).
+   * Multi-asset requests merge into one data graph for SHACL-only validation.</p>
    *
    * @param validationRequest asset IRIs and schema selection
    * @return validation response with result ID and optional report

@@ -766,41 +766,26 @@ components:
             type: string
           minItems: 1
           maxItems: 20
-          description: Asset IRIs to validate (all must be RDF assets for multi-asset SHACL)
+          description: >
+            1–20 asset IRIs to validate. A single-ID request runs full type-based dispatch
+            (SHACL for RDF assets, JSON Schema for JSON, XML Schema for XML).
+            Multiple IDs merge all assets into a single data graph for SHACL-only validation;
+            all assets must be RDF assets in that case.
         schemaIds:
           type: array
           items:
             type: string
           description: >
-            Optional list of schema IDs to validate against. Each must be a SHACL shape.
+            Optional schema IDs to validate against. For single-asset requests, each schema
+            must match the asset type (SHACL shape for RDF, JSON Schema for JSON, XML Schema
+            for XML). For multi-asset requests, each must be a SHACL shape.
             Mutually exclusive with validateAgainstAllSchemas=true.
         validateAgainstAllSchemas:
           type: boolean
           default: false
-          description: If true, validate against all stored SHACL shapes (composite schema)
-
-    SingleAssetValidationRequest:
-      type: object
-      description: >
-        Request body for POST /assets/{id}/validate. The asset to validate is identified by the
-        path parameter {id} — it must already be stored in the catalogue. This schema carries
-        only the optional schema selection; it does not contain asset content.
-        Contrast with ValidationRequest (POST /assets/validate), which accepts a list of asset
-        IRIs for combined multi-asset SHACL validation.
-        Contrast with StoredValidationResult / ValidationResponse, which are the response types.
-      properties:
-        schemaIds:
-          type: array
-          items:
-            type: string
           description: >
-            Optional list of schema IDs to validate against. Schema type must match the
-            asset content type (SHACL for RDF, JSON Schema for JSON, XML Schema for XML).
-            Mutually exclusive with validateAgainstAllSchemas=true.
-        validateAgainstAllSchemas:
-          type: boolean
-          default: false
-          description: If true, validate against all stored schemas matching the asset type
+            If true, validate against all stored schemas matching the asset type (single-asset)
+            or all stored SHACL shapes (multi-asset).
 
     ValidationResponse:
       type: object
@@ -1489,15 +1474,14 @@ paths:
     post:
       tags:
         - Assets
-      summary: Validate multiple assets combined into a single data graph (multi-asset SHACL)
+      summary: Validate one or more assets against stored schemas
       description: >
-        Combines the RDF content of all listed assets into a single data graph
-        and validates it against the specified SHACL shapes. Use validateAgainstAllSchemas=true
-        to validate against all stored SHACL shapes (composite schema). If schemaIds are
-        provided, each must reference a SHACL shape; providing a JSON or XML schema ID is
-        a client error. The endpoint is primarily intended for multi-asset SHACL validation
-        (R₁ ∪ R₂ against S). All referenced assets must be RDF assets.
-        Maximum 20 assets per request.
+        Validates stored assets against SHACL, JSON Schema, or XML Schema depending on asset
+        type and request size. A single-ID request runs full type-based dispatch: RDF assets
+        validate via SHACL (and optionally JSON Schema / XML Schema if the serialisation
+        matches); non-RDF assets validate via JSON Schema or XML Schema. A multi-ID request
+        merges all asset content into a single data graph and validates via SHACL only
+        (R₁ ∪ R₂ against S); all assets must be RDF assets. Maximum 20 assets per request.
       operationId: validateAssets
       security:
         - jwt: []
@@ -1954,57 +1938,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/ServerError'
-
-  /assets/{id}/validate:
-    post:
-      tags:
-        - Assets
-      summary: Validate a single asset against stored schemas
-      description: >
-        Validates the stored asset identified by its IRI against SHACL, JSON Schema, or XML
-        Schema — the schema type is determined by the asset's content type. If schemaIds are
-        provided, those schemas are used; if validateAgainstAllSchemas=true, the composite
-        schema (all schemas of the matching type) is used. The validation result is stored
-        and retrievable via GET /assets/{id}/validations.
-      operationId: validateAsset
-      security:
-        - jwt: []
-      parameters:
-        - name: id
-          in: path
-          description: IRI identifier of the asset
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SingleAssetValidationRequest'
-      responses:
-        '200':
-          description: Validation completed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationResponse'
-        '400':
-          $ref: '#/components/responses/ClientError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          description: Asset type is not validatable (unsupported content type)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           $ref: '#/components/responses/ServerError'
 

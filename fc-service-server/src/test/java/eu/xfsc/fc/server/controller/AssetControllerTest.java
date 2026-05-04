@@ -872,9 +872,10 @@ public class AssetControllerTest {
 
     @Test
     public void validateAsset_withoutAuth_returnsUnauthorized() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate", "urn:uuid:00000000-0000-0000-0000-000000000001")
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-000000000001\"]}")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
@@ -882,9 +883,10 @@ public class AssetControllerTest {
     @Test
     @WithMockUser
     public void validateAsset_withoutPermission_returnsForbidden() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate", "urn:uuid:00000000-0000-0000-0000-000000000001")
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-000000000001\"]}")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
@@ -996,11 +998,10 @@ public class AssetControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_READ_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void validateAsset_nonExistentAsset_returnsNotFound() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate",
-                        "urn:uuid:00000000-0000-0000-0000-does-not-exist")
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
+                        .content("{\"assetIds\": [\"urn:uuid:00000000-0000-0000-0000-does-not-exist\"]}")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -1010,12 +1011,12 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void validateAsset_unsupportedContentType_returnsUnprocessableEntity() throws Exception {
         doThrow(new VerificationException("unsupported content type for asset"))
-            .when(assetValidationService).validateAsset(any(), any());
+            .when(assetValidationService).validateAssets(any());
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/assets/{id}/validate", assetMeta.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"validateAgainstAllSchemas\": true}")
+                        .content("{\"assetIds\": [\"" + assetMeta.getId() + "\"], \"validateAgainstAllSchemas\": true}")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnprocessableEntity());
     }

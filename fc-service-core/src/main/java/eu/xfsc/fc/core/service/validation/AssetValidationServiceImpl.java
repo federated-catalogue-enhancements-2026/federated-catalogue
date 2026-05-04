@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.service.validation;
 
-import eu.xfsc.fc.api.generated.model.SingleAssetValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.api.generated.model.ValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationResponse;
@@ -72,19 +71,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   @Override
   @Transactional
-  public ValidationResponse validateAsset(String assetId, SingleAssetValidationRequest request) {
-    log.debug("validateAsset.enter; assetId={}", assetId);
-    AssetMetadata asset = assetStore.getById(assetId);
-    boolean isRdf = asset.getContentAccessor() != null;
-
-    if (isRdf) {
-      return validateRdfAsset(asset, request);
-    }
-    return validateNonRdfAsset(asset, request);
-  }
-
-  @Override
-  @Transactional
   public ValidationResponse validateAssets(ValidationRequest request) {
     log.debug("validateAssets.enter; assetIds={}", request.getAssetIds());
     List<String> assetIds = request.getAssetIds();
@@ -95,6 +81,17 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       throw new ClientException(
           "Too many assets in request: " + assetIds.size() + " (maximum: " + maxAssetsPerRequest + ")");
     }
+
+    if (assetIds.size() == 1) {
+      AssetMetadata asset = assetStore.getById(assetIds.get(0));
+      List<String> schemaIds = request.getSchemaIds();
+      Boolean validateAll = request.getValidateAgainstAllSchemas();
+      log.debug("validateAssets; routing single-asset to type-based dispatch");
+      return asset.getContentAccessor() != null
+          ? validateRdfAsset(asset, schemaIds, validateAll)
+          : validateNonRdfAsset(asset, schemaIds, validateAll);
+    }
+
     requireModuleEnabled(SchemaModuleType.SHACL);
 
     List<AssetMetadata> assets = new ArrayList<>();
@@ -121,9 +118,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   // --- RDF asset routing ---
 
-  private ValidationResponse validateRdfAsset(AssetMetadata asset, SingleAssetValidationRequest request) {
-    List<String> schemaIds = request != null ? request.getSchemaIds() : null;
-    Boolean validateAll = request != null ? request.getValidateAgainstAllSchemas() : null;
+  private ValidationResponse validateRdfAsset(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
     Instant validatedAt = Instant.now();
 
     if (schemaIds != null && !schemaIds.isEmpty()) {
@@ -313,7 +308,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   // --- Non-RDF asset ---
 
-  private ValidationResponse validateNonRdfAsset(AssetMetadata asset, SingleAssetValidationRequest request) {
+  private ValidationResponse validateNonRdfAsset(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
     String contentType = asset.getContentType();
     if (contentType == null) {
       throw new VerificationException(
@@ -321,20 +316,18 @@ public class AssetValidationServiceImpl implements AssetValidationService {
               + "Validatable types: application/json, application/xml");
     }
     if (contentType.contains(MediaType.APPLICATION_JSON_VALUE) || contentType.contains(MEDIA_TYPE_SCHEMA_JSON)) {
-      return validateWithJsonSchema(asset, request);
+      return validateWithJsonSchema(asset, schemaIds, validateAll);
     }
     if (contentType.contains(MediaType.APPLICATION_XML_VALUE) || contentType.contains(MediaType.TEXT_XML_VALUE)) {
-      return validateWithXmlSchema(asset, request);
+      return validateWithXmlSchema(asset, schemaIds, validateAll);
     }
     throw new VerificationException(
         "Asset " + asset.getId() + " has unsupported content type for validation: " + contentType
             + ". Validatable types: application/json, application/xml");
   }
 
-  private ValidationResponse validateWithJsonSchema(AssetMetadata asset, SingleAssetValidationRequest request) {
+  private ValidationResponse validateWithJsonSchema(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
     requireModuleEnabled(SchemaModuleType.JSON_SCHEMA);
-    List<String> schemaIds = request != null ? request.getSchemaIds() : null;
-    Boolean validateAll = request != null ? request.getValidateAgainstAllSchemas() : null;
     SchemaContentResult schemas = resolveNonRdfSchema(schemaIds, validateAll, SchemaType.JSON, asset.getId());
 
     ContentAccessor assetContent = readFileStoreContent(asset);
@@ -346,10 +339,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
 
-  private ValidationResponse validateWithXmlSchema(AssetMetadata asset, SingleAssetValidationRequest request) {
+  private ValidationResponse validateWithXmlSchema(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
     requireModuleEnabled(SchemaModuleType.XML_SCHEMA);
-    List<String> schemaIds = request != null ? request.getSchemaIds() : null;
-    Boolean validateAll = request != null ? request.getValidateAgainstAllSchemas() : null;
     SchemaContentResult schemas = resolveNonRdfSchema(schemaIds, validateAll, SchemaType.XML, asset.getId());
 
     ContentAccessor assetContent = readFileStoreContent(asset);

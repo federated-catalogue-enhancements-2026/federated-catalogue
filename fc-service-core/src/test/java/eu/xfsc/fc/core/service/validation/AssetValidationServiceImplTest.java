@@ -13,7 +13,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import eu.xfsc.fc.api.generated.model.SingleAssetValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.api.generated.model.ValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationResponse;
@@ -76,6 +75,7 @@ class AssetValidationServiceImplTest {
   // --- helpers ---
 
   private static final String ASSET_ID = "https://example.org/asset/1";
+  private static final String ASSET_ID_2 = "https://example.org/asset/2";
   private static final String SCHEMA_ID = "https://example.org/schema/shape/1";
   private static final String JSON_SCHEMA_ID = "https://example.org/schema/json/1";
   private static final String XML_SCHEMA_ID = "https://example.org/schema/xml/1";
@@ -163,10 +163,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(1L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(ASSET_ID), response.getAssetIds());
@@ -189,10 +190,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(2L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertFalse(response.getConforms());
     assertNotNull(response.getReport());
@@ -214,10 +216,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(3L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
@@ -229,10 +232,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(false);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -241,10 +245,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -253,19 +258,21 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
   void validateAsset_rdfAsset_noSchemasNoValidateAll_throwsNotFoundException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
 
-    assertThrows(NotFoundException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(NotFoundException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -276,10 +283,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(
         new SchemaRecord(SCHEMA_ID, SCHEMA_ID, SchemaType.ONTOLOGY, "ontology content", null));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -289,10 +297,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
     // JSON_SCHEMA not enabled (default false) — nothing runs
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   // === validateAsset — RDF validateAll C-2: skip disabled modules ===
@@ -302,10 +311,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     // no module mocked → all return false
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -321,10 +331,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(40L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(40L), response.getValidationResultIds());
@@ -350,10 +361,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(41L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(41L), response.getValidationResultIds());
@@ -378,10 +390,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(ASSET_ID), response.getAssetIds());
@@ -405,10 +418,11 @@ class AssetValidationServiceImplTest {
     when(xmlSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(21L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(XML_SCHEMA_ID), response.getSchemaIds());
@@ -439,10 +453,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L, 21L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID, JSON_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(20L, 21L), response.getValidationResultIds());
@@ -470,10 +485,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(20L, 21L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID, JSON_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertFalse(response.getConforms());
     assertNotNull(response.getReport());
@@ -498,10 +514,11 @@ class AssetValidationServiceImplTest {
     when(xmlSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(22L, 23L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID, XML_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(22L, 23L), response.getValidationResultIds());
@@ -514,10 +531,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfXmlAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -525,10 +543,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -538,10 +557,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord("https://example.org/schema/json/2"))
         .thenReturn(buildJsonRecord("https://example.org/schema/json/2"));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID, "https://example.org/schema/json/2"));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -551,10 +571,11 @@ class AssetValidationServiceImplTest {
     when(schemaStore.getSchemaRecord("https://example.org/schema/xml/2"))
         .thenReturn(buildXmlRecord("https://example.org/schema/xml/2"));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID, "https://example.org/schema/xml/2"));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -576,10 +597,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(30L, 31L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(30L, 31L), response.getValidationResultIds());
@@ -607,10 +629,11 @@ class AssetValidationServiceImplTest {
     when(xmlSchemaValidator.validate(any(), any())).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(32L, 33L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(32L, 33L), response.getValidationResultIds());
@@ -631,10 +654,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(34L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(34L), response.getValidationResultIds());
@@ -657,10 +681,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(4L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(ASSET_ID), response.getAssetIds());
@@ -672,10 +697,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -685,10 +711,11 @@ class AssetValidationServiceImplTest {
     // Caller provided a SHAPE schema for a JSON asset — must be rejected
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -696,10 +723,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID, "https://example.org/schema/json/2"));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -716,10 +744,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(5L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(JSON_SCHEMA_ID), response.getSchemaIds());
@@ -731,7 +760,7 @@ class AssetValidationServiceImplTest {
     givenJsonModuleEnabled();
 
     assertThrows(NotFoundException.class,
-        () -> service.validateAsset(ASSET_ID, new SingleAssetValidationRequest()));
+        () -> service.validateAssets(new ValidationRequest().assetIds(List.of(ASSET_ID))));
   }
 
   @Test
@@ -740,10 +769,11 @@ class AssetValidationServiceImplTest {
     givenJsonModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(null);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(NotFoundException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(NotFoundException.class, () -> service.validateAssets(request));
   }
 
   // === validateAsset — XML path (Case E) ===
@@ -762,10 +792,11 @@ class AssetValidationServiceImplTest {
     when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(6L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    ValidationResponse response = service.validateAsset(ASSET_ID, request);
+    ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertEquals(List.of(ASSET_ID), response.getAssetIds());
@@ -777,10 +808,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -789,10 +821,11 @@ class AssetValidationServiceImplTest {
     givenXmlModuleEnabled();
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -800,10 +833,11 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID, "https://example.org/schema/xml/2"));
 
-    assertThrows(ClientException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -812,7 +846,7 @@ class AssetValidationServiceImplTest {
     givenXmlModuleEnabled();
 
     assertThrows(NotFoundException.class,
-        () -> service.validateAsset(ASSET_ID, new SingleAssetValidationRequest()));
+        () -> service.validateAssets(new ValidationRequest().assetIds(List.of(ASSET_ID))));
   }
 
   @Test
@@ -821,10 +855,11 @@ class AssetValidationServiceImplTest {
     givenXmlModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.XML)).thenReturn(null);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(NotFoundException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(NotFoundException.class, () -> service.validateAssets(request));
   }
 
   // === validateAsset — unsupported type (Case F) ===
@@ -833,10 +868,11 @@ class AssetValidationServiceImplTest {
   void validateAsset_unsupportedContentType_throwsVerificationException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/pdf"));
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -845,25 +881,22 @@ class AssetValidationServiceImplTest {
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAsset(ASSET_ID, request));
+    assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
   // === validateAssets — multi-asset SHACL ===
 
   @Test
   void validateAssets_multipleRdfAssets_mergedValidation_returnsConformingResponse() {
-    String id1 = "https://example.org/asset/1";
-    String id2 = "https://example.org/asset/2";
-    AssetMetadata asset1 = buildRdfAsset(id1);
-    AssetMetadata asset2 = buildRdfAsset(id2);
     ContentAccessor shapeContent = new ContentAccessorDirect("shape ttl");
     Model shapesModel = ModelFactory.createDefaultModel();
 
-    when(assetStore.getById(id1)).thenReturn(asset1);
-    when(assetStore.getById(id2)).thenReturn(asset2);
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
     givenShaclModuleEnabled();
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
@@ -872,15 +905,67 @@ class AssetValidationServiceImplTest {
     when(validationResultStore.store(any())).thenReturn(7L);
 
     ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(id1, id2));
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
-    assertEquals(List.of(id1, id2), response.getAssetIds());
+    assertEquals(List.of(ASSET_ID, ASSET_ID_2), response.getAssetIds());
     assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
     assertEquals(List.of(7L), response.getValidationResultIds());
+  }
+
+  @Test
+  void validateAssets_multipleRdfAssets_nonConformingResult_returnsViolations() {
+    ContentAccessor shapeContent = new ContentAccessorDirect("shape ttl");
+    Model shapesModel = ModelFactory.createDefaultModel();
+
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
+    givenShaclModuleEnabled();
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
+    when(shaclValidator.parseShapeModel(shapeContent)).thenReturn(shapesModel);
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(NON_CONFORMING_REPORT);
+    when(validationResultStore.store(any())).thenReturn(9L);
+
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
+    request.setSchemaIds(List.of(SCHEMA_ID));
+
+    ValidationResponse response = service.validateAssets(request);
+
+    assertFalse(response.getConforms());
+    assertEquals(List.of(9L), response.getValidationResultIds());
+    assertNotNull(response.getReport());
+    assertFalse(response.getReport().getViolations().isEmpty());
+  }
+
+  @Test
+  void validateAssets_multipleRdfAssets_validateAll_compositeShapeFound_returnsConforming() {
+    ContentAccessor composite = new ContentAccessorDirect("composite shape");
+    Model shapesModel = ModelFactory.createDefaultModel();
+
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
+    givenShaclModuleEnabled();
+    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
+    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID)));
+    when(shaclValidator.parseShapeModel(composite)).thenReturn(shapesModel);
+    when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
+    when(validationResultStore.store(any())).thenReturn(10L);
+
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
+    request.setValidateAgainstAllSchemas(true);
+
+    ValidationResponse response = service.validateAssets(request);
+
+    assertTrue(response.getConforms());
+    assertEquals(List.of(10L), response.getValidationResultIds());
+    assertEquals(List.of(ASSET_ID, ASSET_ID_2), response.getAssetIds());
+    assertTrue(response.getSchemaIds().contains(SCHEMA_ID));
   }
 
   @Test
@@ -928,9 +1013,11 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAssets_shaclModuleDisabled_throwsVerificationException() {
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(false);
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
 
     ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
     assertThrows(VerificationException.class, () -> service.validateAssets(request));
@@ -938,7 +1025,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_multipleShapeSchemas_verifyBothShapesParsedAndReturnsConforming() {
-    String id2 = "https://example.org/schema/shape/2";
+    String schemaId2 = "https://example.org/schema/shape/2";
     AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shape1 = new ContentAccessorDirect("shape1");
     ContentAccessor shape2 = new ContentAccessorDirect("shape2");
@@ -948,9 +1035,9 @@ class AssetValidationServiceImplTest {
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(id2)).thenReturn(buildShapeRecord(id2));
+    when(schemaStore.getSchemaRecord(schemaId2)).thenReturn(buildShapeRecord(schemaId2));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shape1);
-    when(schemaStore.getSchema(id2)).thenReturn(shape2);
+    when(schemaStore.getSchema(schemaId2)).thenReturn(shape2);
     when(shaclValidator.parseShapeModel(shape1)).thenReturn(model1);
     when(shaclValidator.parseShapeModel(shape2)).thenReturn(model2);
     when(shaclValidator.validate(anyList(), any())).thenReturn(CONFORMING_REPORT);
@@ -958,12 +1045,12 @@ class AssetValidationServiceImplTest {
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(SCHEMA_ID, id2));
+    request.setSchemaIds(List.of(SCHEMA_ID, schemaId2));
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
-    assertEquals(List.of(SCHEMA_ID, id2), response.getSchemaIds());
+    assertEquals(List.of(SCHEMA_ID, schemaId2), response.getSchemaIds());
     // Both shapes were parsed into individual models and merged
     verify(shaclValidator).parseShapeModel(shape1);
     verify(shaclValidator).parseShapeModel(shape2);
@@ -983,11 +1070,12 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAssets_schemaTypeNotShape_throwsClientException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
     givenShaclModuleEnabled();
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
 
     ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
     assertThrows(ClientException.class, () -> service.validateAssets(request));
@@ -996,11 +1084,12 @@ class AssetValidationServiceImplTest {
   @Test
   void validateAssets_validateAll_noShapesFound_throwsNotFoundException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
+    when(assetStore.getById(ASSET_ID_2)).thenReturn(buildRdfAsset(ASSET_ID_2));
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
 
     ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
+    request.setAssetIds(List.of(ASSET_ID, ASSET_ID_2));
     request.setValidateAgainstAllSchemas(true);
 
     assertThrows(NotFoundException.class, () -> service.validateAssets(request));
@@ -1022,10 +1111,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(9L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    service.validateAsset(ASSET_ID, request);
+    service.validateAssets(request);
 
     ArgumentCaptor<ValidationResultRecord> captor =
         ArgumentCaptor.forClass(ValidationResultRecord.class);
@@ -1053,10 +1143,11 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(10L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    service.validateAsset(ASSET_ID, request);
+    service.validateAssets(request);
 
     ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
     verify(validationResultStore).store(captor.capture());
@@ -1082,10 +1173,11 @@ class AssetValidationServiceImplTest {
     when(xmlSchemaValidator.validate(assetContent, schemaContent)).thenReturn(CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(11L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    service.validateAsset(ASSET_ID, request);
+    service.validateAssets(request);
 
     ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
     verify(validationResultStore).store(captor.capture());
@@ -1111,10 +1203,11 @@ class AssetValidationServiceImplTest {
     when(shaclValidator.validate(anyList(), any(Model.class))).thenReturn(NON_CONFORMING_REPORT);
     when(validationResultStore.store(any())).thenReturn(10L);
 
-    SingleAssetValidationRequest request = new SingleAssetValidationRequest();
+    ValidationRequest request = new ValidationRequest();
+    request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(SCHEMA_ID));
 
-    service.validateAsset(ASSET_ID, request);
+    service.validateAssets(request);
 
     ArgumentCaptor<ValidationResultRecord> captor =
         ArgumentCaptor.forClass(ValidationResultRecord.class);
