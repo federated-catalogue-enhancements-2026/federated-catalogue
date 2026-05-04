@@ -4,19 +4,13 @@ import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.system.stream.StreamManager;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import com.apicatalog.jsonld.loader.DocumentLoader;
-import com.apicatalog.jsonld.loader.SchemeRouter;
-import jakarta.annotation.PostConstruct;
 
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
-import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
-import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import lombok.extern.slf4j.Slf4j;
@@ -36,11 +30,8 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
 
   private final ClaimExtractionService claimExtractionService;
   private final SchemaStore schemaStore;
-    @Qualifier("contextCacheFileStore")
-    private final FileStore fileStore;
-  private final DocumentLoader documentLoader;
-
-    private StreamManager streamManager;
+  // Shared stream-manager from RdfAssetParser eliminates duplicate StreamManager setup.
+  private final RdfAssetParser rdfAssetParser;
 
     /** {@inheritDoc} Delegates to {@link #validateCredentialAgainstSchema} with a {@code null} schema. */
     @Override
@@ -86,27 +77,9 @@ public class SchemaValidationServiceImpl implements SchemaValidationService {
     /** {@inheritDoc} */
     @Override
     public SchemaValidationResult validateClaimsAgainstSchema(List<RdfClaim> claims, ContentAccessor schema) {
+        StreamManager streamManager = rdfAssetParser.getStreamManager();
         String report = ClaimValidator.validateClaimsBySchema(claims, schema, streamManager);
         return new SchemaValidationResult(report == null, report);
-    }
-
-    /**
-     * Initialises the JSON-LD {@link SchemeRouter} and Jena {@link StreamManager}
-     * once after dependency injection, ensuring thread-safe setup.
-     */
-    @PostConstruct
-    private void init() {
-        log.debug("init; Setting up SchemeRouter");
-        SchemeRouter loader = (SchemeRouter) SchemeRouter.defaultInstance();
-        loader.set("file", documentLoader);
-        loader.set("http", documentLoader);
-        loader.set("https", documentLoader);
-
-        log.debug("init; Setting up Jena caching Locator");
-        StreamManager clone = StreamManager.get().clone();
-        clone.clearLocators();
-        clone.addLocator(new CachingLocator(fileStore));
-        streamManager = clone;
     }
 
     private List<RdfClaim> extractClaims(ContentAccessor payload) {

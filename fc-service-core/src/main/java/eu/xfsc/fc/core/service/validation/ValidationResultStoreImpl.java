@@ -49,7 +49,7 @@ public class ValidationResultStoreImpl implements ValidationResultStore {
     log.debug("store; saved ValidationResult id={}, conforms={}", saved.getId(), saved.isConforms());
 
     // Note: the graph write happens while the @Transactional method is still open.
-    // PostgreSQL commits when store() returns. Best-effort: graph write failure marks row FAILED; no retry.
+    // The DB transaction commits when store() returns. Best-effort: graph write failure marks row FAILED; no retry.
     tryWriteToGraph(saved);
 
     return saved.getId();

@@ -14,6 +14,12 @@ public enum ValidatorType {
   /** On-demand XML Schema validation of non-RDF XML assets. */
   XML_SCHEMA,
 
-  /** External trust framework compliance check. */
+  /**
+   * External trust framework compliance check.
+   *
+   * <p>No {@code ValidationStrategy} implementation exists yet; compliance evaluation is
+   * currently performed by the trust-framework orchestrator outside the on-demand validation
+   * pipeline.</p>
+   */
   TRUST_FRAMEWORK
 }

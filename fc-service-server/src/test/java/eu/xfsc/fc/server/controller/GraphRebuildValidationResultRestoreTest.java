@@ -92,6 +92,11 @@ class GraphRebuildValidationResultRestoreTest {
   @MockitoSpyBean
   private ValidationResultGraphWriter graphWriter;
 
+  private static final int REBUILD_CHUNK_COUNT = 1;
+  private static final int REBUILD_CHUNK_ID = 0;
+  private static final int REBUILD_THREADS = 2;
+  private static final int REBUILD_BATCH_SIZE = 100;
+
   @AfterEach
   void cleanup() {
     validationResultRepository.deleteAll();
@@ -99,7 +104,8 @@ class GraphRebuildValidationResultRestoreTest {
 
   @Test
   void postGraphRebuild_noAuth_returnsUnauthorized() throws Exception {
-    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(
+        REBUILD_CHUNK_COUNT, REBUILD_CHUNK_ID, REBUILD_THREADS, REBUILD_BATCH_SIZE);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
             .content(jsonMapper.writeValueAsString(rebuildRequest))
             .contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +116,8 @@ class GraphRebuildValidationResultRestoreTest {
   @Test
   @WithMockUser(roles = {ASSET_READ})
   void postGraphRebuild_nonAdminRole_returnsForbidden() throws Exception {
-    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(
+        REBUILD_CHUNK_COUNT, REBUILD_CHUNK_ID, REBUILD_THREADS, REBUILD_BATCH_SIZE);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
             .content(jsonMapper.writeValueAsString(rebuildRequest))
             .contentType(MediaType.APPLICATION_JSON)
@@ -147,7 +154,8 @@ class GraphRebuildValidationResultRestoreTest {
           "Initial graph_sync_status should be FAILED");
     });
 
-    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(
+        REBUILD_CHUNK_COUNT, REBUILD_CHUNK_ID, REBUILD_THREADS, REBUILD_BATCH_SIZE);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
             .content(jsonMapper.writeValueAsString(rebuildRequest))
             .contentType(MediaType.APPLICATION_JSON)
@@ -198,7 +206,8 @@ class GraphRebuildValidationResultRestoreTest {
       assertTrue(failedCount > 0, "Should have at least one FAILED result before rebuild");
     });
 
-    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(
+        REBUILD_CHUNK_COUNT, REBUILD_CHUNK_ID, REBUILD_THREADS, REBUILD_BATCH_SIZE);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
             .content(jsonMapper.writeValueAsString(rebuildRequest))
             .contentType(MediaType.APPLICATION_JSON)
@@ -251,7 +260,8 @@ class GraphRebuildValidationResultRestoreTest {
           "Initial graph_sync_status should be FAILED");
     });
 
-    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(1, 0, 2, 100);
+    GraphRebuildRequest rebuildRequest = new GraphRebuildRequest(
+        REBUILD_CHUNK_COUNT, REBUILD_CHUNK_ID, REBUILD_THREADS, REBUILD_BATCH_SIZE);
     mockMvc.perform(MockMvcRequestBuilders.post("/actuator/graph-rebuild")
             .content(jsonMapper.writeValueAsString(rebuildRequest))
             .contentType(MediaType.APPLICATION_JSON)

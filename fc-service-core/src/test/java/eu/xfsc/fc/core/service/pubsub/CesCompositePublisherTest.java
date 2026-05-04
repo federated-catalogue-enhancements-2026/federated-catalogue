@@ -38,6 +38,7 @@ import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.FormatDetector;
 import eu.xfsc.fc.core.service.verification.LoireMatcher;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
@@ -110,6 +111,7 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
         SchemaJpaDao.class,
         SchemaModuleConfigService.class,
         SchemaStoreImpl.class,
+        RdfAssetParser.class,
         SchemaValidationServiceImpl.class,
         ValidatorCacheJpaDao.class,
         Vc2Processor.class,

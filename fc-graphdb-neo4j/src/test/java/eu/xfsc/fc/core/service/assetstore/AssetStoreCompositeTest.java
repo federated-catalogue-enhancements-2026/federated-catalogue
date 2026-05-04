@@ -65,6 +65,7 @@ import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.validation.ValidationResultGraphWriter;
 import eu.xfsc.fc.core.service.validation.ValidationResultHasher;
 import eu.xfsc.fc.core.service.validation.ValidationResultStoreImpl;
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
@@ -109,6 +110,7 @@ import lombok.extern.slf4j.Slf4j;
         SchemaJpaDao.class,
         SchemaModuleConfigService.class,
         SchemaStoreImpl.class,
+        RdfAssetParser.class,
         SchemaValidationServiceImpl.class,
         SecurityAuditorAware.class,
         ValidatorCacheJpaDao.class,

@@ -10,28 +10,21 @@ import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
-import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
+import eu.xfsc.fc.core.service.validation.strategy.ValidationStrategy;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,40 +32,32 @@ import java.util.Map;
  * Default implementation of {@link AssetValidationService}.
  *
  * <p>Orchestrates on-demand validation of stored assets against stored schemas.
- * Handles module toggles, schema resolution, and result storage via {@link ValidationResultStore}.</p>
+ * Dispatches to registered {@link ValidationStrategy} implementations based on schema type
+ * and asset format. Handles module toggles, schema resolution, and result storage via
+ * {@link ValidationResultStore}.</p>
  *
- * <p>Cross-paradigm validation: JSON Schema applies to RDF assets serialized as JSON-LD;
- * XML Schema applies to RDF assets serialized as RDF/XML. When an RDF asset is validated,
- * all applicable schema types are dispatched, each storing an independent
+ * <p>Multi-asset requests are restricted to SHACL validation. Single-asset requests support
+ * all registered strategies (SHACL for RDF assets, JSON Schema for JSON and JSON-LD,
+ * XML Schema for XML and RDF/XML). Each applicable strategy stores an independent
  * {@link eu.xfsc.fc.core.dao.validation.ValidationResult}.</p>
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AssetValidationServiceImpl implements AssetValidationService {
 
-  private static final String JSON_LD_CONTENT_PREFIX = "{";
-  private static final String RDF_XML_CONTENT_PREFIX_1 = "<?xml";
-  private static final String RDF_XML_CONTENT_PREFIX_2 = "<rdf:RDF";
-  private static final String MEDIA_TYPE_SCHEMA_JSON = "application/schema+json";
-
+  // increase with caution: each extra asset adds a full SHACL merge pass
   @Value("${federated-catalogue.validation.max-assets-per-request:20}")
   private int maxAssetsPerRequest;
 
   private final AssetStore assetStore;
-  @Qualifier("assetFileStore")
-  private final FileStore fileStore;
   private final SchemaStore schemaStore;
   private final SchemaModuleConfigService moduleConfig;
-  private final ShaclValidator shaclValidator;
-  private final JsonSchemaValidator jsonSchemaValidator;
-  private final XmlSchemaValidator xmlSchemaValidator;
+  private final List<ValidationStrategy> strategies;
   private final ValidationResultStore validationResultStore;
 
   @Override
   @Transactional
   public ValidationResponse validateAssets(ValidationRequest request) {
-    log.debug("validateAssets.enter; assetIds={}", request.getAssetIds());
     List<String> assetIds = request.getAssetIds();
     if (assetIds == null || assetIds.isEmpty()) {
       throw new ClientException("assetIds must contain at least one asset ID");
@@ -82,16 +67,48 @@ public class AssetValidationServiceImpl implements AssetValidationService {
           "Too many assets in request: " + assetIds.size() + " (maximum: " + maxAssetsPerRequest + ")");
     }
 
-    if (assetIds.size() == 1) {
-      AssetMetadata asset = assetStore.getById(assetIds.get(0));
-      List<String> schemaIds = request.getSchemaIds();
-      Boolean validateAll = request.getValidateAgainstAllSchemas();
-      log.debug("validateAssets; routing single-asset to type-based dispatch");
-      return asset.getContentAccessor() != null
-          ? validateRdfAsset(asset, schemaIds, validateAll)
-          : validateNonRdfAsset(asset, schemaIds, validateAll);
+    List<String> schemaIds = request.getSchemaIds();
+    Boolean validateAll = request.getValidateAgainstAllSchemas();
+    Instant validatedAt = Instant.now();
+
+    if (assetIds.size() > 1) {
+      return validateMultipleAssets(assetIds, schemaIds, validateAll, validatedAt);
     }
 
+    AssetMetadata asset = assetStore.getById(assetIds.get(0));
+
+    if (asset.getContentAccessor() == null) {
+      boolean anyApplies = strategies.stream().anyMatch(s -> s.appliesTo(asset));
+      if (!anyApplies) {
+        String ct = asset.getContentType();
+        if (ct == null) {
+          throw new VerificationException(
+              "Asset " + asset.getId() + " has no content type. Cannot determine validation schema type. "
+                  + "Validatable types: application/json, application/xml");
+        }
+        throw new VerificationException(
+            "Asset " + asset.getId() + " has unsupported content type for validation: " + ct
+                + ". Validatable types: application/json, application/xml");
+      }
+    }
+
+    List<StrategyJob> jobs;
+    if (schemaIds != null && !schemaIds.isEmpty()) {
+      jobs = planExplicit(asset, schemaIds);
+    } else if (Boolean.TRUE.equals(validateAll)) {
+      jobs = planAllApplicable(asset);
+    } else {
+      throw new NotFoundException(
+          "No schemas specified for validation. Provide schemaIds or set validateAgainstAllSchemas=true.");
+    }
+
+    return execute(List.of(asset), jobs, validatedAt);
+  }
+
+  // --- Multi-asset path (SHACL only) ---
+
+  private ValidationResponse validateMultipleAssets(
+      List<String> assetIds, List<String> schemaIds, Boolean validateAll, Instant validatedAt) {
     requireModuleEnabled(SchemaModuleType.SHACL);
 
     List<AssetMetadata> assets = new ArrayList<>();
@@ -104,266 +121,151 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       assets.add(asset);
     }
 
-    List<String> schemaIds = request.getSchemaIds();
-    Boolean validateAll = request.getValidateAgainstAllSchemas();
     SchemaResolutionResult schemas = resolveShaclSchemas(schemaIds, validateAll);
+    ValidationStrategy shaclStrategy = strategies.stream()
+        .filter(s -> s.type() == ValidatorType.SHACL)
+        .findFirst()
+        .orElseThrow(() -> new ServerException("SHACL validation strategy not registered"));
 
-    ValidationReport report = shaclValidator.validate(assets, schemas.shapesModel());
-    Instant validatedAt = Instant.now();
+    ValidationReport report = shaclStrategy.validate(assets, schemas.schemaContents());
     Long resultId = storeResult(assetIds, schemas.validatorIds(), ValidatorType.SHACL, report, validatedAt);
 
-    log.debug("validateAssets.exit; conforms={}", report.getConforms());
     return buildResponse(assetIds, schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
 
-  // --- RDF asset routing ---
+  // --- Single-asset strategy planning ---
 
-  private ValidationResponse validateRdfAsset(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
-    Instant validatedAt = Instant.now();
+  /**
+   * Plans validation jobs for a single asset against explicit schema IDs.
+   *
+   * <p>Schema IDs are grouped by the strategy that accepts them. Each group produces one
+   * {@link StrategyJob}. SHACL accepts multiple shapes per job; JSON and XML enforce exactly
+   * one schema.</p>
+   *
+   * @throws ClientException if no registered strategy accepts a schema type,
+   *     if a non-SHACL strategy receives more than one schema,
+   *     or if the matched strategy does not apply to the asset's format
+   * @throws VerificationException if the matched strategy's module is disabled
+   */
+  private List<StrategyJob> planExplicit(AssetMetadata asset, List<String> schemaIds) {
+    Map<ValidationStrategy, List<SchemaRecord>> byStrategy = new LinkedHashMap<>();
+    for (String id : schemaIds) {
+      SchemaRecord record = schemaStore.getSchemaRecord(id);
+      ValidationStrategy strategy = findStrategyFor(record);
+      byStrategy.computeIfAbsent(strategy, k -> new ArrayList<>()).add(record);
+    }
 
-    if (schemaIds != null && !schemaIds.isEmpty()) {
-      return validateRdfAssetWithExplicitSchemas(asset, schemaIds, validatedAt);
+    List<StrategyJob> jobs = new ArrayList<>();
+    for (Map.Entry<ValidationStrategy, List<SchemaRecord>> entry : byStrategy.entrySet()) {
+      ValidationStrategy strategy = entry.getKey();
+      List<SchemaRecord> records = entry.getValue();
+
+      if (strategy.type() != ValidatorType.SHACL && records.size() > 1) {
+        throw new ClientException(
+            strategy.type() + " validation supports exactly one schema per request, but "
+                + records.size() + " were provided.");
+      }
+      if (!strategy.appliesTo(asset)) {
+        throw new ClientException(
+            "Schema type " + records.get(0).type() + " is not applicable to asset " + asset.getId());
+      }
+      requireModuleEnabled(strategy.moduleType());
+
+      List<ContentAccessor> contents = records.stream()
+          .map(r -> schemaStore.getSchema(r.getId()))
+          .toList();
+      List<String> ids = records.stream().map(SchemaRecord::getId).toList();
+      jobs.add(new StrategyJob(strategy, contents, ids));
     }
-    if (Boolean.TRUE.equals(validateAll)) {
-      return validateRdfAssetAgainstAll(asset, validatedAt);
-    }
-    throw new NotFoundException(
-        "No schemas specified for validation. Provide schemaIds or set validateAgainstAllSchemas=true.");
+    return jobs;
   }
 
   /**
-   * Validates an RDF asset against explicitly provided schema IDs.
+   * Plans validation jobs for a single asset against all applicable stored schemas.
    *
-   * <p>Schema IDs are grouped by type. SHAPE schemas run via SHACL. JSON schemas run via
-   * JSON Schema (only if the asset is JSON-LD). XML schemas run via XML Schema (only if
-   * the asset is RDF/XML). Each type stores an independent result.</p>
+   * <p>Each enabled strategy that applies to the asset is checked for available schemas.
+   * Strategies with no stored schemas are silently skipped. Throws if no job can be planned.</p>
+   *
+   * @throws NotFoundException if at least one applicable, enabled strategy has no stored schemas
+   *     (applies to non-RDF assets with a single applicable schema type)
+   * @throws VerificationException if no strategy is both enabled and applicable
    */
-  private ValidationResponse validateRdfAssetWithExplicitSchemas(
-      AssetMetadata asset, List<String> schemaIds, Instant validatedAt) {
-    Map<SchemaType, List<String>> grouped = groupSchemasByType(schemaIds);
-    List<String> shapeIds = grouped.getOrDefault(SchemaType.SHAPE, List.of());
-    List<String> jsonIds = grouped.getOrDefault(SchemaType.JSON, List.of());
-    List<String> xmlIds = grouped.getOrDefault(SchemaType.XML, List.of());
+  private List<StrategyJob> planAllApplicable(AssetMetadata asset) {
+    List<StrategyJob> jobs = new ArrayList<>();
+    boolean anyApplicableEnabled = false;
+    Map<SchemaType, List<String>> schemasByType = null;
 
-    // Read asset content once — avoids repeated file/S3 reads across format checks and validators
-    String contentStr = asset.getContentAccessor().getContentAsString();
-    ContentAccessorDirect assetContent = new ContentAccessorDirect(contentStr);
-
-    if (!jsonIds.isEmpty() && !isJsonLdContent(contentStr)) {
-      throw new ClientException(
-          "JSON Schema validation requires a JSON-LD serialized RDF asset, "
-              + "but asset " + asset.getId() + " is not JSON-LD. "
-              + "JSON Schema is applicable to JSON-LD and application/vc+ld+json assets.");
-    }
-    if (!xmlIds.isEmpty() && !isRdfXmlContent(contentStr)) {
-      throw new ClientException(
-          "XML Schema validation requires an RDF/XML serialized asset, "
-              + "but asset " + asset.getId() + " is not RDF/XML. "
-              + "XML Schema is applicable to application/rdf+xml assets.");
-    }
-
-    List<String> allSchemaIds = new ArrayList<>();
-    List<Long> allResultIds = new ArrayList<>();
-    boolean overallConforms = true;
-    ValidationReport firstReport = null;
-    ValidationReport failingReport = null;
-
-    if (!shapeIds.isEmpty()) {
-      requireModuleEnabled(SchemaModuleType.SHACL);
-      SchemaResolutionResult shaclSchemas = resolveShaclSchemas(shapeIds, null);
-      ValidationReport report = shaclValidator.validate(List.of(asset), shaclSchemas.shapesModel());
-      allResultIds.add(storeResult(
-          List.of(asset.getId()), shaclSchemas.validatorIds(), ValidatorType.SHACL, report, validatedAt));
-      allSchemaIds.addAll(shaclSchemas.schemaIds());
-      overallConforms = report.getConforms();
-      firstReport = report;
-      if (!report.getConforms()) failingReport = report;
-    }
-
-    if (!jsonIds.isEmpty()) {
-      if (jsonIds.size() > 1) {
-        throw new ClientException("JSON Schema validation supports exactly one schema per request, but "
-            + jsonIds.size() + " were provided.");
+    for (ValidationStrategy strategy : strategies) {
+      if (!moduleConfig.isModuleEnabled(strategy.moduleType())) {
+        continue;
       }
-      requireModuleEnabled(SchemaModuleType.JSON_SCHEMA);
-      ContentAccessor jsonSchema = schemaStore.getSchema(jsonIds.get(0));
-      ValidationReport report = jsonSchemaValidator.validate(assetContent, jsonSchema);
-      allResultIds.add(storeResult(
-          List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, report, validatedAt));
-      allSchemaIds.addAll(jsonIds);
-      overallConforms = overallConforms && report.getConforms();
-      if (firstReport == null) firstReport = report;
-      if (!report.getConforms() && failingReport == null) failingReport = report;
-    }
-
-    if (!xmlIds.isEmpty()) {
-      if (xmlIds.size() > 1) {
-        throw new ClientException("XML Schema validation supports exactly one schema per request, but "
-            + xmlIds.size() + " were provided.");
+      if (!strategy.appliesTo(asset)) {
+        continue;
       }
-      requireModuleEnabled(SchemaModuleType.XML_SCHEMA);
-      ContentAccessor xmlSchema = schemaStore.getSchema(xmlIds.get(0));
-      ValidationReport report = xmlSchemaValidator.validate(assetContent, xmlSchema);
-      allResultIds.add(storeResult(
-          List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, report, validatedAt));
-      allSchemaIds.addAll(xmlIds);
-      overallConforms = overallConforms && report.getConforms();
-      if (firstReport == null) firstReport = report;
-      if (!report.getConforms() && failingReport == null) failingReport = report;
-    }
 
-    if (allResultIds.isEmpty()) {
-      throw new ClientException("None of the provided schemas are applicable to this RDF asset.");
-    }
-
-    ValidationReport responseReport = failingReport != null ? failingReport : firstReport;
-    log.debug("validateRdfAssetWithExplicitSchemas.exit; assetId={}, conforms={}", asset.getId(), overallConforms);
-    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, allResultIds, validatedAt);
-  }
-
-  /**
-   * Validates an RDF asset against all applicable stored schemas.
-   *
-   * <p>Each paradigm runs only if its module is enabled and schemas of that type are stored.
-   * Disabled modules are silently skipped — this is the "all <em>applicable</em>" semantics from
-   * the SRS. Throws {@link VerificationException} (422) only when every applicable paradigm is
-   * either disabled or has no stored schemas.</p>
-   *
-   * <ul>
-   *   <li>SHACL — runs if module enabled and at least one SHACL shape is stored.</li>
-   *   <li>JSON Schema — additionally runs if asset is JSON-LD and JSON_SCHEMA module is enabled.</li>
-   *   <li>XML Schema — additionally runs if asset is RDF/XML and XML_SCHEMA module is enabled.</li>
-   * </ul>
-   *
-   * <p>Each paradigm stores an independent result. The primary result ID is from the first paradigm
-   * that ran. Response report is the first failing one, or the first result if all passed.</p>
-   */
-  private ValidationResponse validateRdfAssetAgainstAll(AssetMetadata asset, Instant validatedAt) {
-    // Load schema list once — avoids repeated DB calls (one per schema type below)
-    Map<SchemaType, List<String>> schemasByType = schemaStore.getSchemaList();
-    // Read asset content once — avoids repeated file/S3 reads across format checks and validators
-    String contentStr = asset.getContentAccessor().getContentAsString();
-    ContentAccessorDirect assetContent = new ContentAccessorDirect(contentStr);
-
-    List<String> allSchemaIds = new ArrayList<>();
-    List<Long> allResultIds = new ArrayList<>();
-    boolean overallConforms = true;
-    ValidationReport firstReport = null;
-    ValidationReport failingReport = null;
-
-    if (moduleConfig.isModuleEnabled(SchemaModuleType.SHACL)) {
-      ContentAccessor composite = schemaStore.getCompositeSchema(SchemaType.SHAPE);
-      if (composite != null) {
-        Model shapesModel = shaclValidator.parseShapeModel(composite);
-        List<String> shaclIds = schemasByType.getOrDefault(SchemaType.SHAPE, List.of());
-        ValidationReport shaclReport = shaclValidator.validate(List.of(asset), shapesModel);
-        allResultIds.add(storeResult(
-            List.of(asset.getId()), shaclIds, ValidatorType.SHACL, shaclReport, validatedAt));
-        allSchemaIds.addAll(shaclIds);
-        overallConforms = shaclReport.getConforms();
-        firstReport = shaclReport;
-        if (!shaclReport.getConforms()) failingReport = shaclReport;
+      anyApplicableEnabled = true;
+      SchemaType schemaType = schemaStoreType(strategy);
+      ContentAccessor content = resolveAllSchemasContent(strategy, schemaType);
+      if (content == null) {
+        continue;
       }
-    }
 
-    if (isJsonLdContent(contentStr) && moduleConfig.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)) {
-      ContentAccessor jsonSchema = schemaStore.getLatestSchemaByType(SchemaType.JSON);
-      if (jsonSchema != null) {
-        List<String> jsonIds = schemasByType.getOrDefault(SchemaType.JSON, List.of());
-        ValidationReport jsonReport = jsonSchemaValidator.validate(assetContent, jsonSchema);
-        allResultIds.add(storeResult(
-            List.of(asset.getId()), jsonIds, ValidatorType.JSON_SCHEMA, jsonReport, validatedAt));
-        allSchemaIds.addAll(jsonIds);
-        overallConforms = overallConforms && jsonReport.getConforms();
-        if (firstReport == null) firstReport = jsonReport;
-        if (!jsonReport.getConforms() && failingReport == null) failingReport = jsonReport;
+      if (schemasByType == null) {
+        schemasByType = schemaStore.getSchemaList();
       }
+      List<String> ids = schemasByType.getOrDefault(schemaType, List.of());
+      jobs.add(new StrategyJob(strategy, List.of(content), ids));
     }
 
-    if (isRdfXmlContent(contentStr) && moduleConfig.isModuleEnabled(SchemaModuleType.XML_SCHEMA)) {
-      ContentAccessor xmlSchema = schemaStore.getLatestSchemaByType(SchemaType.XML);
-      if (xmlSchema != null) {
-        List<String> xmlIds = schemasByType.getOrDefault(SchemaType.XML, List.of());
-        ValidationReport xmlReport = xmlSchemaValidator.validate(assetContent, xmlSchema);
-        allResultIds.add(storeResult(
-            List.of(asset.getId()), xmlIds, ValidatorType.XML_SCHEMA, xmlReport, validatedAt));
-        allSchemaIds.addAll(xmlIds);
-        overallConforms = overallConforms && xmlReport.getConforms();
-        if (firstReport == null) firstReport = xmlReport;
-        if (!xmlReport.getConforms() && failingReport == null) failingReport = xmlReport;
+    if (jobs.isEmpty()) {
+      if (asset.getContentAccessor() == null && anyApplicableEnabled) {
+        throw new NotFoundException(
+            "No schema found for validation of asset " + asset.getId()
+                + ". Ensure schemas of the applicable type are stored.");
       }
-    }
-
-    if (allResultIds.isEmpty()) {
       throw new VerificationException(
           "No validation module is enabled or applicable for asset " + asset.getId()
               + ". Enable at least one applicable module via admin settings (SHACL, "
               + SchemaModuleType.JSON_SCHEMA + ", or " + SchemaModuleType.XML_SCHEMA + ").");
     }
+    return jobs;
+  }
+
+  private ValidationResponse execute(
+      List<AssetMetadata> assets, List<StrategyJob> jobs, Instant validatedAt) {
+    List<String> assetIds = assets.stream().map(AssetMetadata::getId).toList();
+    List<String> allSchemaIds = new ArrayList<>();
+    List<Long> allResultIds = new ArrayList<>();
+    ValidationReport firstReport = null;
+    ValidationReport failingReport = null;
+
+    for (StrategyJob job : jobs) {
+      ValidationReport report = job.strategy().validate(assets, job.schemaContents());
+      allResultIds.add(storeResult(assetIds, job.schemaIds(), job.strategy().type(), report, validatedAt));
+      allSchemaIds.addAll(job.schemaIds());
+      if (firstReport == null) {
+        firstReport = report;
+      }
+      if (!report.getConforms() && failingReport == null) {
+        failingReport = report;
+      }
+    }
 
     ValidationReport responseReport = failingReport != null ? failingReport : firstReport;
-    log.debug("validateRdfAssetAgainstAll.exit; assetId={}, conforms={}", asset.getId(), overallConforms);
-    return buildResponse(List.of(asset.getId()), allSchemaIds, responseReport, allResultIds, validatedAt);
-  }
-
-  // --- Non-RDF asset ---
-
-  private ValidationResponse validateNonRdfAsset(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
-    String contentType = asset.getContentType();
-    if (contentType == null) {
-      throw new VerificationException(
-          "Asset " + asset.getId() + " has no content type. Cannot determine validation schema type. "
-              + "Validatable types: application/json, application/xml");
-    }
-    if (contentType.contains(MediaType.APPLICATION_JSON_VALUE) || contentType.contains(MEDIA_TYPE_SCHEMA_JSON)) {
-      return validateWithJsonSchema(asset, schemaIds, validateAll);
-    }
-    if (contentType.contains(MediaType.APPLICATION_XML_VALUE) || contentType.contains(MediaType.TEXT_XML_VALUE)) {
-      return validateWithXmlSchema(asset, schemaIds, validateAll);
-    }
-    throw new VerificationException(
-        "Asset " + asset.getId() + " has unsupported content type for validation: " + contentType
-            + ". Validatable types: application/json, application/xml");
-  }
-
-  private ValidationResponse validateWithJsonSchema(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
-    requireModuleEnabled(SchemaModuleType.JSON_SCHEMA);
-    SchemaContentResult schemas = resolveNonRdfSchema(schemaIds, validateAll, SchemaType.JSON, asset.getId());
-
-    ContentAccessor assetContent = readFileStoreContent(asset);
-    ValidationReport report = jsonSchemaValidator.validate(assetContent, schemas.schemaContent());
-    Instant validatedAt = Instant.now();
-    Long resultId = storeResult(
-      List.of(asset.getId()), schemas.validatorIds(), ValidatorType.JSON_SCHEMA, report, validatedAt);
-
-    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, List.of(resultId), validatedAt);
-  }
-
-  private ValidationResponse validateWithXmlSchema(AssetMetadata asset, List<String> schemaIds, Boolean validateAll) {
-    requireModuleEnabled(SchemaModuleType.XML_SCHEMA);
-    SchemaContentResult schemas = resolveNonRdfSchema(schemaIds, validateAll, SchemaType.XML, asset.getId());
-
-    ContentAccessor assetContent = readFileStoreContent(asset);
-    ValidationReport report = xmlSchemaValidator.validate(assetContent, schemas.schemaContent());
-    Instant validatedAt = Instant.now();
-    Long resultId = storeResult(
-      List.of(asset.getId()), schemas.validatorIds(), ValidatorType.XML_SCHEMA, report, validatedAt);
-
-    return buildResponse(List.of(asset.getId()), schemas.schemaIds(), report, List.of(resultId), validatedAt);
+    return buildResponse(assetIds, allSchemaIds, responseReport, allResultIds, validatedAt);
   }
 
   // --- Schema resolution ---
 
   /**
-   * Resolves SHACL shapes into a merged Jena Model.
+   * Resolves SHACL shapes into a merged list of ContentAccessors.
    *
    * <p>If explicit schemaIds are given, each is type-checked (must be SHAPE) and loaded.
-   * Multiple shapes are merged via {@code Model.add()}. If validateAgainstAllSchemas=true,
-   * the composite schema (union of all stored shapes) is used directly.</p>
+   * If validateAgainstAllSchemas=true, the composite schema (union of all stored shapes) is used.</p>
    */
   private SchemaResolutionResult resolveShaclSchemas(List<String> schemaIds, Boolean validateAll) {
     if (schemaIds != null && !schemaIds.isEmpty()) {
-      Model merged = ModelFactory.createDefaultModel();
+      List<ContentAccessor> contents = new ArrayList<>();
       List<String> resolvedIds = new ArrayList<>();
       for (String id : schemaIds) {
         SchemaRecord record = schemaStore.getSchemaRecord(id);
@@ -372,11 +274,10 @@ public class AssetValidationServiceImpl implements AssetValidationService {
               "Schema " + id + " has type " + record.type()
                   + " and cannot be used for SHACL validation. Only SHAPE schemas are accepted.");
         }
-        ContentAccessor shape = schemaStore.getSchema(id);
-        merged.add(shaclValidator.parseShapeModel(shape));
+        contents.add(schemaStore.getSchema(id));
         resolvedIds.add(id);
       }
-      return new SchemaResolutionResult(merged, resolvedIds, resolvedIds);
+      return new SchemaResolutionResult(contents, resolvedIds, resolvedIds);
     }
 
     if (Boolean.TRUE.equals(validateAll)) {
@@ -384,89 +285,46 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       if (composite == null) {
         throw new NotFoundException("No SHACL shapes found for validation");
       }
-      Model shapesModel = shaclValidator.parseShapeModel(composite);
       List<String> allIds = schemaStore.getSchemaList().getOrDefault(SchemaType.SHAPE, List.of());
-      return new SchemaResolutionResult(shapesModel, allIds, allIds);
+      return new SchemaResolutionResult(List.of(composite), allIds, allIds);
     }
 
     throw new NotFoundException(
         "No schemas specified for validation. Provide schemaIds or set validateAgainstAllSchemas=true.");
   }
 
-  /**
-   * Resolves a single non-RDF (JSON or XML) schema for validation.
-   */
-  private SchemaContentResult resolveNonRdfSchema(
-      List<String> schemaIds, Boolean validateAll, SchemaType expectedType, String assetId) {
-    if (schemaIds != null && !schemaIds.isEmpty()) {
-      if (schemaIds.size() > 1) {
-        throw new ClientException(
-            "JSON and XML Schema validation supports exactly one schema per request, but "
-                + schemaIds.size() + " were provided.");
-      }
-      String id = schemaIds.get(0);
-      SchemaRecord record = schemaStore.getSchemaRecord(id);
-      if (record.type() != expectedType) {
-        throw new ClientException(
-            "Schema " + id + " has type " + record.type()
-                + " but asset " + assetId + " requires a " + expectedType + " schema.");
-      }
-      return new SchemaContentResult(schemaStore.getSchema(id), List.of(id), List.of(id));
+  // --- Strategy helpers ---
+
+  private ValidationStrategy findStrategyFor(SchemaRecord record) {
+    return strategies.stream()
+        .filter(s -> s.acceptsSchema(record))
+        .findFirst()
+        .orElseThrow(() -> new ClientException(
+            "Schema " + record.getId() + " has type " + record.type()
+                + " which is not supported for on-demand validation. Supported types: SHAPE, JSON, XML."));
+  }
+
+  private SchemaType schemaStoreType(ValidationStrategy strategy) {
+    return switch (strategy.type()) {
+      case SHACL -> SchemaType.SHAPE;
+      case JSON_SCHEMA -> SchemaType.JSON;
+      case XML_SCHEMA -> SchemaType.XML;
+      default -> throw new ServerException("Unknown validator type: " + strategy.type());
+    };
+  }
+
+  private ContentAccessor resolveAllSchemasContent(ValidationStrategy strategy, SchemaType schemaType) {
+    if (strategy.type() == ValidatorType.SHACL) {
+      return schemaStore.getCompositeSchema(schemaType);
     }
-
-    if (Boolean.TRUE.equals(validateAll)) {
-      ContentAccessor schema = schemaStore.getLatestSchemaByType(expectedType);
-      if (schema == null) {
-        throw new NotFoundException("No " + expectedType + " schema found for validation");
-      }
-      List<String> allIds = schemaStore.getSchemaList().getOrDefault(expectedType, List.of());
-      return new SchemaContentResult(schema, allIds, allIds);
-    }
-
-    throw new NotFoundException(
-        "No schemas specified for validation. Provide schemaIds or set validateAgainstAllSchemas=true.");
+    return schemaStore.getLatestSchemaByType(schemaType);
   }
 
-  // --- Helpers ---
-
-  /**
-   * Groups schema IDs by their SchemaType, loading each record from the schema store.
-   * Throws {@link ClientException} for schema types not supported in on-demand validation (e.g., ONTOLOGY).
-   */
-  private Map<SchemaType, List<String>> groupSchemasByType(List<String> schemaIds) {
-    Map<SchemaType, List<String>> grouped = new HashMap<>();
-    for (String id : schemaIds) {
-      SchemaRecord record = schemaStore.getSchemaRecord(id);
-      SchemaType type = record.type();
-      if (type != SchemaType.SHAPE && type != SchemaType.JSON && type != SchemaType.XML) {
-        throw new ClientException("Schema " + id + " has type " + type
-            + " which is not supported for on-demand validation. Supported types: SHAPE, JSON, XML.");
-      }
-      grouped.computeIfAbsent(type, k -> new ArrayList<>()).add(id);
-    }
-    return grouped;
-  }
-
-  private boolean isJsonLdContent(String content) {
-    return content.startsWith(JSON_LD_CONTENT_PREFIX);
-  }
-
-  private boolean isRdfXmlContent(String content) {
-    return content.startsWith(RDF_XML_CONTENT_PREFIX_1) || content.startsWith(RDF_XML_CONTENT_PREFIX_2);
-  }
+  // --- General helpers ---
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
       throw new VerificationException("Validation module " + moduleType + " is disabled");
-    }
-  }
-
-  private ContentAccessor readFileStoreContent(AssetMetadata asset) {
-    try {
-      return fileStore.readFile(asset.getAssetHash());
-    } catch (IOException e) {
-      throw new ServerException(
-          "Failed to read asset content from file store for asset " + asset.getId() + ": " + e.getMessage(), e);
     }
   }
 
@@ -499,15 +357,18 @@ public class AssetValidationServiceImpl implements AssetValidationService {
   // --- Internal DTOs ---
 
   /**
-   * Holds a resolved SHACL shapes model, the resolved schema IDs, and validator IDs for storage.
+   * Holds resolved SHACL schema ContentAccessors, schema IDs, and validator IDs for storage.
    */
-  private record SchemaResolutionResult(Model shapesModel, List<String> schemaIds, List<String> validatorIds) {
+  private record SchemaResolutionResult(
+      List<ContentAccessor> schemaContents, List<String> schemaIds, List<String> validatorIds) {
   }
 
   /**
-   * Holds a resolved non-RDF (JSON/XML) schema, the resolved schema IDs, and validator IDs.
+   * Binds a {@link ValidationStrategy} to the pre-resolved schema content and IDs for one dispatch.
    */
-  private record SchemaContentResult(ContentAccessor schemaContent, List<String> schemaIds,
-                                     List<String> validatorIds) {
+  private record StrategyJob(
+      ValidationStrategy strategy,
+      List<ContentAccessor> schemaContents,
+      List<String> schemaIds) {
   }
 }

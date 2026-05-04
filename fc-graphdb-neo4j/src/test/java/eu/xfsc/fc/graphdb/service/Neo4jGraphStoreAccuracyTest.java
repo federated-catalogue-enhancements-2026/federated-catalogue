@@ -6,7 +6,12 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.pojo.*;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
@@ -31,6 +36,7 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -72,7 +78,7 @@ import java.util.Map;
 	VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, ValidatorCacheJpaDao.class,
 	DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
         CredentialVerificationStrategy.class, ClaimExtractionService.class, JenaAllTriplesExtractor.class,
-        SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        RdfAssetParser.class, SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 	AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
 	JwtContentPreprocessor.class, Vc2Processor.class, JwtSignatureVerifier.class, DidDocumentResolver.class,
         FormatDetector.class, LoireJwtParser.class, LoireMatcher.class, DanubeTechFormatMatcher.class})

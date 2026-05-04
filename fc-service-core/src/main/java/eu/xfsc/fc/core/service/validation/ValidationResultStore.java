@@ -40,7 +40,7 @@ public interface ValidationResultStore {
   /**
    * Writes {@code fcmeta:} triples for the given result to the graph store and updates
    * {@code graph_sync_status} to {@code SYNCED} on success or {@code FAILED} on error.
-   * Used during graph rebuild to restore triples from PostgreSQL state.
+   * Used during graph rebuild to restore triples from the relational DB.
    */
   void syncToGraph(ValidationResult result, GraphStore graphStore);
 

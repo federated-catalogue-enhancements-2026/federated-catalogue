@@ -123,9 +123,8 @@ public class Neo4jGraphStore implements GraphStore {
      */
     @Override
     public void addClaims(List<RdfClaim> claimList, String credentialSubject) {
-        log.debug("addClaims.enter; got claims: {}, subject: {}", claimList, credentialSubject);
         if (!claimList.isEmpty()) {
-            try (Session session = driver.session()) { 
+            try (Session session = driver.session()) {
                 Pair<String, Set<String>> props = claimValidator.resolveClaims(claimList, credentialSubject);
                 if (!props.getRight().isEmpty()) {
                     updateGraphConfig(session, props.getRight());
@@ -134,7 +133,6 @@ public class Neo4jGraphStore implements GraphStore {
                 log.debug("addClaims; inserted: {}", rs.consume());
             }
         }
-        log.debug("addClaims.exit");
     }
 
     /**
@@ -142,20 +140,17 @@ public class Neo4jGraphStore implements GraphStore {
      */
     @Override
     public void deleteClaims(String credentialSubject) {
-        log.debug("deleteClaims.enter; got subject: {}", credentialSubject);
         Map<String, Object> params = Map.of("uri", credentialSubject);
         try (Session session = driver.session()) {
-            Result rsDelelte = session.run(queryDelete, params);
-            log.debug("deleteClaims; deleted: {}", rsDelelte.consume());
+            Result rsDelete = session.run(queryDelete, params);
+            log.debug("deleteClaims; deleted: {}", rsDelete.consume());
             Result rsUpdate = session.run(queryUpdate, params);
             log.debug("deleteClaims; updated: {}", rsUpdate.consume());
         }
-        log.debug("deleteClaims.exit");
     }
 
     @Override
     public void deleteValidationResultClaims(String resultIri) {
-        log.debug("deleteValidationResultClaims.enter; resultIri={}", resultIri);
         try (Session session = driver.session()) {
             Result rs = session.run("MATCH (n {uri: $uri}) DETACH DELETE n", Map.of("uri", resultIri));
             log.debug("deleteValidationResultClaims; deleted: {}", rs.consume());
@@ -202,7 +197,6 @@ public class Neo4jGraphStore implements GraphStore {
         while (result.hasNext()) {
             org.neo4j.driver.Record record = result.next();
             Map<String, Object> map = record.asMap();
-            log.debug("doQuery; record: {}", map);
             Map<String, Object> outputMap = new HashMap<>();
             totalCount = (Long) map.getOrDefault("totalCount", Long.valueOf(resultList.size()));
             for (var entry : map.entrySet()) {
@@ -233,7 +227,6 @@ public class Neo4jGraphStore implements GraphStore {
             Collections.shuffle(resultList);
         }
 
-        log.debug("doQuery.exit; returning: {}", resultList);
         return new PaginatedResults<>(totalCount, resultList);
     }
 
@@ -264,7 +257,6 @@ public class Neo4jGraphStore implements GraphStore {
 
     private String getDynamicallyAddedCountClauseQuery(GraphQuery query) {
         if (query.isWithTotalCount()) {
-            log.debug("getDynamicallyAddedCountClauseQuery.enter; actual query: {}", query.getQuery());
             /*get string before statements and append count clause*/
             String statement = "return";
 
@@ -289,7 +281,6 @@ public class Neo4jGraphStore implements GraphStore {
             }
             /*finally combine both string */
             String finalString = subStringOfCount.append(actualQuery).toString();
-            log.debug("getDynamicallyAddedCountClauseQuery.exit; count query appended : {}", finalString);
             return finalString;
         }
         return query.getQuery();
