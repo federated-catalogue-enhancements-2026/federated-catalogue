@@ -165,7 +165,7 @@ class ValidationResultRepositoryTest {
         new String[]{assetId, "https://example.org/asset/other"}, new String[]{"ref/2"},
         true, GraphSyncStatus.SYNCED));
 
-    repository.markOutdatedByAssetId(assetId, "ASSET_UPDATED");
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_UPDATED.name());
 
     Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
     assertEquals(2, page.getTotalElements());
@@ -177,9 +177,17 @@ class ValidationResultRepositoryTest {
 
   @Test
   @Transactional
-  void markOutdatedByAssetId_noMatchingResults_isIdempotent() {
-    assertDoesNotThrow(
-        () -> repository.markOutdatedByAssetId("https://example.org/asset/none", "ASSET_REVOKED"));
+  void markOutdatedByAssetId_alreadyOutdated_isIdempotent() {
+    final String assetId = "https://example.org/asset/idem-1";
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_REVOKED.name());
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_REVOKED.name());
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(1, page.getTotalElements());
+    assertTrue(page.getContent().getFirst().isOutdated());
+    assertEquals(OutdatedReason.ASSET_REVOKED, page.getContent().getFirst().getOutdatedReason());
   }
 
   @Test

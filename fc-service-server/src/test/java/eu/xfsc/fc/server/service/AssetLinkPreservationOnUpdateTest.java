@@ -31,8 +31,10 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.core.util.CredentialConstants;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -66,10 +68,6 @@ public class AssetLinkPreservationOnUpdateTest {
 
   private static final String TEST_ISSUER = "http://example.org/test-issuer";
   private static final String MR_IRI = "did:web:test:preservation-mr";
-  private static final String FCMETA_NS =
-      "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#";
-  private static final String FCMETA_HAS_HUMAN_READABLE = FCMETA_NS + "hasHumanReadable";
-  private static final String CRED_SUBJECT_URI = "https://www.w3.org/2018/credentials#credentialSubject";
 
   @Autowired
   private WebApplicationContext context;
@@ -83,6 +81,8 @@ public class AssetLinkPreservationOnUpdateTest {
   private AssetRepository assetRepository;
   @Autowired
   private GraphStore graphStore;
+  @Autowired
+  private ProtectedNamespaceProperties namespaceProperties;
 
   @BeforeAll
   void setup() {
@@ -175,7 +175,8 @@ public class AssetLinkPreservationOnUpdateTest {
           <<(?s ?p ?o)>> <%s> <%s> .
           FILTER(?s = <%s> && ?p = <%s>)
         }
-        """.formatted(CRED_SUBJECT_URI, MR_IRI, MR_IRI, FCMETA_HAS_HUMAN_READABLE);
+        """.formatted(CredentialConstants.CREDENTIAL_SUBJECT_URI, MR_IRI, MR_IRI,
+            namespaceProperties.getNamespace() + "hasHumanReadable");
     final var results = graphStore.queryData(
         new GraphQuery(sparql, Map.of(), QueryLanguage.SPARQL, GraphQuery.QUERY_TIMEOUT, false));
 

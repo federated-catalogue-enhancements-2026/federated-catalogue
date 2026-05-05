@@ -21,22 +21,14 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
   Page<ValidationResult> findByAssetId(@Param("assetId") String assetId, Pageable pageable);
 
   /**
-   * Mark all validation results for a given asset as outdated with a reason.
-   *
-   * <p>Uses native query to directly update the DB. Called when an asset is updated or
-   * revoked to stale-date its previous validation history.</p>
+   * Marks all validation results that reference the given asset ID as outdated with the supplied reason.
    */
   @Modifying(clearAutomatically = true)
   @Query(value = "UPDATE validation_result SET outdated = true, outdated_reason = :reason "
       + "WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
   void markOutdatedByAssetId(@Param("assetId") String assetId, @Param("reason") String reason);
 
-  /**
-   * Delete all validation results for a given asset.
-   *
-   * <p>Used during asset deletion to clean up validation history when the asset itself
-   * is removed.</p>
-   */
+  /** Deletes all validation results that reference the given asset ID. */
   @Modifying
   @Query(value = "DELETE FROM validation_result WHERE :assetId = ANY(asset_ids)",
       nativeQuery = true)

@@ -4,7 +4,7 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-  <changeSet id="015-validation-result-outdated" author="CAT-FR-LM-04">
+  <changeSet id="015-validation-result-outdated" author="saackef">
     <addColumn tableName="validation_result">
       <column name="outdated" type="boolean" defaultValueBoolean="false">
         <constraints nullable="false"/>

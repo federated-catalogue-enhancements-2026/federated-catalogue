@@ -12,6 +12,8 @@ import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
+import eu.xfsc.fc.core.dao.validation.OutdatedReason;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
@@ -32,6 +34,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -133,6 +136,24 @@ class AssetStoreCascadeDeleteTest {
     assetStore.deleteAsset(meta.getAssetHash());
 
     verify(validationResultStore).deleteByAssetId(meta.getId());
+  }
+
+  @Test
+  void storeCredential_existingAssetId_marksValidationResultsOutdated() {
+    storeNonRdfAsset(MR_ID, "update-test-v1");
+
+    final byte[] contentV2 = "update-test-v2".getBytes(StandardCharsets.UTF_8);
+    final Instant now = Instant.now();
+    final AssetMetadata meta = new AssetMetadata(
+        HashUtils.calculateSha256AsHex(contentV2), MR_ID, AssetStatus.ACTIVE,
+        TEST_ISSUER, null, now, now, new ContentAccessorBinary(contentV2));
+    meta.setContentType("application/ld+json");
+    meta.setFileSize((long) contentV2.length);
+
+    assetStore.storeCredential(meta, new CredentialVerificationResult(
+        now, "active", TEST_ISSUER, now, MR_ID, List.of(), null));
+
+    verify(validationResultStore).markOutdatedByAssetId(MR_ID, OutdatedReason.ASSET_UPDATED);
   }
 
   @Test

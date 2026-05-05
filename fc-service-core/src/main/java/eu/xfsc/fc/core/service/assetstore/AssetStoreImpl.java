@@ -203,10 +203,7 @@ public class AssetStoreImpl implements AssetStore {
   private void deleteAsset(final String hash, final boolean cascading) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
     // Only cascade from MR → HR once; a cascading call never triggers a further cascade.
-    final String hrHashToCascade = cascading ? null : assetOpt
-        .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
-        .map(a -> a.getLinkedAsset().getAssetHash())
-        .orElse(null);
+    final String hrHashToCascade = cascading ? null : assetOpt.map(this::findHumanReadableAssetHash).orElse(null);
 
     assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> {
       final Asset peer = a.getLinkedAsset();
@@ -350,6 +347,13 @@ public class AssetStoreImpl implements AssetStore {
     } catch (Exception ex) {
       log.warn("tryRewriteLinkTriples; failed to restore link triples after graph rebuild for asset {}", assetId, ex);
     }
+  }
+
+  private String findHumanReadableAssetHash(Asset asset) {
+    if (asset.getAssetType() != AssetType.MACHINE_READABLE || asset.getLinkedAsset() == null) {
+      return null;
+    }
+    return asset.getLinkedAsset().getAssetHash();
   }
 
   private void writeLinkTriples(String mrIri, String hrIri) {
