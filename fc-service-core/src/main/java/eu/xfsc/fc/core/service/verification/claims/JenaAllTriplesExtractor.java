@@ -3,7 +3,7 @@ package eu.xfsc.fc.core.service.verification.claims;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.RdfClaim;
-import eu.xfsc.fc.core.util.RdfFormatDetector;
+import eu.xfsc.fc.core.util.CredentialFormatDetector;
 import eu.xfsc.fc.core.util.RdfNodeMapper;
 
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ public class JenaAllTriplesExtractor implements ClaimExtractor {
   @Override
   public List<RdfClaim> extractClaims(ContentAccessor content) {
     String body = content.getContentAsString();
-    Lang lang = RdfFormatDetector.detect(content.getContentType(), body);
+    Lang lang = CredentialFormatDetector.detect(content.getContentType(), body);
     Model model = parseWithFallback(body, lang);
     List<RdfClaim> claims = new ArrayList<>();
     StmtIterator it = model.listStatements();

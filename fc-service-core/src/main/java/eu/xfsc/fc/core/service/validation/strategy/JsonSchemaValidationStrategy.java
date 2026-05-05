@@ -63,8 +63,10 @@ public class JsonSchemaValidationStrategy implements ValidationStrategy {
   @Override
   public boolean appliesTo(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
-    
-    // RDF assets (including JSON-LD) must use SHACL, not JSON Schema
+
+    // A non-null ContentAccessor marks an RDF asset (the content is held as a pre-parsed object).
+    // RDF assets - including JSON-LD - must be validated via SHACL, not JSON Schema.
+    // Non-RDF JSON assets have no ContentAccessor; their type is identified by content-type below.
     if (content != null) {
       return false;
     }

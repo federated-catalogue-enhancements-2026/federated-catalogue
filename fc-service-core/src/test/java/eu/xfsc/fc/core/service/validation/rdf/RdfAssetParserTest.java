@@ -95,6 +95,14 @@ class RdfAssetParserTest {
   }
 
   @Test
+  void isJsonLd_rdfXmlContent_returnsFalse() {
+    String rdfXmlContent = "<?xml version=\"1.0\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"/>";
+    AssetMetadata asset = buildAssetWithContent("http://example.org/a", rdfXmlContent);
+
+    assertFalse(rdfAssetParser.isJsonLd(asset));
+  }
+
+  @Test
   void isRdfXml_xmlContent_returnsTrue() {
     String rdfXmlContent = "<?xml version=\"1.0\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"/>";
     AssetMetadata asset = buildAssetWithContent("http://example.org/a", rdfXmlContent);
@@ -109,7 +117,14 @@ class RdfAssetParserTest {
     assertFalse(rdfAssetParser.isRdfXml(asset));
   }
 
-  // --- helpers ---
+  
+  @Test
+  void isRdfXml_turtleContent_returnsFalse() {
+    AssetMetadata asset = buildTurtleAsset("http://example.org/a", TURTLE_PERSON);
+
+    assertFalse(rdfAssetParser.isRdfXml(asset));
+  }
+
 
   private static AssetMetadata buildTurtleAsset(String id, String turtleContent) {
     AssetMetadata asset = new AssetMetadata();

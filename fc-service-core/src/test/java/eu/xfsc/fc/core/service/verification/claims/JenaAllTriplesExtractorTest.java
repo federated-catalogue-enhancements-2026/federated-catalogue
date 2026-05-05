@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.RdfClaim;
-import eu.xfsc.fc.core.util.RdfFormatDetector;
 
 import java.util.List;
 
@@ -17,14 +16,8 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.riot.Lang;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import java.util.stream.Stream;
 
 /**
  * Unit tests for {@link JenaAllTriplesExtractor}.
@@ -82,36 +75,6 @@ class JenaAllTriplesExtractorTest {
     assertEquals(claim.getObjectString(), result);
     assertFalse(result.startsWith("<"), "Blank node must not be formatted as IRI");
     assertFalse(result.startsWith("\""), "Blank node must not be formatted as literal");
-  }
-
-  // --- RdfFormatDetector ---
-
-  @ParameterizedTest(name = "{index} => contentType: {0}, rawContent: {1}, expected: {2}")
-  @MethodSource("detectRdfLangTestCases")
-  void detectRdfLang_returnsCorrectLanguage(String contentType, String rawContent, Lang expected) {
-    assertEquals(expected, RdfFormatDetector.detect(contentType, rawContent));
-  }
-
-  private static Stream<Arguments> detectRdfLangTestCases() {
-    return Stream.of(
-        // content-type detection
-        Arguments.of("text/turtle", null, Lang.TURTLE),
-        Arguments.of("application/n-triples", null, Lang.NT),
-        Arguments.of("application/rdf+xml", null, Lang.RDFXML),
-        Arguments.of("application/ld+json", null, Lang.JSONLD11),
-        Arguments.of("application/json", null, Lang.JSONLD11),
-        Arguments.of("application/vc+ld+json", null, Lang.JSONLD11),
-        // content-type with charset param
-        Arguments.of("application/ld+json; charset=UTF-8", null, Lang.JSONLD11),
-        // content inspection fallback
-        Arguments.of(null, "{\"@context\": {}}", Lang.JSONLD11),
-        Arguments.of(null, "@prefix ex: <http://example.org/> .", Lang.TURTLE),
-        Arguments.of(null, "<?xml version=\"1.0\"?>", Lang.RDFXML),
-        Arguments.of(null, "<rdf:RDF", Lang.RDFXML),
-        // default when nothing matches
-        Arguments.of(null, null, Lang.NT),
-        Arguments.of("unknown/type", null, Lang.NT)
-    );
   }
 
   // --- extractClaims: parse formats ---

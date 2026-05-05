@@ -85,18 +85,25 @@ class AssetValidationServiceImplTest {
     when(jsonSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.JSON_SCHEMA);
     when(jsonSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
         inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.JSON);
-    when(jsonSchemaValidationStrategy.appliesTo(any())).thenAnswer(
-        inv -> isJsonApplicable((AssetMetadata) inv.getArgument(0)));
+    when(jsonSchemaValidationStrategy.appliesTo(any())).thenAnswer(inv -> {
+        AssetMetadata a = (AssetMetadata) inv.getArgument(0);
+        if (a.getContentAccessor() != null) return false;
+        String ct = a.getContentType();
+        return ct != null && (ct.contains("application/json") || ct.contains("application/schema+json"));
+    });
 
     when(xmlSchemaValidationStrategy.type()).thenReturn(ValidatorType.XML_SCHEMA);
     when(xmlSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.XML_SCHEMA);
     when(xmlSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
         inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.XML);
-    when(xmlSchemaValidationStrategy.appliesTo(any())).thenAnswer(
-        inv -> isXmlApplicable((AssetMetadata) inv.getArgument(0)));
+    when(xmlSchemaValidationStrategy.appliesTo(any())).thenAnswer(inv -> {
+        AssetMetadata a = (AssetMetadata) inv.getArgument(0);
+        if (a.getContentAccessor() != null) return false;
+        String ct = a.getContentType();
+        return ct != null && (ct.contains("application/xml") || ct.contains("text/xml"));
+    });
   }
 
-  // --- constants ---
 
   private static final String ASSET_ID = "https://example.org/asset/1";
   private static final String ASSET_ID_2 = "https://example.org/asset/2";
@@ -217,7 +224,8 @@ class AssetValidationServiceImplTest {
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
     // RDF assets (JSON-LD) are not applicable to JSON Schema validation - throws ClientException before module check
-    assertThrows(ClientException.class, () -> service.validateAssets(request));
+    ClientException ex = assertThrows(ClientException.class, () -> service.validateAssets(request));
+    assertTrue(ex.getMessage().contains("not applicable"), "Exception should explain why: " + ex.getMessage());
   }
 
   @Test
@@ -1164,23 +1172,5 @@ class AssetValidationServiceImplTest {
 
   private void givenXmlModuleEnabled() {
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(true);
-  }
-
-  private static boolean isJsonApplicable(AssetMetadata asset) {
-    // RDF assets (including JSON-LD) must use SHACL, not JSON Schema
-    if (asset.getContentAccessor() != null) {
-      return false;
-    }
-    String ct = asset.getContentType();
-    return ct != null && (ct.contains("application/json") || ct.contains("application/schema+json"));
-  }
-
-  private static boolean isXmlApplicable(AssetMetadata asset) {
-    // RDF assets (including RDF/XML) must use SHACL, not XML Schema
-    if (asset.getContentAccessor() != null) {
-      return false;
-    }
-    String ct = asset.getContentType();
-    return ct != null && (ct.contains("application/xml") || ct.contains("text/xml"));
   }
 }

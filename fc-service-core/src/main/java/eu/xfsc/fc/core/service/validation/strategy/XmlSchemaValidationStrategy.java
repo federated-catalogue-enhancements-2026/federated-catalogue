@@ -68,8 +68,10 @@ public class XmlSchemaValidationStrategy implements ValidationStrategy {
   @Override
   public boolean appliesTo(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
-    
-    // RDF assets (including RDF/XML) must use SHACL, not XML Schema
+
+    // A non-null ContentAccessor marks an RDF asset (the content is held as a pre-parsed object).
+    // RDF assets - including RDF/XML - must be validated via SHACL, not XML Schema.
+    // Non-RDF XML assets have no ContentAccessor; their type is identified by content-type below.
     if (content != null) {
       return false;
     }

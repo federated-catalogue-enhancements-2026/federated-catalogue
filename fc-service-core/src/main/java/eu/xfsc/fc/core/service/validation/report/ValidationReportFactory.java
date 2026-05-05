@@ -6,8 +6,7 @@ import eu.xfsc.fc.api.generated.model.ValidationViolation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
@@ -23,8 +22,8 @@ import org.xml.sax.SAXException;
  * implementations contain no {@code new ValidationReport()} / {@code new ValidationViolation()}
  * boilerplate.</p>
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class ValidationReportFactory {
+@UtilityClass
+public class ValidationReportFactory {
 
   private static final String SHACL_NS = "http://www.w3.org/ns/shacl#";
   private static final Map<String, ValidationViolation.SeverityEnum> SHACL_SEVERITY_MAP = Map.of(

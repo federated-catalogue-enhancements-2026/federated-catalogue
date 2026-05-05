@@ -767,7 +767,8 @@ components:
           minItems: 1
           maxItems: 20
           description: >
-            1–20 asset IRIs to validate. A single-ID request runs full type-based dispatch
+            Asset IRIs to validate (1 up to the configured maximum, default 20 - see
+            `federated-catalogue.validation.max-assets-per-request`). A single-ID request runs full type-based dispatch
             (SHACL for RDF assets, JSON Schema for JSON, XML Schema for XML).
             Multiple IDs merge all assets into a single data graph for SHACL-only validation;
             all assets must be RDF assets in that case.
@@ -1481,7 +1482,8 @@ paths:
         validate via SHACL (and optionally JSON Schema / XML Schema if the serialisation
         matches); non-RDF assets validate via JSON Schema or XML Schema. A multi-ID request
         merges all asset content into a single data graph and validates via SHACL only
-        (R₁ ∪ R₂ against S); all assets must be RDF assets. Maximum 20 assets per request.
+        (R₁ ∪ R₂ against S); all assets must be RDF assets. Maximum number of assets per request
+        is configurable via `federated-catalogue.validation.max-assets-per-request` (default: 20).
       operationId: validateAssets
       security:
         - jwt: []

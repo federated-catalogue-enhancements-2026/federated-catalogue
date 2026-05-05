@@ -75,7 +75,12 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       return validateMultipleAssets(assetIds, schemaIds, validateAll, validatedAt);
     }
 
-    AssetMetadata asset = assetStore.getById(assetIds.get(0));
+    return validateSingleAsset(assetIds.get(0), schemaIds, validateAll, validatedAt);
+  }
+
+  private ValidationResponse validateSingleAsset(
+      String assetId, List<String> schemaIds, Boolean validateAll, Instant validatedAt) {
+    AssetMetadata asset = assetStore.getById(assetId);
 
     if (asset.getContentAccessor() == null) {
       boolean anyApplies = strategies.stream().anyMatch(s -> s.appliesTo(asset));
@@ -167,7 +172,9 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
       if (!strategy.appliesTo(asset)) {
         throw new ClientException(
-            "Schema type " + records.get(0).type() + " is not applicable to asset " + asset.getId());
+            "Schema type " + records.get(0).type() + " is not applicable to asset " + asset.getId()
+                + ". RDF assets must be validated via SHACL (SHAPE schema type)."
+                + " Non-RDF assets use JSON or XML schemas.");
       }
       requireModuleEnabled(strategy.moduleType());
 
@@ -340,6 +347,16 @@ public class AssetValidationServiceImpl implements AssetValidationService {
         rawReport));
   }
 
+
+  /**
+   * Builds the {@link ValidationResponse} for a completed validation run.
+   *
+   * <p>When multiple strategies ran (for example SHACL plus JSON Schema in a single request),
+   * the response report is the first <em>failing</em> report, or the first report overall
+   * if all strategies conformed. This means only one report is surfaced per response;
+   * all result IDs are included regardless. The report is omitted entirely when the
+   * overall result conforms.</p>
+   */
   private ValidationResponse buildResponse(List<String> assetIds, List<String> schemaIds,
       ValidationReport report, List<Long> validationResultIds, Instant validatedAt) {
     ValidationResponse response = new ValidationResponse();
