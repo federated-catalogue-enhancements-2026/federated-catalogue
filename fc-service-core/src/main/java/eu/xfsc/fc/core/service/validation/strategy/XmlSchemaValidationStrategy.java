@@ -47,8 +47,6 @@ public class XmlSchemaValidationStrategy implements ValidationStrategy {
 
   private static final String MEDIA_TYPE_XML = "application/xml";
   private static final String MEDIA_TYPE_TEXT_XML = "text/xml";
-  private static final String RDF_XML_PREFIX_1 = "<?xml";
-  private static final String RDF_XML_PREFIX_2 = "<rdf:RDF";
 
   @Qualifier("assetFileStore")
   private final FileStore fileStore;
@@ -64,18 +62,19 @@ public class XmlSchemaValidationStrategy implements ValidationStrategy {
   }
 
   /**
-   * Returns {@code true} for non-RDF XML assets (checked by content type) and
-   * RDF/XML serialized RDF assets (checked by content prefix).
+   * Returns {@code true} for non-RDF XML assets only.
+   * RDF assets (including RDF/XML) should use SHACL validation.
    */
   @Override
   public boolean appliesTo(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
-    if (content == null) {
-      String ct = asset.getContentType();
-      return ct != null && (ct.contains(MEDIA_TYPE_XML) || ct.contains(MEDIA_TYPE_TEXT_XML));
+    
+    // RDF assets (including RDF/XML) must use SHACL, not XML Schema
+    if (content != null) {
+      return false;
     }
-    String raw = content.getContentAsString().strip();
-    return raw.startsWith(RDF_XML_PREFIX_1) || raw.startsWith(RDF_XML_PREFIX_2);
+    String ct = asset.getContentType();
+    return ct != null && (ct.contains(MEDIA_TYPE_XML) || ct.contains(MEDIA_TYPE_TEXT_XML));
   }
 
   @Override

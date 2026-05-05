@@ -41,9 +41,6 @@ public class JsonSchemaValidationStrategy implements ValidationStrategy {
 
   private static final String MEDIA_TYPE_JSON = "application/json";
   private static final String MEDIA_TYPE_SCHEMA_JSON = "application/schema+json";
-  private static final String JSON_LD_PREFIX = "{";
-  private static final String RDF_XML_PREFIX_1 = "<?xml";
-  private static final String RDF_XML_PREFIX_2 = "<rdf:RDF";
 
   @Qualifier("assetFileStore")
   private final FileStore fileStore;
@@ -60,20 +57,19 @@ public class JsonSchemaValidationStrategy implements ValidationStrategy {
   }
 
   /**
-   * Returns {@code true} for non-RDF JSON assets and JSON-LD serialized RDF assets.
-   * Returns {@code false} for RDF/XML assets and non-JSON RDF serializations.
+   * Returns {@code true} for non-RDF JSON assets only.
+   * RDF assets (including JSON-LD) should use SHACL validation.
    */
   @Override
   public boolean appliesTo(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
-    if (content == null) {
-      String ct = asset.getContentType();
-      return ct != null && (ct.contains(MEDIA_TYPE_JSON) || ct.contains(MEDIA_TYPE_SCHEMA_JSON));
+    
+    // RDF assets (including JSON-LD) must use SHACL, not JSON Schema
+    if (content != null) {
+      return false;
     }
-    String raw = content.getContentAsString().strip();
-    return raw.startsWith(JSON_LD_PREFIX)
-        && !raw.startsWith(RDF_XML_PREFIX_1)
-        && !raw.startsWith(RDF_XML_PREFIX_2);
+    String ct = asset.getContentType();
+    return ct != null && (ct.contains(MEDIA_TYPE_JSON) || ct.contains(MEDIA_TYPE_SCHEMA_JSON));
   }
 
   @Override

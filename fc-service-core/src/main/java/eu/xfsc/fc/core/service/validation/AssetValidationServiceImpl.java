@@ -37,8 +37,8 @@ import java.util.Map;
  * {@link ValidationResultStore}.</p>
  *
  * <p>Multi-asset requests are restricted to SHACL validation. Single-asset requests support
- * all registered strategies (SHACL for RDF assets, JSON Schema for JSON and JSON-LD,
- * XML Schema for XML and RDF/XML). Each applicable strategy stores an independent
+ * all registered strategies (SHACL for RDF assets, JSON Schema for non-RDF JSON,
+ * XML Schema for non-RDF XML). Each applicable strategy stores an independent
  * {@link eu.xfsc.fc.core.dao.validation.ValidationResult}.</p>
  */
 @Service

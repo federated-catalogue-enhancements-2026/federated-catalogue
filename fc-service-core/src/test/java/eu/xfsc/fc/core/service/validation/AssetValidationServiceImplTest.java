@@ -207,7 +207,7 @@ class AssetValidationServiceImplTest {
   }
 
   @Test
-  void validateAsset_jsonLdRdfAsset_withExplicitJsonSchema_jsonModuleDisabled_throwsVerificationException() {
+  void validateAsset_jsonLdRdfAsset_withExplicitJsonSchema_jsonModuleDisabled_throwsClientException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
@@ -216,11 +216,12 @@ class AssetValidationServiceImplTest {
     request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(JSON_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAssets(request));
+    // RDF assets (JSON-LD) are not applicable to JSON Schema validation - throws ClientException before module check
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
-  void validateAsset_rdfXmlAsset_withExplicitXmlSchema_xmlModuleDisabled_throwsVerificationException() {
+  void validateAsset_rdfXmlAsset_withExplicitXmlSchema_xmlModuleDisabled_throwsClientException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfXmlAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
@@ -229,7 +230,8 @@ class AssetValidationServiceImplTest {
     request.setAssetIds(List.of(ASSET_ID));
     request.setSchemaIds(List.of(XML_SCHEMA_ID));
 
-    assertThrows(VerificationException.class, () -> service.validateAssets(request));
+    // RDF assets (RDF/XML) are not applicable to XML Schema validation - throws ClientException before module check
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   @Test
@@ -285,211 +287,107 @@ class AssetValidationServiceImplTest {
     assertThrows(VerificationException.class, () -> service.validateAssets(request));
   }
 
-  @Test
-  void validateAsset_jsonLdRdfAsset_validateAll_shaclDisabled_runsJsonSchemaOnly() {
-    AssetMetadata asset = buildRdfAsset(ASSET_ID);
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-
-    when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(false);
-    givenJsonModuleEnabled();
-    when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
-    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(40L);
-
-    ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
-    request.setValidateAgainstAllSchemas(true);
-
-    ValidationResponse response = service.validateAssets(request);
-
-    assertTrue(response.getConforms());
-    assertNull(response.getReport());
-    assertEquals(List.of(40L), response.getValidationResultIds());
-    assertEquals(List.of(JSON_SCHEMA_ID), response.getSchemaIds());
-    verify(validationResultStore, times(1)).store(any());
-
-    ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
-    verify(validationResultStore).store(captor.capture());
-    assertEquals(ValidatorType.JSON_SCHEMA, captor.getValue().validatorType());
-  }
+  // === Positive tests for RDF serializations + SHACL ===
 
   @Test
-  void validateAsset_jsonLdRdfAsset_validateAll_shaclEnabledNoShapes_runsJsonSchemaOnly() {
-    AssetMetadata asset = buildRdfAsset(ASSET_ID);
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
+  void validateAsset_rdfXmlAsset_withShapeSchema_returnsConformingResponse() {
+    AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
+    ContentAccessor shapeContent = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
-    givenJsonModuleEnabled();
-    when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
-    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(41L);
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
+    when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
+    when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
+    when(validationResultStore.store(any())).thenReturn(50L);
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
-    request.setValidateAgainstAllSchemas(true);
+    request.setSchemaIds(List.of(SCHEMA_ID));
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
-    assertNull(response.getReport());
-    assertEquals(List.of(41L), response.getValidationResultIds());
-    assertEquals(List.of(JSON_SCHEMA_ID), response.getSchemaIds());
-
-    ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
-    verify(validationResultStore).store(captor.capture());
-    assertEquals(ValidatorType.JSON_SCHEMA, captor.getValue().validatorType());
-  }
-
-  // === validateAsset — RDF cross-paradigm (CAT-FR-CO-05 Note) ===
-
-  @Test
-  void validateAsset_jsonLdRdfAsset_withExplicitJsonSchema_storesJsonSchemaResult() {
-    AssetMetadata asset = buildRdfAsset(ASSET_ID);
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-
-    when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
-    when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(20L);
-
-    ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(JSON_SCHEMA_ID));
-
-    ValidationResponse response = service.validateAssets(request);
-
-    assertTrue(response.getConforms());
-    assertNull(response.getReport());
     assertEquals(List.of(ASSET_ID), response.getAssetIds());
-    assertEquals(List.of(JSON_SCHEMA_ID), response.getSchemaIds());
-    assertEquals(List.of(20L), response.getValidationResultIds());
-
-    ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
-    verify(validationResultStore).store(captor.capture());
-    assertEquals(ValidatorType.JSON_SCHEMA, captor.getValue().validatorType());
+    assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
+    assertEquals(List.of(50L), response.getValidationResultIds());
+    assertNull(response.getReport());
   }
 
   @Test
-  void validateAsset_rdfXmlAsset_withExplicitXmlSchema_storesXmlSchemaResult() {
+  void validateAsset_rdfXmlAsset_validateAll_runsShaclOnly() {
     AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
-    ContentAccessor xmlSchemaContent = new ContentAccessorDirect("<xs:schema/>");
+    ContentAccessor composite = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
-    when(schemaStore.getSchema(XML_SCHEMA_ID)).thenReturn(xmlSchemaContent);
-    when(xmlSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(21L);
+    givenShaclModuleEnabled();
+    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
+    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID)));
+    when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
+    when(validationResultStore.store(any())).thenReturn(51L);
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(XML_SCHEMA_ID));
+    request.setValidateAgainstAllSchemas(true);
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertNull(response.getReport());
-    assertEquals(List.of(XML_SCHEMA_ID), response.getSchemaIds());
-    assertEquals(List.of(21L), response.getValidationResultIds());
-
-    ArgumentCaptor<ValidationResultRecord> captor = ArgumentCaptor.forClass(ValidationResultRecord.class);
-    verify(validationResultStore).store(captor.capture());
-    assertEquals(ValidatorType.XML_SCHEMA, captor.getValue().validatorType());
+    assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
+    assertEquals(List.of(51L), response.getValidationResultIds());
   }
 
   @Test
-  void validateAsset_jsonLdRdfAsset_withShapeAndJsonSchema_storesTwoResultsAndReturnsBothIds() {
+  void validateAsset_jsonLdRdfAsset_withShapeSchema_returnsConformingResponse() {
     AssetMetadata asset = buildRdfAsset(ASSET_ID);
     ContentAccessor shapeContent = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    givenJsonModuleEnabled();
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
-    when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
     when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(20L, 21L);
+    when(validationResultStore.store(any())).thenReturn(52L);
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(SCHEMA_ID, JSON_SCHEMA_ID));
+    request.setSchemaIds(List.of(SCHEMA_ID));
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
+    assertEquals(List.of(ASSET_ID), response.getAssetIds());
+    assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
+    assertEquals(List.of(52L), response.getValidationResultIds());
     assertNull(response.getReport());
-    assertEquals(List.of(20L, 21L), response.getValidationResultIds());
-    assertEquals(List.of(SCHEMA_ID, JSON_SCHEMA_ID), response.getSchemaIds());
-    verify(validationResultStore, times(2)).store(any());
   }
 
   @Test
-  void validateAsset_jsonLdRdfAsset_withShapeAndJsonSchema_jsonFails_overallConformsIsFalse() {
+  void validateAsset_jsonLdRdfAsset_validateAll_runsShaclOnly() {
     AssetMetadata asset = buildRdfAsset(ASSET_ID);
-    ContentAccessor shapeContent = new ContentAccessorDirect("shape");
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
+    ContentAccessor composite = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
     givenShaclModuleEnabled();
-    givenJsonModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
-    when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
-    when(schemaStore.getSchema(JSON_SCHEMA_ID)).thenReturn(jsonSchemaContent);
+    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
+    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID)));
     when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(NON_CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(20L, 21L);
+    when(validationResultStore.store(any())).thenReturn(53L);
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(SCHEMA_ID, JSON_SCHEMA_ID));
-
-    ValidationResponse response = service.validateAssets(request);
-
-    assertFalse(response.getConforms());
-    assertNotNull(response.getReport());
-  }
-
-  @Test
-  void validateAsset_rdfXmlAsset_withShapeAndXmlSchema_storesTwoResultsAndReturnsBothIds() {
-    AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
-    ContentAccessor shapeContent = new ContentAccessorDirect("@prefix sh: <http://www.w3.org/ns/shacl#> .");
-    ContentAccessor xmlSchemaContent = new ContentAccessorDirect("<xs:schema/>");
-
-    when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    givenShaclModuleEnabled();
-    givenXmlModuleEnabled();
-    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
-    when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
-    when(schemaStore.getSchema(SCHEMA_ID)).thenReturn(shapeContent);
-    when(schemaStore.getSchema(XML_SCHEMA_ID)).thenReturn(xmlSchemaContent);
-    when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(xmlSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(22L, 23L);
-
-    ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
-    request.setSchemaIds(List.of(SCHEMA_ID, XML_SCHEMA_ID));
+    request.setValidateAgainstAllSchemas(true);
 
     ValidationResponse response = service.validateAssets(request);
 
     assertTrue(response.getConforms());
     assertNull(response.getReport());
-    assertEquals(List.of(22L, 23L), response.getValidationResultIds());
-    assertEquals(List.of(SCHEMA_ID, XML_SCHEMA_ID), response.getSchemaIds());
-    verify(validationResultStore, times(2)).store(any());
+    assertEquals(List.of(SCHEMA_ID), response.getSchemaIds());
+    assertEquals(List.of(53L), response.getValidationResultIds());
   }
+
+  // === Negative tests for RDF serializations + non-SHACL schemas ===
 
   @Test
   void validateAsset_rdfXmlAsset_withJsonSchema_throwsClientException() {
@@ -541,66 +439,6 @@ class AssetValidationServiceImplTest {
     request.setSchemaIds(List.of(XML_SCHEMA_ID, "https://example.org/schema/xml/2"));
 
     assertThrows(ClientException.class, () -> service.validateAssets(request));
-  }
-
-  @Test
-  void validateAsset_jsonLdRdfAsset_validateAll_runsShaclAndJsonSchema() {
-    AssetMetadata asset = buildRdfAsset(ASSET_ID);
-    ContentAccessor composite = new ContentAccessorDirect("shape composite");
-    ContentAccessor jsonSchemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
-
-    when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    givenShaclModuleEnabled();
-    givenJsonModuleEnabled();
-    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
-    when(schemaStore.getSchemaList()).thenReturn(
-        Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID), SchemaType.JSON, List.of(JSON_SCHEMA_ID)));
-    when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(jsonSchemaContent);
-    when(jsonSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(30L, 31L);
-
-    ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
-    request.setValidateAgainstAllSchemas(true);
-
-    ValidationResponse response = service.validateAssets(request);
-
-    assertTrue(response.getConforms());
-    assertNull(response.getReport());
-    assertEquals(List.of(30L, 31L), response.getValidationResultIds());
-    assertTrue(response.getSchemaIds().contains(SCHEMA_ID));
-    assertTrue(response.getSchemaIds().contains(JSON_SCHEMA_ID));
-    verify(validationResultStore, times(2)).store(any());
-  }
-
-  @Test
-  void validateAsset_rdfXmlAsset_validateAll_runsShaclAndXmlSchema() {
-    AssetMetadata asset = buildRdfXmlAsset(ASSET_ID);
-    ContentAccessor composite = new ContentAccessorDirect("shape composite");
-    ContentAccessor xmlSchemaContent = new ContentAccessorDirect("<xs:schema/>");
-
-    when(assetStore.getById(ASSET_ID)).thenReturn(asset);
-    givenShaclModuleEnabled();
-    givenXmlModuleEnabled();
-    when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(composite);
-    when(schemaStore.getSchemaList()).thenReturn(
-        Map.of(SchemaType.SHAPE, List.of(SCHEMA_ID), SchemaType.XML, List.of(XML_SCHEMA_ID)));
-    when(shaclValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(schemaStore.getLatestSchemaByType(SchemaType.XML)).thenReturn(xmlSchemaContent);
-    when(xmlSchemaValidationStrategy.validate(anyList(), anyList())).thenReturn(CONFORMING_REPORT);
-    when(validationResultStore.store(any())).thenReturn(32L, 33L);
-
-    ValidationRequest request = new ValidationRequest();
-    request.setAssetIds(List.of(ASSET_ID));
-    request.setValidateAgainstAllSchemas(true);
-
-    ValidationResponse response = service.validateAssets(request);
-
-    assertTrue(response.getConforms());
-    assertNull(response.getReport());
-    assertEquals(List.of(32L, 33L), response.getValidationResultIds());
-    verify(validationResultStore, times(2)).store(any());
   }
 
   @Test
@@ -1329,18 +1167,18 @@ class AssetValidationServiceImplTest {
   }
 
   private static boolean isJsonApplicable(AssetMetadata asset) {
+    // RDF assets (including JSON-LD) must use SHACL, not JSON Schema
     if (asset.getContentAccessor() != null) {
-      String raw = asset.getContentAccessor().getContentAsString().strip();
-      return raw.startsWith("{") && !raw.startsWith("<?xml") && !raw.startsWith("<rdf:RDF");
+      return false;
     }
     String ct = asset.getContentType();
     return ct != null && (ct.contains("application/json") || ct.contains("application/schema+json"));
   }
 
   private static boolean isXmlApplicable(AssetMetadata asset) {
+    // RDF assets (including RDF/XML) must use SHACL, not XML Schema
     if (asset.getContentAccessor() != null) {
-      String raw = asset.getContentAccessor().getContentAsString().strip();
-      return raw.startsWith("<?xml") || raw.startsWith("<rdf:RDF");
+      return false;
     }
     String ct = asset.getContentType();
     return ct != null && (ct.contains("application/xml") || ct.contains("text/xml"));
