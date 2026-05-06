@@ -20,11 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of the {@link VerificationService} interface.
- * Acts as the Context in the Strategy pattern, delegating RDF verification
- * and data extraction logic to format-specific {@link VerificationStrategy} implementations.
- * Routes by RDF serialization format (JSON-LD, Turtle, N-Triples, RDF/XML).
- * 
- * <p>Currently delegates all RDF credentials to {@link CredentialVerificationStrategy} (JSON-LD only).
+ * Thin delegate over a single {@link VerificationStrategy} implementation
+ * ({@link CredentialVerificationStrategy} for W3C VC/VP credentials in JSON-LD form).
+ *
+ * <p>Credential-format dispatch (Loire-JWT vs. danubetech VC2) is handled inside the
+ * verifier via {@link CredentialFormatDetector}; it is not a sibling-strategy axis at
+ * this level. Structural validation of stored assets against stored schemas is the
+ * responsibility of {@code AssetValidationService}, not this service.
  */
 @Slf4j
 @Component
@@ -50,15 +52,6 @@ public class VerificationServiceImpl implements VerificationService {
     this.verifySchema = verifySchema;
   }
 
-  /**
-   * Resolves the appropriate {@link VerificationStrategy} for the given payload.
-   * Currently always returns the credential strategy. When future asset types require
-   * different verification logic (e.g., non-RDF, non-credential), this method is the
-   * extension point for payload-based routing.
-   *
-   * @param payload the RDF content used to determine which strategy to apply (currently always JSON-LD)
-   * @return the resolved strategy
-   */
   private VerificationStrategy resolveStrategy(ContentAccessor payload) {
     return credentialStrategy;
   }
