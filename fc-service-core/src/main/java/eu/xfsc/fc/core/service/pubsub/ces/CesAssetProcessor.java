@@ -27,7 +27,7 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
-import eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import eu.xfsc.fc.core.service.verification.VerificationService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -59,6 +59,8 @@ public class CesAssetProcessor {
 	private DidDocumentResolver didResolver;
 	@Autowired
 	private HttpDocumentResolver httpResolver;
+  @Autowired
+  private TrustFrameworkRegistry trustFrameworkRegistry;
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW) //, rollbackFor = Exception.class)
 	public int processCesEvent(CesTracking ctr, Map<String, Object> data) {
@@ -69,8 +71,7 @@ public class CesAssetProcessor {
 		    	String sub = jsonMapper.writeValueAsString(subject);
 		    	CesSubject ceSub = jsonMapper.readValue(sub, CesSubject.class);
 		    	ctr.setCredId(ceSub.getId());
-		    	TrustFrameworkBaseClass base = processibleSubject(ceSub);
-		    	if (base != null) {
+              if (isProcessibleSubject(ceSub)) {
 		    		if (processSubject(ceSub.getId(), ceSub.getGxIntegrity())) {
 		    			cnt++;
 		    		}
@@ -85,23 +86,17 @@ public class CesAssetProcessor {
 		return ctr.getCredProcessed();
 	}
 
-	private TrustFrameworkBaseClass processibleSubject(CesSubject ceSub) {
-		if (ceSub == null) {
-			return null;
+  private boolean isProcessibleSubject(CesSubject ceSub) {
+    if (ceSub == null || ceSub.getGxType() == null) {
+      return false;
 		}
 		String gxType = ceSub.getGxType();
-		if (gxType == null) {
-			return null;
+    if (!trustFrameworkRegistry.resolveRole(gxType).isResolved()) {
+      log.debug("isProcessibleSubject; type '{}' not recognized by registry — subject skipped"
+          + " (registry requires full URIs; CURIEs will not resolve)", gxType);
+      return false;
 		}
-		// TODO: get baseClass using ClaimsValidator.getSubjectType method.
-		// this will require some refactoring in VerificationService/SchemaStore/ClaimValidator classes..
-		if (gxType.endsWith(":LegalParticipant")) {
-			return TrustFrameworkBaseClass.PARTICIPANT;
-		}
-		if (gxType.endsWith(":ServiceOffering")) {
-			return TrustFrameworkBaseClass.SERVICE_OFFERING;
-		}
-		return null;
+    return true;
 	}
 	
 	private boolean processSubject(String subId, String subIntegrity) {

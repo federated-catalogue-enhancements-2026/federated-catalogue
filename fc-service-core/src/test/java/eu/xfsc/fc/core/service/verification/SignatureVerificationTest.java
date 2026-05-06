@@ -41,6 +41,7 @@ import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
+import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 
@@ -54,7 +55,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 @ContextConfiguration(classes = {SignatureVerificationTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
         VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class, DidDocumentResolver.class, ValidatorCacheJpaDao.class,
         ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class,
-        RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class})
+    RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class, TrustFrameworkRegistryConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class SignatureVerificationTest {

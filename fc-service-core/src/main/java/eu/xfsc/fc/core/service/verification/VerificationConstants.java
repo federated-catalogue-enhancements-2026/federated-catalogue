@@ -26,6 +26,20 @@ public final class VerificationConstants {
 
   public static final String VERIFIABLE_CREDENTIAL_KEY = "verifiableCredential";
 
+  /**
+   * Gaia-X 2511 role names as declared in the gaia-x-2511 bundle's {@code framework.yaml}.
+   * Used to dispatch result types and to validate the expected role at typed verification endpoints.
+   * Future work: eliminate these by driving dispatch from bundle metadata rather than hard-coded names.
+   */
+  public static final String ROLE_PARTICIPANT = "Participant";
+  public static final String ROLE_SERVICE_OFFERING = "ServiceOffering";
+  public static final String ROLE_RESOURCE = "Resource";
+
+  /**
+   * Property URI used to annotate graph claims with their source credential subject IRI.
+   */
+  public static final String GAIAX_CLAIMS_GRAPH_URI = "https://w3id.org/gaia-x/2511#claimsGraphUri";
+
   // W3C VC-JOSE-COSE media types (IANA-registered)
   public static final String MEDIA_TYPE_VC_JWT = "application/vc+jwt";
   public static final String MEDIA_TYPE_VP_JWT = "application/vp+jwt";
