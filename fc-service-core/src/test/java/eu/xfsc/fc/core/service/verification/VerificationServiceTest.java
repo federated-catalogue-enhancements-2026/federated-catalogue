@@ -28,30 +28,18 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.security.SecurityAuditorAware;
-import eu.xfsc.fc.core.config.DidResolverConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderProperties;
-import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
-import org.springframework.jdbc.core.JdbcTemplate;
-
+import eu.xfsc.fc.core.config.VerificationStackTestConfig;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
-import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
-import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
-import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
-import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
-import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
-import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
-import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
+import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.extern.slf4j.Slf4j;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -71,10 +59,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, FileStoreConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class,
-        VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, DatabaseConfig.class, DidResolverConfig.class, ValidatorCacheJpaDao.class, HttpDocumentResolver.class,
-        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class, JenaAllTriplesExtractor.class, ClaimExtractionService.class,
-    RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class, TrustFrameworkRegistryConfig.class})
+@ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, VerificationStackTestConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class VerificationServiceTest {
 

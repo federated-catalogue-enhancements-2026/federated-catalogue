@@ -20,27 +20,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import eu.xfsc.fc.core.config.DatabaseConfig;
-import eu.xfsc.fc.core.config.DidResolverConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderConfig;
-import eu.xfsc.fc.core.config.DocumentLoaderProperties;
-import eu.xfsc.fc.core.config.FileStoreConfig;
-import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
-import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
-import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
-import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
+import eu.xfsc.fc.core.config.VerificationStackTestConfig;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
-import eu.xfsc.fc.core.security.SecurityAuditorAware;
-import eu.xfsc.fc.core.service.resolve.DidDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
-import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
-import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
@@ -61,27 +48,8 @@ import lombok.extern.slf4j.Slf4j;
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@ContextConfiguration(classes = {
-    DatabaseConfig.class,
-    DidDocumentResolver.class,
-    DidResolverConfig.class,
-    DocumentLoaderConfig.class,
-    DocumentLoaderProperties.class,
-    FileStoreConfig.class,
-    LoireJwtParser.class,
-    ProtectedNamespaceFilter.class,
-    ProtectedNamespaceProperties.class,
-    RdfAssetParser.class,
-    RoleResolutionCharacterisationTest.TestApplication.class,
-    SchemaAuditRepository.class,
-    SchemaJpaDao.class,
-    SchemaStoreImpl.class,
-    SecurityAuditorAware.class,
-    ShaclValidationExecutor.class,
-    TrustFrameworkRegistryConfig.class,
-    ValidatorCacheJpaDao.class,
-    VerificationServiceImpl.class
-})
+@ContextConfiguration(classes = {RoleResolutionCharacterisationTest.TestApplication.class,
+    VerificationStackTestConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class RoleResolutionCharacterisationTest {
 
