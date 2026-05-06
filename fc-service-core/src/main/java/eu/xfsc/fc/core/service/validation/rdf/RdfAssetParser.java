@@ -8,8 +8,9 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
-import eu.xfsc.fc.core.util.RdfFormatDetector;
+import eu.xfsc.fc.core.util.CredentialFormatDetector;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -23,39 +24,33 @@ import org.springframework.stereotype.Service;
 /**
  * Parses RDF asset content and SHACL shapes into Jena {@link Model} instances.
  *
- * <p>Owns the application-scoped {@link StreamManager} backed by a context-cache locator and
- * JSON-LD {@link DocumentLoader}. Handles Loire JWT-wrapped credentials (Case A), plain
- * JSON-LD credentials (Case B), and other RDF serializations (Case C) via
- * {@link RdfFormatDetector} for format detection.</p>
+ * <p>This class is a Spring bean because it owns the application-scoped {@link StreamManager}
+ * lifecycle. The {@link StreamManager} is initialised once in {@link #init()} and shared across
+ * all parsing calls. {@link FileStore} is injected solely to back the {@link CachingLocator}
+ * registered with that {@link StreamManager}; it is not used in any parsing method directly.</p>
+ *
+ * <p>Parsing supports three input forms:</p>
+ * <ul>
+ *   <li>Loire JWT (starts with {@code "eyJ"}): unwrapped via {@link LoireJwtParser},
+ *       then parsed as JSON-LD 1.1.</li>
+ *   <li>Credential JSON-LD (starts with {@code "{"}): parsed directly as JSON-LD 1.1.</li>
+ *   <li>Other RDF serializations: format detected via {@link CredentialFormatDetector}.</li>
+ * </ul>
  *
  * <p>Content-type helpers {@link #isJsonLd} and {@link #isRdfXml} are used by validation
  * strategies to determine which assets they are applicable to.</p>
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RdfAssetParser {
 
-  // Loire JWT credentials start with a Base64url-encoded header
-  private static final String JWT_PREFIX = "eyJ";
-  private static final String JSON_LD_PREFIX = "{";
-  private static final String RDF_XML_PREFIX_1 = "<?xml";
-  private static final String RDF_XML_PREFIX_2 = "<rdf:RDF";
-
+  @Qualifier("contextCacheFileStore")
   private final FileStore fileStore;
   private final DocumentLoader documentLoader;
   private final LoireJwtParser loireJwtParser;
 
   private StreamManager streamManager;
-
-  /** Creates the parser with context-cache file store, JSON-LD document loader, and JWT unwrapper. */
-  public RdfAssetParser(
-      @Qualifier("contextCacheFileStore") FileStore fileStore,
-      DocumentLoader documentLoader,
-      LoireJwtParser loireJwtParser) {
-    this.fileStore = fileStore;
-    this.documentLoader = documentLoader;
-    this.loireJwtParser = loireJwtParser;
-  }
 
   @PostConstruct
   void init() {
@@ -72,9 +67,8 @@ public class RdfAssetParser {
   /**
    * Parses an RDF asset into a Jena {@link Model}.
    *
-   * <p>Case A — Loire JWT: content starts with {@code "eyJ"}, unwrapped via
-   * {@link LoireJwtParser} then parsed as JSON-LD 1.1. Case B — credential JSON-LD: parsed
-   * directly. Case C — other RDF: format detected via {@link RdfFormatDetector}.</p>
+   * <p>Loire JWTs are unwrapped first; JSON-LD content is parsed directly;
+   * other RDF serializations are detected via {@link CredentialFormatDetector}.</p>
    *
    * @param asset asset with non-null {@link AssetMetadata#getContentAccessor()}
    * @throws ClientException if the asset has no content or the RDF content is malformed
@@ -86,11 +80,11 @@ public class RdfAssetParser {
           "Asset " + asset.getId() + " is not an RDF asset and cannot be validated with SHACL");
     }
     String rawContent = content.getContentAsString().strip();
-    if (rawContent.startsWith(JWT_PREFIX)) {
+    if (rawContent.startsWith(CredentialFormatDetector.JWT_PREFIX)) {
       ContentAccessor unwrapped = loireJwtParser.unwrap(content);
       return parseRdfContent(unwrapped, Lang.JSONLD11);
     }
-    Lang lang = RdfFormatDetector.detect(asset.getContentType(), rawContent);
+    Lang lang = CredentialFormatDetector.detect(asset.getContentType(), rawContent);
     return parseRdfContent(content, lang);
   }
 
@@ -121,7 +115,7 @@ public class RdfAssetParser {
   public boolean isJsonLd(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
-      return content.getContentAsString().strip().startsWith(JSON_LD_PREFIX);
+      return content.getContentAsString().strip().startsWith(CredentialFormatDetector.JSON_LD_PREFIX);
     }
     String ct = asset.getContentType();
     return ct != null && (ct.contains("application/ld+json")
@@ -137,19 +131,10 @@ public class RdfAssetParser {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
       String raw = content.getContentAsString().strip();
-      return raw.startsWith(RDF_XML_PREFIX_1) || raw.startsWith(RDF_XML_PREFIX_2);
+      return raw.startsWith(CredentialFormatDetector.RDF_XML_PREFIX_1) || raw.startsWith(CredentialFormatDetector.RDF_XML_PREFIX_2);
     }
     String ct = asset.getContentType();
     return ct != null && ct.contains("rdf+xml");
-  }
-
-  /**
-   * Returns the shared {@link StreamManager} backed by the context-cache locator.
-   * Exposed for use by {@link eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl}
-   * to eliminate its duplicate stream-manager setup.
-   */
-  public StreamManager getStreamManager() {
-    return streamManager;
   }
 
   private Model parseRdfContent(ContentAccessor content, Lang lang) {

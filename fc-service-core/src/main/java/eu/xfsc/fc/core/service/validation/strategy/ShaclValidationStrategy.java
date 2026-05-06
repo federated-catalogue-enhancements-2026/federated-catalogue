@@ -3,30 +3,19 @@ package eu.xfsc.fc.core.service.validation.strategy;
 import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.core.dao.validation.ValidatorType;
 import eu.xfsc.fc.core.service.validation.report.ValidationReportFactory;
-import eu.xfsc.fc.core.exception.ServerException;
-import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.topbraid.shacl.validation.ValidationUtil;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@link ValidationStrategy} implementation for SHACL validation of RDF assets.
@@ -40,35 +29,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ShaclValidationStrategy implements ValidationStrategy {
 
   private final RdfAssetParser rdfAssetParser;
-
-  @Value("${federated-catalogue.validation.shacl.timeout-seconds:10}")
-  private int shaclTimeoutSeconds;
-
-  @Value("${federated-catalogue.validation.shacl.pool-size:4}")
-  private int shaclPoolSize;
-
-  // Application-scoped pool — avoids per-call thread creation; threads are reused across requests.
-  private ExecutorService shaclExecutor;
-
-  public ShaclValidationStrategy(RdfAssetParser rdfAssetParser) {
-    this.rdfAssetParser = rdfAssetParser;
-  }
-
-  @PostConstruct
-  void init() {
-    shaclExecutor = Executors.newFixedThreadPool(shaclPoolSize);
-  }
-
-  @PreDestroy
-  void shutdown() throws InterruptedException {
-    shaclExecutor.shutdown();
-    if (!shaclExecutor.awaitTermination(shaclTimeoutSeconds + 5L, TimeUnit.SECONDS)) {
-      shaclExecutor.shutdownNow();
-    }
-  }
+  private final ShaclValidationExecutor shaclValidationExecutor;
 
   @Override
   public ValidatorType type() {
@@ -105,7 +70,7 @@ public class ShaclValidationStrategy implements ValidationStrategy {
   public ValidationReport validate(List<AssetMetadata> assets, List<ContentAccessor> schemas) {
     Model shapesModel = buildMergedShapesModel(schemas);
     Model dataModel = buildMergedDataModel(assets);
-    return runValidationWithTimeout(dataModel, shapesModel);
+    return ValidationReportFactory.fromShacl(shaclValidationExecutor.validate(dataModel, shapesModel));
   }
 
   private Model buildMergedShapesModel(List<ContentAccessor> schemas) {
@@ -122,25 +87,6 @@ public class ShaclValidationStrategy implements ValidationStrategy {
       merged.add(rdfAssetParser.parse(asset));
     }
     return merged;
-  }
-
-  private ValidationReport runValidationWithTimeout(Model dataModel, Model shapesModel) {
-    Future<Resource> future = shaclExecutor.submit(
-        () -> ValidationUtil.validateModel(dataModel, shapesModel, true));
-    try {
-      Resource reportResource = future.get(shaclTimeoutSeconds, TimeUnit.SECONDS);
-      return ValidationReportFactory.fromShacl(reportResource);
-    } catch (java.util.concurrent.TimeoutException e) {
-      future.cancel(true);
-      throw new TimeoutException(
-          "SHACL validation timed out after " + shaclTimeoutSeconds + " seconds");
-    } catch (ExecutionException e) {
-      throw new ServerException(
-          "SHACL validation failed: " + e.getCause().getMessage(), e.getCause());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new ServerException("SHACL validation interrupted", e);
-    }
   }
 
 }
