@@ -27,7 +27,7 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
-import eu.xfsc.fc.core.service.verification.FormatDetector;
+import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.LoireMatcher;
@@ -83,7 +83,7 @@ import java.util.Map;
         ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 	AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
 	JwtContentPreprocessor.class, Vc2Processor.class, JwtSignatureVerifier.class, DidDocumentResolver.class,
-        FormatDetector.class, LoireJwtParser.class, LoireMatcher.class, DanubeTechFormatMatcher.class})
+        CredentialFormatDetector.class, LoireJwtParser.class, LoireMatcher.class, DanubeTechFormatMatcher.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class Neo4jGraphStoreAccuracyTest {

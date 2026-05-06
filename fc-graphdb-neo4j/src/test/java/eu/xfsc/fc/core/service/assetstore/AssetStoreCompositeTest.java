@@ -52,7 +52,7 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
-import eu.xfsc.fc.core.service.verification.FormatDetector;
+import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
@@ -94,7 +94,7 @@ import lombok.extern.slf4j.Slf4j;
         DocumentLoaderConfig.class,
         DocumentLoaderProperties.class,
         FileStoreConfig.class,
-        FormatDetector.class,
+        CredentialFormatDetector.class,
         GraphRebuilder.class,
         HttpDocumentResolver.class,
         IriGenerator.class,

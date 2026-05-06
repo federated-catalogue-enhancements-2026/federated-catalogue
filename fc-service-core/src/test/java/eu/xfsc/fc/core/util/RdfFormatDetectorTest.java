@@ -13,14 +13,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.stream.Stream;
 
 /**
- * Unit tests for {@link CredentialFormatDetector}.
+ * Unit tests for {@link RdfFormatDetector}.
  */
-class CredentialFormatDetectorTest {
+class RdfFormatDetectorTest {
 
   @ParameterizedTest(name = "{index} => contentType: {0}, rawContent: {1}, expected: {2}")
   @MethodSource("detectRdfLangTestCases")
   void detectRdfLang_returnsCorrectLanguage(String contentType, String rawContent, Lang expected) {
-    assertEquals(expected, CredentialFormatDetector.detect(contentType, rawContent));
+    assertEquals(expected, RdfFormatDetector.detect(contentType, rawContent));
   }
 
   private static Stream<Arguments> detectRdfLangTestCases() {
@@ -50,16 +50,16 @@ class CredentialFormatDetectorTest {
 
   @Test
   void detect_unknownContentTypeAndContent_throwsClientException() {
-    assertThrows(ClientException.class, () -> CredentialFormatDetector.detect("unknown/type", null));
+    assertThrows(ClientException.class, () -> RdfFormatDetector.detect("unknown/type", null));
   }
 
   @Test
   void detect_nullContentTypeAndNullContent_throwsClientException() {
-    assertThrows(ClientException.class, () -> CredentialFormatDetector.detect(null, null));
+    assertThrows(ClientException.class, () -> RdfFormatDetector.detect(null, null));
   }
 
   @Test
   void detect_unknownContentTypeAndUnrecognisedContent_throwsClientException() {
-    assertThrows(ClientException.class, () -> CredentialFormatDetector.detect(null, "TOTALLY UNKNOWN FORMAT"));
+    assertThrows(ClientException.class, () -> RdfFormatDetector.detect(null, "TOTALLY UNKNOWN FORMAT"));
   }
 }

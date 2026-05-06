@@ -8,7 +8,7 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
-import eu.xfsc.fc.core.util.CredentialFormatDetector;
+import eu.xfsc.fc.core.util.RdfFormatDetector;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,16 +29,17 @@ import org.springframework.stereotype.Service;
  * all parsing calls. {@link FileStore} is injected solely to back the {@link CachingLocator}
  * registered with that {@link StreamManager}; it is not used in any parsing method directly.</p>
  *
- * <p>Parsing supports three input forms:</p>
+ * <p>The {@link #parse(AssetMetadata)} method supports two runtime branches:</p>
  * <ul>
  *   <li>Loire JWT (starts with {@code "eyJ"}): unwrapped via {@link LoireJwtParser},
  *       then parsed as JSON-LD 1.1.</li>
- *   <li>Credential JSON-LD (starts with {@code "{"}): parsed directly as JSON-LD 1.1.</li>
- *   <li>Other RDF serializations: format detected via {@link CredentialFormatDetector}.</li>
+ *   <li>All non-JWT RDF content (including JSON-LD): format detected via
+ *       {@link RdfFormatDetector}.</li>
  * </ul>
  *
- * <p>Content-type helpers {@link #isJsonLd} and {@link #isRdfXml} are used by validation
- * strategies to determine which assets they are applicable to.</p>
+ * <p>The helper methods {@link #isJsonLd(AssetMetadata)} and {@link #isRdfXml(AssetMetadata)}
+ * are separate from parse-branching and are used only by validation strategies to determine
+ * applicability.</p>
  */
 @Slf4j
 @Service
@@ -67,8 +68,12 @@ public class RdfAssetParser {
   /**
    * Parses an RDF asset into a Jena {@link Model}.
    *
-   * <p>Loire JWTs are unwrapped first; JSON-LD content is parsed directly;
-   * other RDF serializations are detected via {@link CredentialFormatDetector}.</p>
+    * <p>Runtime flow:</p>
+    * <ul>
+    *   <li>JWT branch: unwrap via {@link LoireJwtParser} and parse as JSON-LD 1.1.</li>
+    *   <li>Non-JWT branch: detect RDF syntax via {@link RdfFormatDetector}
+    *       (including JSON-LD), then parse using the detected Jena {@link Lang}.</li>
+    * </ul>
    *
    * @param asset asset with non-null {@link AssetMetadata#getContentAccessor()}
    * @throws ClientException if the asset has no content or the RDF content is malformed
@@ -80,11 +85,11 @@ public class RdfAssetParser {
           "Asset " + asset.getId() + " is not an RDF asset and cannot be validated with SHACL");
     }
     String rawContent = content.getContentAsString().strip();
-    if (rawContent.startsWith(CredentialFormatDetector.JWT_PREFIX)) {
+    if (rawContent.startsWith(RdfFormatDetector.JWT_PREFIX)) {
       ContentAccessor unwrapped = loireJwtParser.unwrap(content);
       return parseRdfContent(unwrapped, Lang.JSONLD11);
     }
-    Lang lang = CredentialFormatDetector.detect(asset.getContentType(), rawContent);
+    Lang lang = RdfFormatDetector.detect(asset.getContentType(), rawContent);
     return parseRdfContent(content, lang);
   }
 
@@ -115,7 +120,7 @@ public class RdfAssetParser {
   public boolean isJsonLd(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
-      return content.getContentAsString().strip().startsWith(CredentialFormatDetector.JSON_LD_PREFIX);
+      return content.getContentAsString().strip().startsWith(RdfFormatDetector.JSON_LD_PREFIX);
     }
     String ct = asset.getContentType();
     return ct != null && (ct.contains("application/ld+json")
@@ -131,7 +136,7 @@ public class RdfAssetParser {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
       String raw = content.getContentAsString().strip();
-      return raw.startsWith(CredentialFormatDetector.RDF_XML_PREFIX_1) || raw.startsWith(CredentialFormatDetector.RDF_XML_PREFIX_2);
+      return raw.startsWith(RdfFormatDetector.RDF_XML_PREFIX_1) || raw.startsWith(RdfFormatDetector.RDF_XML_PREFIX_2);
     }
     String ct = asset.getContentType();
     return ct != null && ct.contains("rdf+xml");

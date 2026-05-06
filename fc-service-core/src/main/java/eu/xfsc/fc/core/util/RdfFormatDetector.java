@@ -14,7 +14,7 @@ import org.apache.jena.riot.Lang;
  * <p>Also exposes content prefix constants shared with {@link eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser}.</p>
  */
 @UtilityClass
-public class CredentialFormatDetector {
+public class RdfFormatDetector {
 
   public static final String JWT_PREFIX = "eyJ";
   public static final String JSON_LD_PREFIX = "{";
