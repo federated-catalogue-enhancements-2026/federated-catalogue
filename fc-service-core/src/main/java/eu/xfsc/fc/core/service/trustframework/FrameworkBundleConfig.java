@@ -14,7 +14,7 @@ public record FrameworkBundleConfig(
     @JsonProperty("id") String id,
     @JsonProperty("family") String family,
     @JsonProperty("namespace") String namespace,
-    @JsonProperty("validation_type") String validationType,
+    @JsonProperty("validation_type") ValidationType validationType,
     @JsonProperty("roles") Map<String, RoleConfig> roles,
     @JsonProperty("properties") Map<String, String> properties
 ) {
