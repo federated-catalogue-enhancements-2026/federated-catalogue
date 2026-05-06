@@ -33,6 +33,7 @@ import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.ContentKind;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import eu.xfsc.fc.core.service.assetstore.SubjectHashRecord;
@@ -84,6 +85,7 @@ class AssetDaoTest {
         .contentType(contentType)
         .fileSize(fileSize)
         .originalFilename(originalFilename)
+        .contentKind(ContentKind.RDF)
         .build();
   }
 

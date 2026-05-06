@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.service;
 
 import eu.xfsc.fc.api.generated.model.Asset;
+import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
 import eu.xfsc.fc.api.generated.model.AssetResult;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetVersion;
@@ -224,12 +225,18 @@ public class AssetService implements AssetsApiDelegate {
    */
   @Override
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public ResponseEntity<Asset> addAsset(String body) {
+  public ResponseEntity<AssetEnrichmentResponse> addAsset(String body) {
     log.debug("addAsset.enter; got asset of length: {}", body.length());
     AssetMetadata assetMetadata = verifyAndStore(body, null, null);
     log.debug("addAsset.exit; returning asset with id: {}", assetMetadata.getId());
     String encodedId = UriUtils.encodePathSegment(assetMetadata.getId(), StandardCharsets.UTF_8);
-    return ResponseEntity.created(URI.create("/assets/" + encodedId)).body(assetMetadata);
+    // The delegate interface is typed to AssetEnrichmentResponse because the generator picks the
+    // lowest 2xx response (200 enrichment). This path returns 201 with Asset body; the cast is
+    // safe because Java erases generics at runtime and Jackson serializes by the actual object type.
+    @SuppressWarnings("unchecked")
+    ResponseEntity<AssetEnrichmentResponse> response = (ResponseEntity<AssetEnrichmentResponse>) (ResponseEntity<?>)
+        ResponseEntity.created(URI.create("/assets/" + encodedId)).body(assetMetadata);
+    return response;
   }
 
   /**

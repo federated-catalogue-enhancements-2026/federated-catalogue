@@ -3,8 +3,11 @@ package eu.xfsc.fc.core.service.assetstore;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
+import eu.xfsc.fc.core.dao.assets.AssetMapper;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
+import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;
@@ -12,6 +15,7 @@ import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentKind;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -95,12 +99,7 @@ public class AssetStoreImpl implements AssetStore {
     }
     log.debug("storeCredential.enter; got meta: {}", assetMetadata);
 
-    Instant expirationTime = null;
-    final List<Validator> validators = verificationResult.getValidators();
-    if (validators != null) {
-      Validator minVal = validators.stream().min(new Validator.ExpirationComparator()).orElse(null);
-      expirationTime = minVal == null ? null : minVal.getExpirationDate();
-    }
+    Instant expirationTime = calculateExpirationTime(verificationResult.getValidators());
     AssetRecord assetRecord = AssetRecord.builder()
         .assetHash(assetMetadata.getAssetHash())
         .id(assetMetadata.getId())
@@ -113,11 +112,34 @@ public class AssetStoreImpl implements AssetStore {
         .expirationTime(expirationTime)
         .contentType(assetMetadata.getContentType() != null ? assetMetadata.getContentType() : "application/ld+json")
         .changeComment(assetMetadata.getChangeComment())
+        .contentKind(ContentKind.RDF)
         .build();
 
-    SubjectHashRecord subjectHash = null;
+    SubjectHashRecord subjectHash = insertAssetWithErrorHandling(assetRecord, assetMetadata);
+
+    if (subjectHash != null && subjectHash.subjectId() != null) {
+      graphDb.deleteClaims(subjectHash.subjectId());
+      validationResultStore.markOutdatedByAssetId(subjectHash.subjectId(), OutdatedReason.ASSET_UPDATED);
+      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
+      tryRewriteLinkTriples(assetMetadata.getId());
+    }
+    graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
+    return subjectHash;
+  }
+
+  private Instant calculateExpirationTime(List<Validator> validators) {
+    if (validators == null) {
+      return null;
+    }
+    return validators.stream()
+        .min(new Validator.ExpirationComparator())
+        .map(Validator::getExpirationDate)
+        .orElse(null);
+  }
+
+  private SubjectHashRecord insertAssetWithErrorHandling(AssetRecord assetRecord, AssetMetadata assetMetadata) {
     try {
-      subjectHash = dao.insert(assetRecord);
+      return dao.insert(assetRecord);
     } catch (DataIntegrityViolationException ex) {
       if (ex.getMessage().contains("uq_assets_asset_hash")) {
         throw new ConflictException(String.format("asset with id %s already exists (hash: %s)", assetMetadata.getId(), assetMetadata.getAssetHash()));
@@ -128,14 +150,6 @@ public class AssetStoreImpl implements AssetStore {
       log.error("storeCredential.error 2", ex);
       throw new ServerException(ex);
     }
-    if (subjectHash != null && subjectHash.subjectId() != null) {
-      graphDb.deleteClaims(subjectHash.subjectId());
-      validationResultStore.markOutdatedByAssetId(subjectHash.subjectId(), OutdatedReason.ASSET_UPDATED);
-      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
-      tryRewriteLinkTriples(assetMetadata.getId());
-    }
-    graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
-    return subjectHash;
   }
 
   @Override
@@ -158,18 +172,11 @@ public class AssetStoreImpl implements AssetStore {
         .contentType(assetMetadata.getContentType())
         .fileSize(assetMetadata.getFileSize())
         .originalFilename(originalFilename)
+        .contentKind(ContentKind.NON_RDF)
         .build();
-    try {
-      dao.insert(assetRecord);
-    } catch (DataIntegrityViolationException ex) {
-      if (ex.getMessage().contains("uq_assets_asset_hash")) {
-        throw new ConflictException(String.format("asset with id %s already exists (hash: %s)", subjectId, assetMetadata.getAssetHash()));
-      }
-      if (ex.getMessage().contains("idx_asset_active")) {
-        throw new ConflictException(String.format("active asset with id %s already exists", subjectId));
-      }
-      throw new ServerException(ex);
-    }
+
+    insertAssetWithErrorHandling(assetRecord, assetMetadata);
+
     try {
       fileStore.replaceFile(assetMetadata.getAssetHash(), assetMetadata.getContentAccessor());
     } catch (IOException ex) {
@@ -278,6 +285,32 @@ public class AssetStoreImpl implements AssetStore {
   public ContentAccessor getFileById(final String id) {
     AssetRecord record = (AssetRecord) getById(id);
     return record.getContentAccessor();
+  }
+
+  @Override
+  public Optional<AssetRecord> findEnrichableAsset(String subjectId) {
+    Optional<Asset> asset = assetRepository.findBySubjectId(subjectId);
+    if (asset.isEmpty()) {
+      return Optional.empty();
+    }
+    Asset a = asset.get();
+    if (a.getAssetType() == AssetType.HUMAN_READABLE) {
+      throw new VerificationException("Human-readable assets cannot be enriched via metadata endpoint");
+    }
+    if (a.getContentKind() == ContentKind.NON_RDF) {
+      return Optional.of(AssetMapper.toRecord(a));
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public void saveEnrichedContent(String subjectId, String rawRdfContent) {
+    Asset asset = assetRepository.findBySubjectId(subjectId)
+        .orElseThrow(() -> new NotFoundException("Asset not found: " + subjectId));
+    asset.setContent(rawRdfContent);
+    asset.setChangeComment("Metadata enriched");
+    assetRepository.save(asset);
+    log.debug("saveEnrichedContent; persisted enrichment for subject {}", subjectId);
   }
 
   @Override

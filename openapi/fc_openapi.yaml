@@ -69,6 +69,28 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    AssetEnrichmentResponse:
+      type: object
+      description: Response returned when an existing non-RDF asset is enriched with RDF metadata.
+      required:
+        - assetId
+        - triplesAdded
+        - triplesRejected
+        - enrichmentTimestamp
+      properties:
+        assetId:
+          type: string
+          description: IRI (subjectId) of the enriched asset.
+        triplesAdded:
+          type: integer
+          description: Number of RDF triples written to the graph store after namespace filtering.
+        triplesRejected:
+          type: integer
+          description: Number of triples filtered out due to protected namespace policy.
+        enrichmentTimestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the enrichment was completed.
     Error:
       type: object
       properties:
@@ -1387,9 +1409,11 @@ paths:
         - Assets
       summary: Add a new asset to the catalogue
       description: >-
-        Upload an asset. RDF content (JSON-LD credentials) is automatically
-        detected and routed through the verification pipeline. Non-RDF content
-        is stored directly.
+        Upload an asset. Non-RDF content is stored directly (HTTP 201).
+        RDF content is automatically detected and routed: if the RDF subject IRI
+        matches an existing non-RDF asset, the asset is enriched with metadata
+        (HTTP 200, returns AssetEnrichmentResponse); otherwise the RDF is
+        stored as a new or updated credential asset (HTTP 201, returns Asset).
       operationId: addAsset
       security:
         - jwt: []
@@ -1443,6 +1467,14 @@ paths:
               type: string
         required: true
       responses:
+        '200':
+          description: >-
+            Non-RDF asset enriched with RDF metadata. Returned when the uploaded
+            RDF payload matches the subject IRI of an existing non-RDF asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetEnrichmentResponse'
         '201':
           description: Created
           headers:
@@ -1462,6 +1494,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ClientError'
         '500':
           $ref: '#/components/responses/ServerError'
   /assets/{id}:

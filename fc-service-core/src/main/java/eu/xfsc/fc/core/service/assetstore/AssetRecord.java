@@ -5,6 +5,7 @@ import java.util.List;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.ContentKind;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -58,6 +59,9 @@ public class AssetRecord extends AssetMetadata {
     }
   }
 
+  @Setter
+  private ContentKind contentKind;
+
   /**
    * Creates a record from explicit fields.
    *
@@ -74,17 +78,19 @@ public class AssetRecord extends AssetMetadata {
    * @param fileSize        file size in bytes, or null
    * @param originalFilename original filename for binary uploads, or null
    * @param changeComment   optional change note for this version
+   * @param contentKind     RDF vs. NON_RDF asset type
    */
   @Builder
   public AssetRecord(String assetHash, String id, AssetStatus status, String issuer, List<String> validatorDids,
       Instant uploadTime, Instant statusTime, ContentAccessor content, Instant expirationTime,
-      String contentType, Long fileSize, String originalFilename, String changeComment) {
+      String contentType, Long fileSize, String originalFilename, String changeComment, ContentKind contentKind) {
     super(assetHash, id, status, issuer, validatorDids, uploadTime, statusTime, content);
     this.expirationTime = expirationTime;
     setContentType(contentType);
     setFileSize(fileSize);
     this.originalFilename = originalFilename;
     setChangeComment(changeComment);
+    this.contentKind = contentKind;
   }
 
   public String getContent() {

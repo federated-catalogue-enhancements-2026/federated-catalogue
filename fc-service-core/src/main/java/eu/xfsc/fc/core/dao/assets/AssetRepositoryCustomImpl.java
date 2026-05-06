@@ -18,6 +18,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.ContentKind;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 import lombok.RequiredArgsConstructor;
@@ -147,13 +148,13 @@ public class AssetRepositoryCustomImpl implements AssetRepositoryCustom {
       if (fullMeta) {
         query = new StringBuilder("select asset_hash, subjectid, status, issuer,"
             + " uploadtime, statustime, expirationtime, validators,"
-            + " content_type, file_size, original_filename");
+            + " content_type, file_size, original_filename, content_kind");
       } else {
         query = new StringBuilder("select asset_hash, null as subjectid, status,"
             + " null as issuer, null as uploadtime, null as statustime,"
             + " null as expirationtime, null as validators,"
             + " null as content_type, null::bigint as file_size,"
-            + " null as original_filename");
+            + " null as original_filename, null as content_kind");
       }
       if (returnContent) {
         query.append(", content");
@@ -208,6 +209,7 @@ public class AssetRepositoryCustomImpl implements AssetRepositoryCustom {
       String contentType = rs.getString("content_type");
       long fileSize = rs.getLong("file_size");
       String originalFilename = rs.getString("original_filename");
+      String contentKindStr = rs.getString("content_kind");
       return AssetRecord.builder()
           .assetHash(rs.getString("asset_hash"))
           .id(rs.getString("subjectid"))
@@ -222,6 +224,7 @@ public class AssetRepositoryCustomImpl implements AssetRepositoryCustom {
           .contentType(contentType)
           .fileSize(rs.wasNull() ? null : fileSize)
           .originalFilename(originalFilename)
+          .contentKind(contentKindStr == null ? null : ContentKind.valueOf(contentKindStr))
           .build();
     }
   }

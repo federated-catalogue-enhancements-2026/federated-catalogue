@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.dao.assets;
 
 import eu.xfsc.fc.core.pojo.AssetType;
+import eu.xfsc.fc.core.pojo.ContentKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -86,6 +87,10 @@ public class Asset {
   @Enumerated(EnumType.STRING)
   @Column(name = "asset_type", length = 50)
   private AssetType assetType;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "content_kind", nullable = false)
+  private ContentKind contentKind;
 
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "linked_asset_id")
