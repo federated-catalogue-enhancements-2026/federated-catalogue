@@ -60,7 +60,7 @@ class FoundationRecordsTest {
     assertThat(config.id()).isEqualTo("gaia-x-2511");
     assertThat(config.family()).isEqualTo("gaia-x");
     assertThat(config.namespace()).isEqualTo("https://w3id.org/gaia-x/");
-    assertThat(config.validationType()).isEqualTo("shacl");
+    assertThat(config.validationType()).isEqualTo(ValidationType.SHACL);
     assertThat(config.roles()).containsKeys("Participant", "ServiceOffering");
     assertThat(config.roles().get("Participant").additionalRoots())
         .containsExactly("https://w3id.org/gaia-x/LegalPerson");

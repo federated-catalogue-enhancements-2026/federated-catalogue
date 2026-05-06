@@ -148,9 +148,8 @@ public class RoleResolutionCharacterisationTest {
     @Test
     @DisplayName("gx:DigitalServiceOffering VP -> CredentialVerificationResultOffering (gx-2511 edge case)")
     void verifyOffering_digitalServiceOfferingVp_returnsOfferingResultWithClaims() {
-        // gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering; currently resolved
-        // via explicit additional-types root. In the future it resolves via correct OWL subclass walk.
-        // The observable outcome must not change.
+      // gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering in gx-2511.
+      // It is covered via additionalRoots in framework.yaml — the correct long-term mechanism.
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("CharacterisationTests/digitalServiceOffering.jsonld"),
             SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
