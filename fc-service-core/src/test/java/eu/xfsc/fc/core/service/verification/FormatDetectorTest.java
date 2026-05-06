@@ -258,7 +258,6 @@ class FormatDetectorTest {
         assertEquals(CredentialFormat.UNKNOWN, result);
     }
 
-    // --- helpers ---
 
     private String buildLoireVcJwt() throws Exception {
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)

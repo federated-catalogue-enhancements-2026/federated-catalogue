@@ -164,7 +164,6 @@ class ValidationResultGraphWriterTest {
     verify(failingStore).addClaims(any(), any());
   }
 
-  // --- helpers ---
 
   private static ValidationResult buildResult(long id, String[] assetIds) {
     ValidationResult r = new ValidationResult();

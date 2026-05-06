@@ -451,7 +451,6 @@ public class SparqlGraphStoreTest {
             "Filter by credA should not return credB's claims");
     }
 
-    // --- Helpers ---
 
     private PaginatedResults<Map<String, Object>> querySparql(String sparql) {
         return graphStore.queryData(new GraphQuery(

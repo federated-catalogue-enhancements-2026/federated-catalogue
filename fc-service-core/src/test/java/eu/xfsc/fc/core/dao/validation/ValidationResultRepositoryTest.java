@@ -224,7 +224,6 @@ class ValidationResultRepositoryTest {
     assertEquals(1, failedCount, "Should include FAILED results for rebuild processing");
   }
 
-  // --- helpers ---
 
   private ValidationResult buildResult(String[] assetIds, String[] schemaIds,
       boolean conforms, GraphSyncStatus syncStatus) {

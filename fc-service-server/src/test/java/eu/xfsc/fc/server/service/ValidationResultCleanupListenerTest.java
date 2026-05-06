@@ -80,7 +80,6 @@ class ValidationResultCleanupListenerTest {
     assertNotNull(found, "Asset must still exist after the rolled-back transaction");
   }
 
-  // --- helpers ---
 
   private static AssetMetadata buildTestAsset() {
     AssetMetadata asset = new AssetMetadata();

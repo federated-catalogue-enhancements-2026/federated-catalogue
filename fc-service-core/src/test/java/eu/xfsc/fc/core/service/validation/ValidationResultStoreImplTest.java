@@ -173,7 +173,6 @@ class ValidationResultStoreImplTest {
     verify(repository).deleteAllByAssetId("https://example.org/asset/1");
   }
 
-  // --- helpers ---
 
   private static ValidationResultRecord buildRecord(boolean conforms) {
     return new ValidationResultRecord(

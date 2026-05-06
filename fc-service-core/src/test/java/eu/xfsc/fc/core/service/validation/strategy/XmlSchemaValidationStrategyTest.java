@@ -99,7 +99,6 @@ class XmlSchemaValidationStrategyTest {
             new ContentAccessorDirect(VALID_XSD))));
   }
 
-  // --- helpers ---
 
   private static AssetMetadata buildAsset(String content) {
     AssetMetadata asset = new AssetMetadata();

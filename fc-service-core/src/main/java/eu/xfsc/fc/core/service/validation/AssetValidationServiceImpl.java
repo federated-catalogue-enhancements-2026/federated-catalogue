@@ -110,8 +110,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return execute(List.of(asset), jobs, validatedAt);
   }
 
-  // --- Multi-asset path (SHACL only) ---
-
   private ValidationResponse validateMultipleAssets(
       List<String> assetIds, List<String> schemaIds, Boolean validateAll, Instant validatedAt) {
     requireModuleEnabled(SchemaModuleType.SHACL);
@@ -137,8 +135,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
     return buildResponse(assetIds, schemas.schemaIds(), report, List.of(resultId), validatedAt);
   }
-
-  // --- Single-asset strategy planning ---
 
   /**
    * Plans validation jobs for a single asset against explicit schema IDs.
@@ -262,8 +258,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     return buildResponse(assetIds, allSchemaIds, responseReport, allResultIds, validatedAt);
   }
 
-  // --- Schema resolution ---
-
   /**
    * Resolves SHACL shapes into a merged list of ContentAccessors.
    *
@@ -300,8 +294,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
         "No schemas specified for validation. Provide schemaIds or set validateAgainstAllSchemas=true.");
   }
 
-  // --- Strategy helpers ---
-
   private ValidationStrategy findStrategyFor(SchemaRecord record) {
     return strategies.stream()
         .filter(s -> s.acceptsSchema(record))
@@ -326,8 +318,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     }
     return schemaStore.getLatestSchemaByType(schemaType);
   }
-
-  // --- General helpers ---
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
@@ -370,8 +360,6 @@ public class AssetValidationServiceImpl implements AssetValidationService {
     }
     return response;
   }
-
-  // --- Internal DTOs ---
 
   /**
    * Holds resolved SHACL schema ContentAccessors, schema IDs, and validator IDs for storage.

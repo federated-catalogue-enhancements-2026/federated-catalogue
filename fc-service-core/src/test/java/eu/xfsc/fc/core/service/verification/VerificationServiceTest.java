@@ -1166,7 +1166,6 @@ public class VerificationServiceTest {
                 "VC credential extractor must return CredentialClaim instances");
     }
 
-  // --- helpers ---
 
   /** Builds a fake danubetech-style JWT wrapping the given VC JSON under a {@code vc} claim. */
   private static String fakeVcJwt(String vcJson) {

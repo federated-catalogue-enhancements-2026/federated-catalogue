@@ -70,7 +70,6 @@ class AssetValidationServiceImplTest {
   @Autowired
   private AssetValidationServiceImpl service;
 
-  // --- setup ---
 
   @BeforeEach
   void setUpStrategies() {
@@ -1122,7 +1121,6 @@ class AssetValidationServiceImplTest {
     verify(xmlSchemaValidationStrategy, never()).validate(anyList(), anyList());
   }
 
-  // --- helpers ---
 
   private static AssetMetadata buildRdfAsset(String id) {
     return new AssetMetadata(RDF_HASH, id, AssetStatus.ACTIVE,

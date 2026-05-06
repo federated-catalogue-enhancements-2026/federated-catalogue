@@ -117,7 +117,6 @@ class ShaclValidationStrategyTest {
             List.of(new ContentAccessorDirect(SHAPE_PERSON_NAME_REQUIRED))));
   }
 
-  // --- helpers ---
 
   private static AssetMetadata buildTurtleAsset(String id, String turtleContent) {
     AssetMetadata asset = new AssetMetadata();

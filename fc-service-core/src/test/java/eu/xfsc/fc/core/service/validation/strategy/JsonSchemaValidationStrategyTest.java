@@ -116,7 +116,6 @@ class JsonSchemaValidationStrategyTest {
             new ContentAccessorDirect(SIMPLE_SCHEMA))));
   }
 
-  // --- helpers ---
 
   private static AssetMetadata buildAsset(String content) {
     AssetMetadata asset = new AssetMetadata();

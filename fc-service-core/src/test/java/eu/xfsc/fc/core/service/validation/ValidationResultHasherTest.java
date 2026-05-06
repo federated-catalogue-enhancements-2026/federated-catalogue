@@ -21,7 +21,6 @@ class ValidationResultHasherTest {
     hasher = new ValidationResultHasher(new ObjectMapper());
   }
 
-  // --- helper ---
 
   private static ValidationResult buildResult(String[] assetIds, String[] validatorIds,
       ValidatorType validatorType, boolean conforms, Instant validatedAt) {
