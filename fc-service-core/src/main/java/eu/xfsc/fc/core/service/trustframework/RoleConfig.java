@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.trustframework;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Per-role configuration entry from a bundle's {@code framework.yaml}.
