@@ -7,6 +7,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheDao;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
@@ -46,7 +47,7 @@ import java.time.temporal.ChronoUnit;
         DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
         JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
         SecurityAuditorAware.class,
-        RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class})
+    RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class, TrustFrameworkRegistryConfig.class})
 //@DirtiesContext
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 public class ValidatorCacheTest {

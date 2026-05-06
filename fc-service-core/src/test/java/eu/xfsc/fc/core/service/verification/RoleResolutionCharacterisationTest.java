@@ -26,6 +26,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
 import eu.xfsc.fc.core.dao.schemas.SchemaAuditRepository;
 import eu.xfsc.fc.core.dao.schemas.SchemaJpaDao;
 import eu.xfsc.fc.core.dao.validatorcache.ValidatorCacheJpaDao;
@@ -77,6 +78,7 @@ import lombok.extern.slf4j.Slf4j;
     SchemaStoreImpl.class,
     SecurityAuditorAware.class,
     ShaclValidationExecutor.class,
+    TrustFrameworkRegistryConfig.class,
     ValidatorCacheJpaDao.class,
     VerificationServiceImpl.class
 })

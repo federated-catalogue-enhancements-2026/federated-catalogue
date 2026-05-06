@@ -8,6 +8,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
 import eu.xfsc.fc.core.dao.revalidator.RevalidatorChunksJpaDao;
@@ -76,7 +77,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   DocumentLoaderConfig.class, DocumentLoaderProperties.class, DidResolverConfig.class, DidDocumentResolver.class, HttpDocumentResolver.class,
   JwtSignatureVerifier.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
   IriGenerator.class, IriValidator.class, ObjectMapper.class, SecurityAuditorAware.class,
-  RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class})
+    RdfAssetParser.class, ShaclValidationExecutor.class, LoireJwtParser.class, TrustFrameworkRegistryConfig.class})
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 //@Import(EmbeddedNeo4JConfig.class)
 public class RevalidationServiceTest {

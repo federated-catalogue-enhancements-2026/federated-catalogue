@@ -7,6 +7,7 @@ import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.config.RdfContentTypeProperties;
+import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
@@ -125,7 +126,8 @@ import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
         ValidationResultGraphWriter.class,
         ValidationResultHasher.class,
         Vc2Processor.class,
-        VerificationServiceImpl.class
+    VerificationServiceImpl.class,
+    TrustFrameworkRegistryConfig.class
 })
 @Slf4j
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)

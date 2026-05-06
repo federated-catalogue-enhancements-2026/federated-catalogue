@@ -1,9 +1,8 @@
 package eu.xfsc.fc.core.service.verification;
 
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.PARTICIPANT;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.RESOURCE;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.SERVICE_OFFERING;
-import static eu.xfsc.fc.core.service.verification.TrustFrameworkBaseClass.UNKNOWN;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_PARTICIPANT;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_RESOURCE;
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_SERVICE_OFFERING;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,7 +71,8 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultParticipant) resolveStrategy(payload).verifyCredential(payload, true, PARTICIPANT,
+    return (CredentialVerificationResultParticipant) resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_PARTICIPANT,
             verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
   }
 
@@ -84,7 +84,8 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultOffering) resolveStrategy(payload).verifyCredential(payload, true, SERVICE_OFFERING,
+    return (CredentialVerificationResultOffering) resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_SERVICE_OFFERING,
             verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
   }
 
@@ -96,7 +97,8 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultResource) resolveStrategy(payload).verifyCredential(payload, true, RESOURCE,
+    return (CredentialVerificationResultResource) resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_RESOURCE,
             verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
   }
 
@@ -114,7 +116,7 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    return resolveStrategy(payload).verifyCredential(payload, false, UNKNOWN,
+    return resolveStrategy(payload).verifyCredential(payload, false, "",
             verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
   }
 
