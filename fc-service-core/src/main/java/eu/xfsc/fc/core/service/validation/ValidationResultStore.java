@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.validation;
 
+import eu.xfsc.fc.core.dao.validation.OutdatedReason;
 import eu.xfsc.fc.core.dao.validation.ValidationResult;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import java.util.Optional;
@@ -43,6 +44,14 @@ public interface ValidationResultStore {
    * Used during graph rebuild to restore triples from the relational DB.
    */
   void syncToGraph(ValidationResult result, GraphStore graphStore);
+
+  /**
+   * Marks all validation results for the given asset ID as outdated.
+   *
+   * @param assetId the asset IRI whose results to mark outdated
+   * @param reason  why the results are being invalidated
+   */
+  void markOutdatedByAssetId(String assetId, OutdatedReason reason);
 
   /**
    * Deletes all validation results that reference the given asset ID, from both the relational DB

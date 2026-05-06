@@ -41,6 +41,8 @@ import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.graphdb.config.GraphDbConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -60,6 +62,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -102,6 +105,11 @@ public class Neo4jGraphStoreAccuracyTest {
     }
   }
   
+  @MockitoBean
+  private ProvenanceService provenanceService;
+  @MockitoBean
+  private ValidationResultStore validationResultStore;
+
   @Autowired
   private Neo4j embeddedDatabaseServer;
   @Autowired

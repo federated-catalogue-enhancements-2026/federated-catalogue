@@ -4,6 +4,7 @@ import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
+import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.exception.ServerException;
@@ -127,6 +128,8 @@ public class AssetStoreImpl implements AssetStore {
     }
     if (subjectHash != null && subjectHash.subjectId() != null) {
       graphDb.deleteClaims(subjectHash.subjectId());
+      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
+      tryRewriteLinkTriples(assetMetadata.getId());
     }
     graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
     return subjectHash;
@@ -190,11 +193,13 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public void deleteAsset(final String hash) {
+    deleteAsset(hash, false);
+  }
+
+  private void deleteAsset(final String hash, final boolean cascading) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
-    final String hrHashToCascade = assetOpt
-        .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
-        .map(a -> a.getLinkedAsset().getAssetHash())
-        .orElse(null);
+    // Only cascade from MR → HR once; a cascading call never triggers a further cascade.
+    final String hrHashToCascade = cascading ? null : assetOpt.map(this::findHumanReadableAssetHash).orElse(null);
 
     assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> {
       final Asset peer = a.getLinkedAsset();
@@ -221,7 +226,7 @@ public class AssetStoreImpl implements AssetStore {
 
     if (hrHashToCascade != null) {
       try {
-        deleteAsset(hrHashToCascade);
+        deleteAsset(hrHashToCascade, true);
       } catch (NotFoundException ex) {
         log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }
@@ -326,6 +331,23 @@ public class AssetStoreImpl implements AssetStore {
   @Override
   public void writeAssetLinkTriples(String mrIri, String hrIri) {
     writeLinkTriples(mrIri, hrIri);
+  }
+
+  private void tryRewriteLinkTriples(String assetId) {
+    try {
+      assetRepository.findBySubjectIdWithLinkedAsset(assetId)
+          .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
+          .ifPresent(a -> writeAssetLinkTriples(assetId, a.getLinkedAsset().getSubjectId()));
+    } catch (Exception ex) {
+      log.warn("tryRewriteLinkTriples; failed to restore link triples after graph rebuild for asset {}", assetId, ex);
+    }
+  }
+
+  private String findHumanReadableAssetHash(Asset asset) {
+    if (asset.getAssetType() != AssetType.MACHINE_READABLE || asset.getLinkedAsset() == null) {
+      return null;
+    }
+    return asset.getLinkedAsset().getAssetHash();
   }
 
   private void writeLinkTriples(String mrIri, String hrIri) {
