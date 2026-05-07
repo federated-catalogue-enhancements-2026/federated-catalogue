@@ -34,11 +34,24 @@ public class AssetStoreConfig {
       AssetPublisher assetPublisher) {
     AssetStore assetStore;
     if ("none".equals(pubImpl)) {
-      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository, namespaceProperties,
+      assetStore = new AssetStoreImpl(
+          dao,
+          graphDb,
+          fileStore,
+          iriGenerator,
+          assetRepository,
+          namespaceProperties,
           eventPublisher);
     } else {
-      assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, eventPublisher, assetPublisher);
+      assetStore = new PublishingAssetStore(
+          dao,
+          graphDb,
+          fileStore,
+          iriGenerator,
+          assetRepository,
+          namespaceProperties,
+          eventPublisher,
+          assetPublisher);
     }
     log.debug("getAssetStore; returning {} for impl {}", assetStore, pubImpl);
     return assetStore;

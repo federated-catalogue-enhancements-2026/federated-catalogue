@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 /** Spring Data JPA repository for {@link ValidationResult} entities. */
 public interface ValidationResultRepository extends JpaRepository<ValidationResult, Long> {
 
@@ -30,5 +29,13 @@ public interface ValidationResultRepository extends JpaRepository<ValidationResu
   @Modifying
   @Query(value = "DELETE FROM validation_result WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
   void deleteAllByAssetId(@Param("assetId") String assetId);
+
+  /**
+   * Marks all validation results that reference the given asset ID as outdated with the supplied reason.
+   */
+  @Modifying(clearAutomatically = true)
+  @Query(value = "UPDATE validation_result SET outdated = true, outdated_reason = :reason "
+      + "WHERE :assetId = ANY(asset_ids)", nativeQuery = true)
+  void markOutdatedByAssetId(@Param("assetId") String assetId, @Param("reason") String reason);
 
 }
