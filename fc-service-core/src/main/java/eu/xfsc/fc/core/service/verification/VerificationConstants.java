@@ -28,8 +28,17 @@ public final class VerificationConstants {
 
   /**
    * Gaia-X 2511 role names as declared in the gaia-x-2511 bundle's {@code framework.yaml}.
-   * Used to dispatch result types and to validate the expected role at typed verification endpoints.
-   * Future work: eliminate these by driving dispatch from bundle metadata rather than hard-coded names.
+   *
+   * <p>These are dispatch keys, not new Gaia-X coupling: the typed verification endpoints
+   * ({@link VerificationService#verifyParticipantCredential} etc.) and the typed result
+   * POJOs ({@code CredentialVerificationResultParticipant}, {@code ...Offering},
+   * {@code ...Resource}) are already Gaia-X-specific. The constants just centralise the
+   * role strings used to map between them.
+   *
+   * <p>Eliminating Gaia-X from this layer requires making the typed endpoints and result
+   * POJOs framework-agnostic (or letting each trust-framework bundle declare
+   * {@code role → resultType} in its metadata and dispatching from that). Until then,
+   * extracting these strings as constants is strictly better than inlining them.
    */
   public static final String ROLE_PARTICIPANT = "Participant";
   public static final String ROLE_SERVICE_OFFERING = "ServiceOffering";
