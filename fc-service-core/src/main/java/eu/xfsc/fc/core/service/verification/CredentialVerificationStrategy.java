@@ -30,9 +30,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -78,9 +75,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_PARTICIPANT;
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_RESOURCE;
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_SERVICE_OFFERING;
 
 
 /**
@@ -345,19 +339,15 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
       Collection<ResolvedRole> roles = typedCredentials.getBaseClasses();
 
       if (roles.size() > 1) {
-        boolean hasParticipant = roles.stream().anyMatch(r -> ROLE_PARTICIPANT.equals(r.role()));
-        boolean hasServiceOffering = roles.stream().anyMatch(r -> ROLE_SERVICE_OFFERING.equals(r.role()));
-
-        if (verifySemantics && hasParticipant && hasServiceOffering) {
-          throw new VerificationException("Semantic error: credential has several types: " + roles);
+        if (verifySemantics) {
+          long distinctRoles = roles.stream().map(ResolvedRole::role).distinct().count();
+          if (distinctRoles > 1) {
+            throw new VerificationException("Semantic error: credential has several types: " + roles);
+          }
         }
-
-        if (hasParticipant) {
-          primaryRole =
-              roles.stream().filter(r -> ROLE_PARTICIPANT.equals(r.role())).findFirst().orElse(ResolvedRole.UNKNOWN);
-        } else if (hasServiceOffering) {
-          primaryRole = roles.stream().filter(r -> ROLE_SERVICE_OFFERING.equals(r.role())).findFirst()
-              .orElse(ResolvedRole.UNKNOWN);
+        if (expectedRole != null && !expectedRole.isBlank()) {
+          primaryRole = roles.stream().filter(r -> expectedRole.equals(r.role()))
+              .findFirst().orElse(ResolvedRole.UNKNOWN);
         } else {
           primaryRole = roles.iterator().next();
         }
@@ -464,12 +454,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Phase 5: Build the typed result object based on the resolved role.
+     * Phase 5: Build the generic result from credential data and the resolved role.
+     * No branching on role name — the role is stored as data, not used for dispatch.
      */
     private CredentialVerificationResult assembleResult(ResolvedRole resolvedRole,
                                                         TypedCredentials typedCredentials, List<RdfClaim> graphClaims,
                                                         List<Validator> validators) {
-        String id = typedCredentials.getID();
+      String credentialSubjectId = typedCredentials.getID();
         String issuer = typedCredentials.getIssuer();
         Instant issuedDate = typedCredentials.getIssuanceDate();
         Instant now = Instant.now();
@@ -477,27 +468,16 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
       String role = resolvedRole.isResolved() ? resolvedRole.role() : null;
       String profileId = resolvedRole.isResolved() ? resolvedRole.frameworkProfileId() : null;
 
-      if (ROLE_PARTICIPANT.equals(role)) {
-            if (issuer == null) {
-                issuer = id;
-            }
-            String method = validators.isEmpty() ? null : validators.getFirst().getDidURI();
-            String holder = typedCredentials.getHolder();
-            String name = holder == null ? issuer : holder;
-        // For Participant: the result id is the issuer DID (the legal entity), not the credentialSubject IRI.
-            return new CredentialVerificationResultParticipant(now, status, issuer, issuedDate,
-                issuer, graphClaims, validators, role, profileId, name, method);
-        }
-      if (ROLE_SERVICE_OFFERING.equals(role)) {
-            return new CredentialVerificationResultOffering(now, status, issuer, issuedDate,
-                id, graphClaims, validators, role, profileId);
-        }
-      if (ROLE_RESOURCE.equals(role)) {
-            return new CredentialVerificationResultResource(now, status, issuer, issuedDate,
-                id, graphClaims, validators, role, profileId);
-        }
-        return new CredentialVerificationResult(now, status, issuer, issuedDate,
-            id, graphClaims, validators, role, profileId);
+      String effectiveIssuer = issuer != null ? issuer : credentialSubjectId;
+      String holder = typedCredentials.getHolder();
+      String name = holder != null ? holder : effectiveIssuer;
+      String publicKey = validators.isEmpty() ? null : validators.getFirst().getDidURI();
+
+      CredentialVerificationResult result = new CredentialVerificationResult(now, status, effectiveIssuer,
+          issuedDate, credentialSubjectId, graphClaims, validators, role, profileId);
+      result.setName(name);
+      result.setPublicKey(publicKey);
+      return result;
     }
 
     private TypedCredentials parseCredentials(JsonLDObject ld, boolean vpRequired, boolean verifySemantics,

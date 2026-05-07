@@ -30,7 +30,6 @@ import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -165,7 +164,7 @@ public class GaiaxTrustFrameworkTest {
             getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result, "Should return result");
-        assertTrue(result instanceof CredentialVerificationResultParticipant, "Should be participant result");
+      assertEquals("Participant", result.getRole(), "Should have Participant role");
       assertNotNull(result.getGraphClaims(), "Claims should be extracted");
       assertFalse(result.getGraphClaims().isEmpty(), "Should have claims");
     }
@@ -198,7 +197,7 @@ public class GaiaxTrustFrameworkTest {
             getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result, "Should process Gaia-X credential");
-        assertInstanceOf(CredentialVerificationResultParticipant.class, result);
+      assertEquals("Participant", result.getRole());
     }
 
     // ==================== Behavioral Toggle Tests ====================

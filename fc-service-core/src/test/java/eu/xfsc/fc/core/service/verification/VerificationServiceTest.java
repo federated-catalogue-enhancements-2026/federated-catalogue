@@ -186,10 +186,9 @@ public class VerificationServiceTest {
 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("did:web:example.com", vrp.getIssuer());
-    assertEquals(vrp.getParticipantName(), vrp.getIssuer());
+    assertEquals("Participant", vr.getRole());
+    assertEquals("did:web:example.com", vr.getIssuer());
+    assertEquals(vr.getName(), vr.getIssuer());
   }
 
   @Test
@@ -243,11 +242,10 @@ public class VerificationServiceTest {
     // verifyVCSigs=false: JWS in fixture was computed over original data; cannot re-sign (external GXDCH key)
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, false, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("https://www.handelsregister.de/", vrp.getId());
-    assertEquals("https://www.handelsregister.de/", vrp.getIssuer());
-    assertEquals(Instant.parse("2010-01-01T19:37:24Z"), vrp.getIssuedDateTime());
+    assertEquals("Participant", vr.getRole());
+    assertEquals("https://www.handelsregister.de/", vr.getId());
+    assertEquals("https://www.handelsregister.de/", vr.getIssuer());
+    assertEquals(Instant.parse("2010-01-01T19:37:24Z"), vr.getIssuedDateTime());
   }
 
   // validSyntax_ValidCredentialVP removed — coverage provided by validSyntax_LegalParticipantNewSchema
@@ -259,15 +257,14 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("VerificationService/syntax/serviceOffering2.jsonld");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultOffering.class, vr);
-    CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
-    assertEquals("https://www.example.org/mySoftwareOffering", vro.getId());
-    assertEquals("http://gaiax.de", vro.getIssuer());
-    assertNotNull(vro.getGraphClaims());
-    assertEquals(17, vro.getGraphClaims().size());
-    assertTrue(vro.getValidators().isEmpty());
-    assertTrue(vro.getValidatorDids().isEmpty());
-    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
+    assertEquals("ServiceOffering", vr.getRole());
+    assertEquals("https://www.example.org/mySoftwareOffering", vr.getId());
+    assertEquals("http://gaiax.de", vr.getIssuer());
+    assertNotNull(vr.getGraphClaims());
+    assertEquals(17, vr.getGraphClaims().size());
+    assertTrue(vr.getValidators().isEmpty());
+    assertTrue(vr.getValidatorDids().isEmpty());
+    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vr.getIssuedDateTime());
   }
 
 
@@ -277,16 +274,15 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("VerificationService/syntax/legalPerson2.jsonld");
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
-    CredentialVerificationResultParticipant vrp = (CredentialVerificationResultParticipant) vr;
-    assertEquals("http://gaiax.de", vrp.getId());
-    assertEquals("http://gaiax.de", vrp.getIssuer());
-    assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
-    assertNotNull(vrp.getGraphClaims());
-    assertEquals(10, vrp.getGraphClaims().size());
-    assertTrue(vrp.getValidators().isEmpty());
-    assertTrue(vrp.getValidatorDids().isEmpty());
-    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
+    assertEquals("Participant", vr.getRole());
+    assertEquals("http://gaiax.de", vr.getId());
+    assertEquals("http://gaiax.de", vr.getIssuer());
+    assertEquals("http://gaiax.de", vr.getName());
+    assertNotNull(vr.getGraphClaims());
+    assertEquals(10, vr.getGraphClaims().size());
+    assertTrue(vr.getValidators().isEmpty());
+    assertTrue(vr.getValidatorDids().isEmpty());
+    assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vr.getIssuedDateTime());
   }
 
   @Test
@@ -305,12 +301,11 @@ public class VerificationServiceTest {
 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultResource.class, vr);
-    CredentialVerificationResultResource vrr = (CredentialVerificationResultResource) vr;
-    assertEquals("did:web:example.com", vrr.getIssuer());
-    assertNotNull(vrr.getGraphClaims());
-    assertTrue(vrr.getValidators().isEmpty());
-    assertTrue(vrr.getValidatorDids().isEmpty());
+    assertEquals("Resource", vr.getRole());
+    assertEquals("did:web:example.com", vr.getIssuer());
+    assertNotNull(vr.getGraphClaims());
+    assertTrue(vr.getValidators().isEmpty());
+    assertTrue(vr.getValidatorDids().isEmpty());
   }
 
   /**
@@ -331,7 +326,7 @@ public class VerificationServiceTest {
 
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, true, false, false);
     assertNotNull(vr);
-    assertInstanceOf(CredentialVerificationResultParticipant.class, vr);
+    assertEquals("Participant", vr.getRole());
 
     schemaStore.deleteSchema("https://example.org/ext");
 
@@ -360,7 +355,7 @@ public class VerificationServiceTest {
       CredentialVerificationResult vrBefore = verificationService.verifyCredential(
           legalParticipantContent, true, false, false, false);
       assertNotNull(vrBefore);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vrBefore);
+      assertEquals("Participant", vrBefore.getRole());
 
       // The schema store is empty (no gaia-x 2511 schema uploaded) — this proves the registry
       // fast path is independent of the schema store.
@@ -370,7 +365,7 @@ public class VerificationServiceTest {
       CredentialVerificationResult vrAfterDelete = verificationService.verifyCredential(
           legalParticipantContent, true, false, false, false);
       assertNotNull(vrAfterDelete);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vrAfterDelete,
+      assertEquals("Participant", vrAfterDelete.getRole(),
           "Bundle type must still resolve after schema store deletion");
 
       jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
@@ -908,7 +903,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
 
     assertNotNull(vr);
-      assertInstanceOf(CredentialVerificationResultParticipant.class, vr, "VC 2.0 with 2511#LegalPerson type must be recognized");
+    assertEquals("Participant", vr.getRole(), "VC 2.0 with 2511#LegalPerson type must be recognized as Participant");
     assertNotNull(vr.getIssuedDateTime(), "issuedDateTime must be non-null for VC 2.0 validFrom");
     assertEquals(Instant.parse("2026-01-30T00:00:00Z"), vr.getIssuedDateTime());
   }

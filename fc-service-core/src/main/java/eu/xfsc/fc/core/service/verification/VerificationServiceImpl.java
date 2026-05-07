@@ -1,9 +1,5 @@
 package eu.xfsc.fc.core.service.verification;
 
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_PARTICIPANT;
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_RESOURCE;
-import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_SERVICE_OFFERING;
-
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,11 +69,14 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_PARTICIPANT, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!(result instanceof CredentialVerificationResultParticipant participant)) {
+        "Participant", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!"Participant".equals(result.getRole())) {
       throw new VerificationException("Expected Participant credential but found role: " + result.getRole());
     }
-    return participant;
+    return new CredentialVerificationResultParticipant(result.getVerificationTimestamp(), result.getLifecycleStatus(),
+        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
+        result.getValidators(), result.getRole(), result.getFrameworkProfileId(),
+        result.getName(), result.getPublicKey());
   }
 
   /**
@@ -89,11 +88,13 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_SERVICE_OFFERING, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!(result instanceof CredentialVerificationResultOffering offering)) {
+        "ServiceOffering", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!"ServiceOffering".equals(result.getRole())) {
       throw new VerificationException("Expected ServiceOffering credential but found role: " + result.getRole());
     }
-    return offering;
+    return new CredentialVerificationResultOffering(result.getVerificationTimestamp(), result.getLifecycleStatus(),
+        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
+        result.getValidators(), result.getRole(), result.getFrameworkProfileId());
   }
 
   /**
@@ -105,11 +106,13 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_RESOURCE, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!(result instanceof CredentialVerificationResultResource resource)) {
+        "Resource", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!"Resource".equals(result.getRole())) {
       throw new VerificationException("Expected Resource credential but found role: " + result.getRole());
     }
-    return resource;
+    return new CredentialVerificationResultResource(result.getVerificationTimestamp(), result.getLifecycleStatus(),
+        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
+        result.getValidators(), result.getRole(), result.getFrameworkProfileId());
   }
 
   /**

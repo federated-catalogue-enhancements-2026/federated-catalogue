@@ -1,8 +1,8 @@
 package eu.xfsc.fc.core.service.verification;
 
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
@@ -23,9 +23,6 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -85,33 +82,35 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    void verifyParticipant_legalPersonVp_returnsParticipantResultWithClaims() {
+    void verifyParticipant_legalPersonVp_resolvesToParticipantRole() {
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("VerificationService/syntax/participantCredential2.jsonld"),
             SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result);
-        assertInstanceOf(CredentialVerificationResultParticipant.class, result,
-            "gx:LegalPerson (subclass of gx:Participant) must resolve to PARTICIPANT result type");
+      assertEquals(CredentialVerificationResult.class, result.getClass(),
+          "gx:LegalPerson must produce a plain CredentialVerificationResult — no role-specific subclass");
+      assertEquals("Participant", result.getRole());
       assertNotNull(result.getGraphClaims());
       assertFalse(result.getGraphClaims().isEmpty(), "Participant credential must produce non-empty claims");
     }
 
     @Test
-    void verifyOffering_serviceOfferingVp_returnsOfferingResultWithClaims() {
+    void verifyOffering_serviceOfferingVp_resolvesToServiceOfferingRole() {
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("VerificationService/syntax/serviceOffering1.jsonld"),
             SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result);
-        assertInstanceOf(CredentialVerificationResultOffering.class, result,
-            "gx:ServiceOffering must resolve to SERVICE_OFFERING result type");
+      assertEquals(CredentialVerificationResult.class, result.getClass(),
+          "gx:ServiceOffering must produce a plain CredentialVerificationResult — no role-specific subclass");
+      assertEquals("ServiceOffering", result.getRole());
       assertNotNull(result.getGraphClaims());
       assertFalse(result.getGraphClaims().isEmpty(), "ServiceOffering credential must produce non-empty claims");
     }
 
     @Test
-    void verifyOffering_digitalServiceOfferingVp_returnsOfferingResultWithClaims() {
+    void verifyOffering_digitalServiceOfferingVp_resolvesToServiceOfferingRole() {
       // gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering in gx-2511.
       // It is covered via additionalRoots in framework.yaml — the correct long-term mechanism.
         CredentialVerificationResult result = verificationService.verifyCredential(
@@ -119,24 +118,36 @@ public class RoleResolutionCharacterisationTest {
             SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result);
-        assertInstanceOf(CredentialVerificationResultOffering.class, result,
-            "gx:DigitalServiceOffering must resolve to SERVICE_OFFERING result type (gx-2511 edge case)");
+      assertEquals(CredentialVerificationResult.class, result.getClass(),
+          "gx:DigitalServiceOffering must produce a plain CredentialVerificationResult (gx-2511 additional_roots edge case)");
+      assertEquals("ServiceOffering", result.getRole());
       assertNotNull(result.getGraphClaims());
       assertFalse(result.getGraphClaims().isEmpty(), "DigitalServiceOffering credential must produce non-empty claims");
     }
 
     @Test
-    void verifyResource_resourceVp_returnsResourceResultWithClaims() {
-        // gx:VirtualResource rdfs:subClassOf gx:Resource — exercises the OWL subclass walk for RESOURCE role
+    void verifyResource_resourceVp_resolvesToResourceRole() {
+      // gx:VirtualResource rdfs:subClassOf gx:Resource — exercises the OWL subclass walk
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("CharacterisationTests/resourceCredential.jsonld"),
             SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
 
         assertNotNull(result);
-        assertInstanceOf(CredentialVerificationResultResource.class, result,
-            "gx:Resource must resolve to RESOURCE result type");
+      assertEquals(CredentialVerificationResult.class, result.getClass(),
+          "gx:Resource must produce a plain CredentialVerificationResult — no role-specific subclass");
+      assertEquals("Resource", result.getRole());
       assertNotNull(result.getGraphClaims());
       assertFalse(result.getGraphClaims().isEmpty(), "Resource credential must produce non-empty claims");
+    }
+
+  @Test
+  void verifyParticipant_nameAndPublicKeyPopulatedInGenericResult() {
+    CredentialVerificationResult result = verificationService.verifyCredential(
+        getAccessor("VerificationService/syntax/participantCredential2.jsonld"),
+        SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
+
+    assertNotNull(result);
+    assertNotNull(result.getName(), "name must be populated in the generic result");
     }
 
     @Test
