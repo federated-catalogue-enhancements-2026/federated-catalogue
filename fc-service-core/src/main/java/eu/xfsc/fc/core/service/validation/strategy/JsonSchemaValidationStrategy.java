@@ -15,6 +15,7 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
+import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 /**
@@ -38,9 +40,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class JsonSchemaValidationStrategy implements ValidationStrategy {
-
-  private static final String MEDIA_TYPE_JSON = "application/json";
-  private static final String MEDIA_TYPE_SCHEMA_JSON = "application/schema+json";
 
   @Qualifier("assetFileStore")
   private final FileStore fileStore;
@@ -71,7 +70,9 @@ public class JsonSchemaValidationStrategy implements ValidationStrategy {
       return false;
     }
     String ct = asset.getContentType();
-    return ct != null && (ct.contains(MEDIA_TYPE_JSON) || ct.contains(MEDIA_TYPE_SCHEMA_JSON));
+    return ct != null
+        && (ct.contains(MediaType.APPLICATION_JSON_VALUE)
+            || ct.contains(SchemaStore.MEDIA_TYPE_JSON_SCHEMA));
   }
 
   @Override

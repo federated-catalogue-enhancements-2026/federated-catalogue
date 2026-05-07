@@ -1,13 +1,16 @@
 package eu.xfsc.fc.core.util;
 
 import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import lombok.experimental.UtilityClass;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
+import org.springframework.http.MediaType;
 
 /**
  * Detects the RDF serialization format from an HTTP Content-Type header and/or content inspection.
  *
- * <p>Content-type is checked first (permissive {@code contains()} matching, handles charset params).
+ * <p>Content-type is checked first using Jena's built-in media-type mapper.
  * If the content type is absent or unrecognised, the raw content string is inspected by prefix.
  * Throws {@link eu.xfsc.fc.core.exception.ClientException} when neither check produces a match.</p>
  *
@@ -15,13 +18,6 @@ import org.apache.jena.riot.Lang;
  */
 @UtilityClass
 public class RdfFormatDetector {
-
-  public static final String JWT_PREFIX = "eyJ";
-  public static final String JSON_LD_PREFIX = "{";
-  public static final String RDF_XML_PREFIX_1 = "<?xml";
-  public static final String RDF_XML_PREFIX_2 = "<rdf:RDF";
-  static final String TURTLE_PREFIX_1 = "@prefix";
-  static final String TURTLE_PREFIX_2 = "@base";
 
   /**
    * Detects the RDF format from content-type and optional content inspection.
@@ -33,28 +29,29 @@ public class RdfFormatDetector {
    */
   public static Lang detect(String contentType, String rawContent) {
     if (contentType != null) {
-      if (contentType.contains("text/turtle")) {
-        return Lang.TURTLE;
+      Lang mappedLang = RDFLanguages.contentTypeToLang(contentType);
+      if (mappedLang != null) {
+        // Keep detector output stable across Jena mappings for ld+json.
+        return mappedLang == Lang.JSONLD ? Lang.JSONLD11 : mappedLang;
       }
-      if (contentType.contains("n-triples")) {
-        return Lang.NT;
-      }
-      if (contentType.contains("rdf+xml")) {
-        return Lang.RDFXML;
-      }
-      if (contentType.contains("application/vc+ld+json") || contentType.contains("application/vp+ld+json")
-          || contentType.contains("application/ld+json") || contentType.contains("application/json")) {
+      // VC/VP-specific JSON-LD media types are not registered with Jena's mapper.
+      if (contentType.contains(VerificationConstants.MEDIA_TYPE_VC_LD_JSON)
+          || contentType.contains(VerificationConstants.MEDIA_TYPE_VP_LD_JSON)
+          || contentType.contains(VerificationConstants.MEDIA_TYPE_LD_JSON)
+          || contentType.contains(MediaType.APPLICATION_JSON_VALUE)) {
         return Lang.JSONLD11;
       }
     }
     if (rawContent != null) {
-      if (rawContent.startsWith(JSON_LD_PREFIX)) {
+      if (rawContent.startsWith(FormatDetectionConstants.JSON_LD_PREFIX)) {
         return Lang.JSONLD11;
       }
-      if (rawContent.startsWith(TURTLE_PREFIX_1) || rawContent.startsWith(TURTLE_PREFIX_2)) {
+      if (rawContent.startsWith(FormatDetectionConstants.TURTLE_PREFIX_1)
+          || rawContent.startsWith(FormatDetectionConstants.TURTLE_PREFIX_2)) {
         return Lang.TURTLE;
       }
-      if (rawContent.startsWith(RDF_XML_PREFIX_1) || rawContent.startsWith(RDF_XML_PREFIX_2)) {
+      if (rawContent.startsWith(FormatDetectionConstants.RDF_XML_PREFIX_1)
+          || rawContent.startsWith(FormatDetectionConstants.RDF_XML_PREFIX_2)) {
         return Lang.RDFXML;
       }
       // N-Triples have no keyword prefix. IRI subjects start with '<' (RDF/XML is already matched above),

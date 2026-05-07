@@ -2,23 +2,23 @@ package eu.xfsc.fc.core.service.validation;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import eu.xfsc.fc.core.service.assetstore.AssetDeletedEvent;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class ValidationResultCleanupListenerTest {
 
+  @Mock
   private ValidationResultStore validationResultStore;
-  private ValidationResultCleanupListener listener;
 
-  @BeforeEach
-  void setUp() {
-    validationResultStore = mock(ValidationResultStore.class);
-    listener = new ValidationResultCleanupListener(validationResultStore);
-  }
+  @InjectMocks
+  private ValidationResultCleanupListener listener;
 
   @Test
   void onAssetDeleted_validEvent_callsDeleteByAssetId() {
