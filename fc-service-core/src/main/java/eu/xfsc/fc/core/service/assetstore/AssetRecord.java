@@ -28,6 +28,8 @@ public class AssetRecord extends AssetMetadata {
   /** Whether this is the current (latest) version. Null when not in a version-history context. */
   @Setter
   private Boolean isCurrent;
+  @Setter
+  private ContentKind contentKind;
 
   /**
    * Creates a record from explicit metadata fields.
@@ -58,9 +60,6 @@ public class AssetRecord extends AssetMetadata {
       expirationTime = minVal == null ? null : minVal.getExpirationDate();
     }
   }
-
-  @Setter
-  private ContentKind contentKind;
 
   /**
    * Creates a record from explicit fields.
