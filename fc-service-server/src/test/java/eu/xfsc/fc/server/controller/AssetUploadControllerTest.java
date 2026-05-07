@@ -1,35 +1,18 @@
 package eu.xfsc.fc.server.controller;
 
-import static eu.xfsc.fc.server.util.CommonConstants.CATALOGUE_ADMIN_ROLE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_ADMIN_ROLE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
-import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.nio.charset.StandardCharsets;
-
 import com.c4_soft.springaddons.security.oauth2.test.annotations.Claims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.OpenIdClaims;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.StringClaim;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockJwtAuth;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import eu.xfsc.fc.api.generated.model.Asset;
-import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -45,6 +28,20 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.nio.charset.StandardCharsets;
+
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_DELETE_WITH_PREFIX;
+import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_READ_WITH_PREFIX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Slf4j
 @SpringBootTest
@@ -607,8 +604,9 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
-        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX, ASSET_DELETE_WITH_PREFIX, ASSET_READ_WITH_PREFIX},
+        claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+            @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteNonRdfAsset_withEnrichment_deletesEnrichmentTriples() throws Exception {
         // Arrange: Create and enrich a non-RDF asset
         byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
@@ -646,14 +644,13 @@ public class AssetUploadControllerTest {
             assertEquals(assetId, enrichResponse.getAssetId());
             assertTrue(enrichResponse.getTriplesAdded() > 0);
 
-            // Act: Delete the asset via GET /assets/{asset_hash}/revoke (revoke is the primary delete path in tests)
-            // Note: The actual delete happens through revokeAsset which then deletes when REVOKED
-            mockMvc.perform(MockMvcRequestBuilders.post("/assets/" + assetHash + "/revoke")
+            // Act: delete the asset — this is the path that should also drop enrichment triples from the graph store.
+            mockMvc.perform(MockMvcRequestBuilders.delete("/assets/" + assetHash)
                     .with(csrf())
                     .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-            // Assert: Verify asset no longer exists
+            // Assert: asset no longer present.
             mockMvc.perform(MockMvcRequestBuilders.get("/assets/" + java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8))
                     .with(csrf())
                     .accept(MediaType.APPLICATION_JSON))
