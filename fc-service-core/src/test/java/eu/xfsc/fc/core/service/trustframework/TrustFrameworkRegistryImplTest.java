@@ -342,6 +342,17 @@ class TrustFrameworkRegistryImplTest {
   }
 
   @Test
+  void getResultType_deferredBundle_returnsEmpty() {
+    var roles = Map.of("Producer", new RoleConfig(List.of(), List.of(), "Producer"));
+    var config =
+        new FrameworkBundleConfig("untp-v1", "untp", "https://untp/", ValidationType.JSON_SCHEMA, roles, Map.of());
+    var bundle = new TrustFrameworkBundle(config, null, null);
+    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+
+    assertThat(registry.getResultType("untp-v1", "Producer")).isEmpty();
+  }
+
+  @Test
   void constructor_uriWithInjectionCharacter_doesNotThrow() {
     // A URI containing '>' in additionalRoots must not break SPARQL query construction
     var roles = Map.of("ServiceOffering", new RoleConfig(

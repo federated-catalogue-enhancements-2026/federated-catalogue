@@ -160,6 +160,9 @@ public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
 
   @Override
   public Optional<String> getResultType(String profileId, String role) {
+    if (!isFrameworkEnabled(profileId)) {
+      return Optional.empty();
+    }
     return Optional.ofNullable(bundleIndex.get(profileId))
         .map(bundle -> bundle.config().roles().get(role))
         .map(RoleConfig::resultType)

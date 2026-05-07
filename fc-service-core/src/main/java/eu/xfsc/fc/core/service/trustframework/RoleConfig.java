@@ -23,6 +23,6 @@ public record RoleConfig(
   public RoleConfig {
     additionalRoots = additionalRoots != null ? additionalRoots : List.of();
     types = types != null ? types : List.of();
-    resultType = resultType != null ? resultType : "";
+    resultType = resultType != null ? resultType.strip() : "";
   }
 }
