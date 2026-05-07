@@ -23,8 +23,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import eu.xfsc.fc.core.dao.validation.OutdatedReason;
-import eu.xfsc.fc.core.service.validation.ValidationResultStore;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -60,8 +59,7 @@ public class AssetStoreImpl implements AssetStore {
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
-  private final ProvenanceService provenanceService;
-  private final ValidationResultStore validationResultStore;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
@@ -151,6 +149,13 @@ public class AssetStoreImpl implements AssetStore {
       log.error("storeCredential.error 2", ex);
       throw new ServerException(ex);
     }
+    if (subjectHash != null && subjectHash.subjectId() != null) {
+      graphDb.deleteClaims(subjectHash.subjectId());
+      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
+      tryRewriteLinkTriples(assetMetadata.getId());
+    }
+    graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
+    return subjectHash;
   }
 
   @Override
@@ -200,7 +205,6 @@ public class AssetStoreImpl implements AssetStore {
     	hash, AssetStatus.ACTIVE, ssr.getAssetStatus()));
     }
     graphDb.deleteClaims(ssr.subjectId());
-    validationResultStore.markOutdatedByAssetId(ssr.subjectId(), OutdatedReason.ASSET_REVOKED);
   }
 
   @Override
@@ -226,9 +230,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new NotFoundException("no asset found for hash " + hash);
     }
 
-    provenanceService.deleteByAssetId(ssr.subjectId());
-    validationResultStore.deleteByAssetId(ssr.subjectId());
-
+    eventPublisher.publishEvent(new AssetDeletedEvent(ssr.subjectId()));
     // Delete enrichment triples for ACTIVE assets or non-ACTIVE NON_RDF assets that may have been enriched.
     // Skip if the graph backend is disabled (deleteClaims would be a no-op or throw).
     final boolean isActive = ssr.getAssetStatus() == AssetStatus.ACTIVE;
