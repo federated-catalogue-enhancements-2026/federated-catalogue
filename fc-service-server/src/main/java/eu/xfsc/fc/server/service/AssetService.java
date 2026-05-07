@@ -243,13 +243,15 @@ public class AssetService implements AssetsApiDelegate {
         String encodedId = UriUtils.encodePathSegment(ac.metadata().getId(), StandardCharsets.UTF_8);
         log.debug("addAsset.exit; created asset id={}, hash={}",
             ac.metadata().getId(), ac.metadata().getAssetHash());
-        // The delegate interface is typed to AssetEnrichmentResponse because the generator picks the
-        // lowest 2xx response (200 enrichment). The created path returns 201 with Asset metadata; the
-        // cast is safe because Java erases generics at runtime and Jackson serializes by actual type.
+        // The generated AssetsApiDelegate#addAsset signature is fixed to the lowest declared 2xx
+        // response (200 → AssetEnrichmentResponse). For the 201 branch the body is an Asset; the
+        // type parameter is irrelevant at runtime (Jackson serialises by actual type) and the wire
+        // contract per OpenAPI is honoured. The cast is the single boundary required by the
+        // openapi-generator delegate pattern.
         @SuppressWarnings("unchecked")
-        ResponseEntity<AssetEnrichmentResponse> response = (ResponseEntity<AssetEnrichmentResponse>) (ResponseEntity<?>)
+        ResponseEntity<AssetEnrichmentResponse> created = (ResponseEntity<AssetEnrichmentResponse>) (ResponseEntity<?>)
             ResponseEntity.created(URI.create("/assets/" + encodedId)).body(ac.metadata());
-        yield response;
+        yield created;
       }
     };
   }

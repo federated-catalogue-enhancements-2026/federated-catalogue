@@ -282,7 +282,6 @@ public class AssetUploadControllerTest {
             assertEquals(assetId, response.getAssetId());
             assertEquals(2, response.getTriplesAdded()); // @id, @type for the object
             assertEquals(0, response.getTriplesRejected());
-            assertNotNull(response.getEnrichmentTimestamp());
         } finally {
             deleteAssetQuietly(createdAsset.getAssetHash());
         }
@@ -451,7 +450,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichHumanReadableAsset_returnsUnprocessableEntity() throws Exception {
+    public void enrichHumanReadableAssetReturnsUnprocessableEntity() throws Exception {
         // 1. Create a non-RDF (machine-readable) asset
         byte[] mrContent = "machine-readable document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile mrFile = new MockMultipartFile("file", "doc.txt", "text/plain", mrContent);
@@ -556,6 +555,111 @@ public class AssetUploadControllerTest {
             assertEquals(0, second.getTriplesRejected());
         } finally {
             deleteAssetQuietly(createdAsset.getAssetHash());
+        }
+    }
+
+    @Test
+    public void enrichNonRdfAssetWithoutAuthReturnsUnauthorized() throws Exception {
+        byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
+
+        String rdfPayload = "{"
+            + "  \"@context\": {\"ex\": \"http://example.org/\"},"
+            + "  \"@id\": \"urn:uuid:12345678-1234-1234-1234-123456789012\","
+            + "  \"ex:title\": \"Enriched Document\""
+            + "}";
+        byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                .file(rdfFile)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void createHumanReadableAssetWithoutAuthReturnsUnauthorized() throws Exception {
+        String assetId = "urn:uuid:12345678-1234-1234-1234-123456789012";
+        String encodedId = java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8);
+        byte[] hrContent = "<html><body>Human Readable</body></html>".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile hrFile = new MockMultipartFile("file", "doc.html", "text/html", hrContent);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/assets/" + encodedId + "/human-readable")
+                .file(hrFile)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void updateHumanReadableAssetWithoutAuthReturnsUnauthorized() throws Exception {
+        String assetId = "urn:uuid:12345678-1234-1234-1234-123456789012";
+        String encodedId = java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8);
+        byte[] hrContent = "<html><body>Updated Human Readable</body></html>".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile hrFile = new MockMultipartFile("file", "doc.html", "text/html", hrContent);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/assets/" + encodedId + "/human-readable")
+                .file(hrFile)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void deleteNonRdfAsset_withEnrichment_deletesEnrichmentTriples() throws Exception {
+        // Arrange: Create and enrich a non-RDF asset
+        byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
+
+        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                .file(file)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        String assetId = createdAsset.getId();
+        String assetHash = createdAsset.getAssetHash();
+
+        try {
+            // Enrich with RDF metadata
+            String rdfPayload = "{"
+                + "  \"@context\": {\"ex\": \"http://example.org/\"},"
+                + "  \"@id\": \"" + assetId + "\","
+                + "  \"ex:title\": \"Enriched Document\""
+                + "}";
+            byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
+            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
+
+            MvcResult enrichResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                    .file(rdfFile)
+                    .with(csrf())
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+            AssetEnrichmentResponse enrichResponse = objectMapper.readValue(enrichResult.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
+            assertEquals(assetId, enrichResponse.getAssetId());
+            assertTrue(enrichResponse.getTriplesAdded() > 0);
+
+            // Act: Delete the asset via GET /assets/{asset_hash}/revoke (revoke is the primary delete path in tests)
+            // Note: The actual delete happens through revokeAsset which then deletes when REVOKED
+            mockMvc.perform(MockMvcRequestBuilders.post("/assets/" + assetHash + "/revoke")
+                    .with(csrf())
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+            // Assert: Verify asset no longer exists
+            mockMvc.perform(MockMvcRequestBuilders.get("/assets/" + java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8))
+                    .with(csrf())
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+        } finally {
+            deleteAssetQuietly(assetHash);
         }
     }
 

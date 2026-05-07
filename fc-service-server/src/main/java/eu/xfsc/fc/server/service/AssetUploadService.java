@@ -37,6 +37,8 @@ import eu.xfsc.fc.core.service.verification.VerificationService;
 import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.GraphStoreDisabledException;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -145,24 +147,34 @@ public class AssetUploadService {
      * Enriches an existing non-RDF asset with RDF metadata.
      *
      * Steps:
-     * 1. Parse RDF payload to list of claims
-     * 2. Validate at least one claim has the asset's subject IRI
-     * 3. Filter protected namespace claims
-     * 4. Delete old enrichment triples from graph
-     * 5. Write new triples to graph
-     * 6. Persist raw RDF payload to asset.content
-     * 7. Return enrichment response with counts
+     * 1. Fail-fast if the graph store is disabled
+     * 2. Parse RDF payload to list of claims
+     * 3. Validate at least one claim has the asset's subject IRI
+     * 4. Filter protected namespace claims
+     * 5. Delete old enrichment triples from graph
+     * 6. Write new triples to graph
+     * 7. Persist raw RDF payload to asset.content
+     * 8. Return enrichment response with counts
+     *
+     * @throws GraphStoreDisabledException if the graph store backend is disabled (graphstore.impl=none)
      */
     private AssetEnrichmentResponse enrichAsset(AssetRecord record, byte[] rdfPayload, String contentType) {
         String subjectId = record.getId();
         log.debug("enrichAsset.enter; assetId={}, contentType={}", subjectId, contentType);
 
-        // Step 1: Parse RDF payload
+        // Step 1: Fail-fast — enrichment requires an active graph backend; no point parsing the payload otherwise.
+        if (graphStore.getBackendType() == GraphBackendType.NONE) {
+            throw new GraphStoreDisabledException(
+                    "Cannot enrich asset: graph store is disabled (graphstore.impl=none). "
+                    + "Enable a graph backend (neo4j or fuseki) to perform metadata enrichment.");
+        }
+
+        // Step 2: Parse RDF payload
         String rawPayloadText = new String(rdfPayload, StandardCharsets.UTF_8);
         List<RdfClaim> claims = parseRdfClaims(rawPayloadText, contentType);
         log.debug("enrichAsset; parsed {} claims", claims.size());
 
-        // Step 2: Validate that at least one claim has the asset's subject IRI
+        // Step 3: Validate that at least one claim has the asset's subject IRI
         boolean hasSubjectClaim = claims.stream()
                 .anyMatch(c -> subjectId.equals(c.getSubjectValue()));
         if (!hasSubjectClaim && !claims.isEmpty()) {
@@ -170,30 +182,28 @@ public class AssetUploadService {
                     "RDF payload must contain at least one claim with subject IRI: " + subjectId);
         }
 
-        // Step 3: Filter protected namespaces
+        // Step 4: Filter protected namespaces
         FilteredClaims filteredClaims = protectedNamespaceFilter.filterClaims(claims, "asset enrichment");
         int rejectedCount = claims.size() - filteredClaims.claims().size();
         log.debug("enrichAsset; filtered {} claims, {} remaining", rejectedCount, filteredClaims.claims().size());
 
-        // Step 4: Delete old enrichment triples
+        // Step 5: Delete old enrichment triples
         graphStore.deleteClaims(subjectId);
         log.debug("enrichAsset; deleted old triples for subject {}", subjectId);
 
-        // Step 5: Write new triples to graph
+        // Step 6: Write new triples to graph
         graphStore.addClaims(filteredClaims.claims(), subjectId);
         log.debug("enrichAsset; added {} new triples", filteredClaims.claims().size());
 
-        // Step 6: Persist raw RDF payload (unfiltered, for graph rebuild)
-        assetStorePublisher.saveEnrichedContent(subjectId, rawPayloadText);
+        // Step 7: Persist raw RDF payload (unfiltered, for graph rebuild)
+        assetStorePublisher.saveEnrichedContent(record, rawPayloadText);
         log.debug("enrichAsset; persisted enrichment content, asset updated");
 
-        // Step 7: Return enrichment response
-        AssetEnrichmentResponse response = new AssetEnrichmentResponse(
-                subjectId,
-                filteredClaims.claims().size(),
-                rejectedCount,
-                Instant.now()
-        );
+        // Step 8: Return enrichment response
+        AssetEnrichmentResponse response = new AssetEnrichmentResponse();
+        response.setAssetId(subjectId);
+        response.setTriplesAdded(filteredClaims.claims().size());
+        response.setTriplesRejected(rejectedCount);
         log.debug("enrichAsset.exit; triplesAdded={}, triplesRejected={}", response.getTriplesAdded(), response.getTriplesRejected());
         return response;
     }

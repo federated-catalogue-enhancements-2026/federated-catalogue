@@ -16,6 +16,7 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.AssetType;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentKind;
+import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -228,9 +229,15 @@ public class AssetStoreImpl implements AssetStore {
     provenanceService.deleteByAssetId(ssr.subjectId());
     validationResultStore.deleteByAssetId(ssr.subjectId());
 
-    if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
+    // Delete enrichment triples for ACTIVE assets or non-ACTIVE NON_RDF assets that may have been enriched.
+    // Skip if the graph backend is disabled (deleteClaims would be a no-op or throw).
+    final boolean isActive = ssr.getAssetStatus() == AssetStatus.ACTIVE;
+    final boolean isEnrichableNonRdf = assetOpt.isPresent()
+        && assetOpt.get().getContentKind() == ContentKind.NON_RDF;
+    if ((isActive || isEnrichableNonRdf) && graphDb.getBackendType() != GraphBackendType.NONE) {
       graphDb.deleteClaims(ssr.subjectId());
     }
+
     try {
       fileStore.deleteFile(hash);
     } catch (IOException ex) {
@@ -304,13 +311,13 @@ public class AssetStoreImpl implements AssetStore {
   }
 
   @Override
-  public void saveEnrichedContent(String subjectId, String rawRdfContent) {
-    Asset asset = assetRepository.findBySubjectId(subjectId)
-        .orElseThrow(() -> new NotFoundException("Asset not found: " + subjectId));
-    asset.setContent(rawRdfContent);
-    asset.setChangeComment("Metadata enriched");
-    assetRepository.save(asset);
-    log.debug("saveEnrichedContent; persisted enrichment for subject {}", subjectId);
+  public void saveEnrichedContent(AssetRecord asset, String rawRdfContent) {
+    Asset persistedAsset = assetRepository.findBySubjectId(asset.getId())
+        .orElseThrow(() -> new NotFoundException("Asset not found: " + asset.getId()));
+    persistedAsset.setContent(rawRdfContent);
+    persistedAsset.setChangeComment("Metadata enriched");
+    assetRepository.save(persistedAsset);
+    log.debug("saveEnrichedContent; persisted enrichment for subject {}", asset.getId());
   }
 
   @Override

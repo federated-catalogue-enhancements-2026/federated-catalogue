@@ -147,14 +147,14 @@ public interface AssetStore {
   Optional<AssetRecord> findEnrichableAsset(String subjectId);
 
   /**
-   * Persists raw RDF enrichment content to the asset identified by the given subject IRI.
+   * Persists raw RDF enrichment content to the given asset.
    * Sets the asset's content to the raw payload and records a change comment for auditing.
    *
-   * @param subjectId      subject IRI of the asset to enrich
+   * @param asset          the asset record to enrich (must be a NON_RDF asset)
    * @param rawRdfContent  raw RDF payload to store
-   * @throws eu.xfsc.fc.core.exception.NotFoundException if no asset with the given IRI exists
+   * @throws eu.xfsc.fc.core.exception.NotFoundException if the asset cannot be found in the database
    */
-  void saveEnrichedContent(String subjectId, String rawRdfContent);
+  void saveEnrichedContent(AssetRecord asset, String rawRdfContent);
 
   /**
    * Remove all assets from the AssetStore.
