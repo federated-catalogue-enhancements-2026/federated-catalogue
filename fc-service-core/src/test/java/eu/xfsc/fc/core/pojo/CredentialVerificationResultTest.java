@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.pojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.List;
@@ -114,6 +115,17 @@ class CredentialVerificationResultTest {
 
     assertNull(result.getRole());
     assertNull(result.getFrameworkProfileId());
+  }
+
+  @Test
+  void getGraphClaims_setToNull_returnsEmptyList() {
+    CredentialVerificationResult result = minimal("Participant");
+    result.setGraphClaims(null);
+
+    List<RdfClaim> claims = result.getGraphClaims();
+
+    assertNotNull(claims);
+    assertTrue(claims.isEmpty());
   }
 
   @Test

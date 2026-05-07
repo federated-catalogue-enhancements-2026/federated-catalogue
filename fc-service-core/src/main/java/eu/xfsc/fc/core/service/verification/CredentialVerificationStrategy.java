@@ -474,8 +474,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         Instant issuedDate = typedCredentials.getIssuanceDate();
         Instant now = Instant.now();
         String status = AssetStatus.ACTIVE.getValue();
-      String role = resolvedRole.role();
-      String profileId = resolvedRole.frameworkProfileId();
+      String role = resolvedRole.isResolved() ? resolvedRole.role() : null;
+      String profileId = resolvedRole.isResolved() ? resolvedRole.frameworkProfileId() : null;
 
       if (ROLE_PARTICIPANT.equals(role)) {
             if (issuer == null) {

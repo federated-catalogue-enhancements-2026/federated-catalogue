@@ -7,7 +7,9 @@ import java.util.List;
  * Verification result for non-credential raw RDF content (e.g. Turtle, N-Triples, RDF/XML).
  *
  * <p>Unlike {@link CredentialVerificationResult}, non-credential RDF has no issuer, issuance date,
- * or credential ID. Those fields are always {@code null} for this subtype.</p>
+ * credential ID, role, or framework profile. Those fields are intentionally {@code null} for this
+ * subtype. The {@code @NotNull} constraints declared on those fields in the parent API model apply
+ * only to credential-based results and are not enforced for this subtype.</p>
  */
 public class NonCredentialVerificationResult extends CredentialVerificationResult {
 

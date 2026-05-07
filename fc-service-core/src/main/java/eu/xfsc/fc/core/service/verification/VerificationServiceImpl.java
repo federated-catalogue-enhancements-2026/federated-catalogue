@@ -64,9 +64,12 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultParticipant) resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_PARTICIPANT,
-            verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_PARTICIPANT, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!(result instanceof CredentialVerificationResultParticipant participant)) {
+      throw new VerificationException("Expected Participant credential but found role: " + result.getRole());
+    }
+    return participant;
   }
 
   /**
@@ -77,9 +80,12 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultOffering) resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_SERVICE_OFFERING,
-            verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_SERVICE_OFFERING, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!(result instanceof CredentialVerificationResultOffering offering)) {
+      throw new VerificationException("Expected ServiceOffering credential but found role: " + result.getRole());
+    }
+    return offering;
   }
 
   /**
@@ -90,9 +96,12 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException {
-    return (CredentialVerificationResultResource) resolveStrategy(payload).verifyCredential(payload, true,
-        ROLE_RESOURCE,
-            verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
+        ROLE_RESOURCE, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
+    if (!(result instanceof CredentialVerificationResultResource resource)) {
+      throw new VerificationException("Expected Resource credential but found role: " + result.getRole());
+    }
+    return resource;
   }
 
   /**

@@ -32,6 +32,13 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
   @JsonIgnore
   private List<RdfClaim> graphClaims;
 
+  /**
+   * Returns graph claims; never null — empty list when not populated (e.g. after JSON deserialization).
+   */
+  public List<RdfClaim> getGraphClaims() {
+    return graphClaims != null ? graphClaims : List.of();
+  }
+
   /** Validators that signed parts of the credential. */
   @JsonIgnore
   private List<Validator> validators;
