@@ -227,16 +227,40 @@ public class AssetService implements AssetsApiDelegate {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public ResponseEntity<AssetEnrichmentResponse> addAsset(String body) {
     log.debug("addAsset.enter; got asset of length: {}", body.length());
-    AssetMetadata assetMetadata = verifyAndStore(body, null, null);
-    log.debug("addAsset.exit; returning asset with id: {}", assetMetadata.getId());
-    String encodedId = UriUtils.encodePathSegment(assetMetadata.getId(), StandardCharsets.UTF_8);
-    // The delegate interface is typed to AssetEnrichmentResponse because the generator picks the
-    // lowest 2xx response (200 enrichment). This path returns 201 with Asset body; the cast is
-    // safe because Java erases generics at runtime and Jackson serializes by the actual object type.
-    @SuppressWarnings("unchecked")
-    ResponseEntity<AssetEnrichmentResponse> response = (ResponseEntity<AssetEnrichmentResponse>) (ResponseEntity<?>)
-        ResponseEntity.created(URI.create("/assets/" + encodedId)).body(assetMetadata);
-    return response;
+
+    // Route through the enrichment-aware upload service so that JSON-body POSTs share the same
+    // RDF-vs-non-RDF detection and metadata-enrichment branching as the multipart/octet-stream paths.
+    UploadResult result = assetUploadService.processUpload(
+        body.getBytes(StandardCharsets.UTF_8), resolveRequestContentType(), null);
+
+    return switch (result) {
+      case UploadResult.AssetEnriched ae -> {
+        log.debug("addAsset.exit; enrichment, assetId={}, triplesAdded={}",
+            ae.response().getAssetId(), ae.response().getTriplesAdded());
+        yield ResponseEntity.ok(ae.response());
+      }
+      case UploadResult.AssetCreated ac -> {
+        String encodedId = UriUtils.encodePathSegment(ac.metadata().getId(), StandardCharsets.UTF_8);
+        log.debug("addAsset.exit; created asset id={}, hash={}",
+            ac.metadata().getId(), ac.metadata().getAssetHash());
+        // The delegate interface is typed to AssetEnrichmentResponse because the generator picks the
+        // lowest 2xx response (200 enrichment). The created path returns 201 with Asset metadata; the
+        // cast is safe because Java erases generics at runtime and Jackson serializes by actual type.
+        @SuppressWarnings("unchecked")
+        ResponseEntity<AssetEnrichmentResponse> response = (ResponseEntity<AssetEnrichmentResponse>) (ResponseEntity<?>)
+            ResponseEntity.created(URI.create("/assets/" + encodedId)).body(ac.metadata());
+        yield response;
+      }
+    };
+  }
+
+  private String resolveRequestContentType() {
+    String contentType = httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE);
+    if (contentType == null) {
+      return MediaType.APPLICATION_JSON_VALUE;
+    }
+    int sep = contentType.indexOf(';');
+    return sep >= 0 ? contentType.substring(0, sep).trim() : contentType;
   }
 
   /**

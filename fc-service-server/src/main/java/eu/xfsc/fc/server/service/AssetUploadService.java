@@ -118,6 +118,10 @@ public class AssetUploadService {
         checkParticipantAccess(assetMetadata.getIssuer());
         assetStorePublisher.storeCredential(assetMetadata, verificationResult);
 
+        if (verificationResult.getWarnings() != null && !verificationResult.getWarnings().isEmpty()) {
+            assetMetadata.setWarnings(verificationResult.getWarnings());
+        }
+
         log.debug("handleCredential.exit; stored credential with hash: {}", assetMetadata.getAssetHash());
         return assetMetadata;
     }
@@ -179,7 +183,7 @@ public class AssetUploadService {
         graphStore.addClaims(filteredClaims.claims(), subjectId);
         log.debug("enrichAsset; added {} new triples", filteredClaims.claims().size());
 
-        // Step 6: Persist raw RDF payload (unfiltered, for GD-07 rebuild)
+        // Step 6: Persist raw RDF payload (unfiltered, for graph rebuild)
         assetStorePublisher.saveEnrichedContent(subjectId, rawPayloadText);
         log.debug("enrichAsset; persisted enrichment content, asset updated");
 
