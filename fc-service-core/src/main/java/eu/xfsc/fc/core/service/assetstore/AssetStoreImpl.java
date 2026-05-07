@@ -5,6 +5,7 @@ import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
 import eu.xfsc.fc.core.dao.assets.AssetDao;
 import eu.xfsc.fc.core.dao.assets.AssetMapper;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
+import eu.xfsc.fc.core.dao.validation.OutdatedReason;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -118,7 +119,6 @@ public class AssetStoreImpl implements AssetStore {
 
     if (subjectHash != null && subjectHash.subjectId() != null) {
       graphDb.deleteClaims(subjectHash.subjectId());
-      validationResultStore.markOutdatedByAssetId(subjectHash.subjectId(), OutdatedReason.ASSET_UPDATED);
       // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
       tryRewriteLinkTriples(assetMetadata.getId());
     }
@@ -149,13 +149,6 @@ public class AssetStoreImpl implements AssetStore {
       log.error("storeCredential.error 2", ex);
       throw new ServerException(ex);
     }
-    if (subjectHash != null && subjectHash.subjectId() != null) {
-      graphDb.deleteClaims(subjectHash.subjectId());
-      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
-      tryRewriteLinkTriples(assetMetadata.getId());
-    }
-    graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
-    return subjectHash;
   }
 
   @Override
