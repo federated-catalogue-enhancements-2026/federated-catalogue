@@ -9,6 +9,7 @@
 #     additional_roots — explicit URIs mapped to this role that are NOT OWL subclasses of the root
 #                        (e.g. DigitalServiceOffering is not an OWL subclass of ServiceOffering in 2511)
 #     types            — explicit type list for JSON Schema engines (forward-compat; unused for SHACL)
+#     result_type      — stable string identifier for result-materialization dispatch; empty = generic result
 #   properties     — framework-specific key/value metadata (reserved; not used by the resolver)
 
 id: gaia-x-2511
@@ -20,6 +21,7 @@ roles:
   Participant:
     additional_roots: [ ]
     types: [ ]
+    result_type: Participant
 
   ServiceOffering:
     # gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering in gx-2511.
@@ -27,9 +29,11 @@ roles:
     additional_roots:
       - "https://w3id.org/gaia-x/2511#DigitalServiceOffering"
     types: [ ]
+    result_type: ServiceOffering
 
   Resource:
     additional_roots: [ ]
     types: [ ]
+    result_type: Resource
 
 properties: { }

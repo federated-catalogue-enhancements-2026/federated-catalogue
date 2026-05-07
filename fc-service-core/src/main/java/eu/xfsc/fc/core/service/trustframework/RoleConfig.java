@@ -11,14 +11,18 @@ import java.util.List;
  * DigitalServiceOffering workaround that was required when migrating to Loire from Tagus) to map DSO to ServiceOffering.
  * {@code types} is defined for forward-compatibility with JSON Schema validation engines
  * and is intentionally unused in the SHACL resolver until other trust frameworks with different validations are integrated.
+ * {@code resultType} is a stable string identifier that maps this role to a result-materialization strategy;
+ * an empty value signals that the generic result schema is used.
  */
 public record RoleConfig(
     @JsonProperty("additional_roots") List<String> additionalRoots,
-    @JsonProperty("types") List<String> types
+    @JsonProperty("types") List<String> types,
+    @JsonProperty("result_type") String resultType
 ) {
 
   public RoleConfig {
     additionalRoots = additionalRoots != null ? additionalRoots : List.of();
     types = types != null ? types : List.of();
+    resultType = resultType != null ? resultType : "";
   }
 }

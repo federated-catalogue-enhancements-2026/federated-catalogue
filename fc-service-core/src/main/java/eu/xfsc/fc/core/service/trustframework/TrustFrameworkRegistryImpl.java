@@ -157,4 +157,12 @@ public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
   public boolean isFrameworkEnabled(String profileId) {
     return activeProfileIds.contains(profileId);
   }
+
+  @Override
+  public Optional<String> getResultType(String profileId, String role) {
+    return Optional.ofNullable(bundleIndex.get(profileId))
+        .map(bundle -> bundle.config().roles().get(role))
+        .map(RoleConfig::resultType)
+        .filter(rt -> !rt.isBlank());
+  }
 }
