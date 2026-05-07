@@ -37,14 +37,12 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Test class for configurable Gaia-X Trust Framework validation.
- *
+ * Test class for configurable Gaia-X Trust Framework validation.*
  * These tests verify that:
  * - Assets can be uploaded without Gaia-X Compliance validation
  * - Gaia-X validation is configurable via gaiax.enabled property
  * - No mandatory Gaia-X validation when disabled
  * - Backward compatibility - Gaia-X validation works when enabled
- *
  * Tests use programmatic toggling of the gaiax.enabled flag to verify
  * behavior changes with the same Spring context.
  */
