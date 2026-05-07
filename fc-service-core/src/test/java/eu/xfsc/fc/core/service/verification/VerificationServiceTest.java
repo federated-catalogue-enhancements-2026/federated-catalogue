@@ -119,8 +119,8 @@ public class VerificationServiceTest {
       CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
       assertNotNull(result);
-      assertNotNull(result.getClaims());
-      assertFalse(result.getClaims().isEmpty(), "Non-VC JSON-LD is processed as non-credential RDF");
+    assertNotNull(result.getGraphClaims());
+    assertFalse(result.getGraphClaims().isEmpty(), "Non-VC JSON-LD is processed as non-credential RDF");
   }
 
   @Test
@@ -159,8 +159,8 @@ public class VerificationServiceTest {
       CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
       assertNotNull(result);
-      assertNotNull(result.getClaims());
-      assertFalse(result.getClaims().isEmpty(), "Plain JSON-LD must extract triples as non-credential RDF");
+    assertNotNull(result.getGraphClaims());
+    assertFalse(result.getGraphClaims().isEmpty(), "Plain JSON-LD must extract triples as non-credential RDF");
   }
 
     @Test
@@ -277,8 +277,8 @@ public class VerificationServiceTest {
     CredentialVerificationResultOffering vro = (CredentialVerificationResultOffering) vr;
     assertEquals("https://www.example.org/mySoftwareOffering", vro.getId());
     assertEquals("http://gaiax.de", vro.getIssuer());
-    assertNotNull(vro.getClaims());
-    assertEquals(17, vro.getClaims().size());
+    assertNotNull(vro.getGraphClaims());
+    assertEquals(17, vro.getGraphClaims().size());
     assertTrue(vro.getValidators().isEmpty());
     assertTrue(vro.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vro.getIssuedDateTime());
@@ -296,8 +296,8 @@ public class VerificationServiceTest {
     assertEquals("http://gaiax.de", vrp.getId());
     assertEquals("http://gaiax.de", vrp.getIssuer());
     assertEquals("http://gaiax.de", vrp.getParticipantName()); // could be 'Provider Name'..
-    assertNotNull(vrp.getClaims());
-    assertEquals(10, vrp.getClaims().size());
+    assertNotNull(vrp.getGraphClaims());
+    assertEquals(10, vrp.getGraphClaims().size());
     assertTrue(vrp.getValidators().isEmpty());
     assertTrue(vrp.getValidatorDids().isEmpty());
     assertEquals(Instant.parse("2022-10-19T18:48:09Z"), vrp.getIssuedDateTime());
@@ -322,7 +322,7 @@ public class VerificationServiceTest {
     assertInstanceOf(CredentialVerificationResultResource.class, vr);
     CredentialVerificationResultResource vrr = (CredentialVerificationResultResource) vr;
     assertEquals("did:web:example.com", vrr.getIssuer());
-    assertNotNull(vrr.getClaims());
+    assertNotNull(vrr.getGraphClaims());
     assertTrue(vrr.getValidators().isEmpty());
     assertTrue(vrr.getValidatorDids().isEmpty());
   }
@@ -430,7 +430,7 @@ public class VerificationServiceTest {
     String path = "VerificationService/syntax/complexCredentialPartType.jsonld";
     CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
     assertNotNull(result);
-    assertEquals(12, result.getClaims().size());
+    assertEquals(12, result.getGraphClaims().size());
     List<RdfClaim> expectedClaims = new ArrayList<>();
     expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
     expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
@@ -446,7 +446,7 @@ public class VerificationServiceTest {
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\""));
     expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
     for (RdfClaim claim: expectedClaims) {
-    	assertTrue(result.getClaims().contains(claim));
+      assertTrue(result.getGraphClaims().contains(claim));
     }
   }
 
@@ -465,7 +465,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
     Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
     expectedClaims.add(new CredentialClaim("<http://example.org/test-issuer>", "<https://w3id.org/gaia-x/2511#name>", "\"deltaDAO AG\""));
@@ -485,7 +485,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
 
     Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<did:web:delta-dao.com>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
@@ -517,7 +517,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoVCs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
     List<RdfClaim> expectedClaims = new ArrayList<>();
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2006/vcard/ns#Address>"));
     expectedClaims.add(new CredentialClaim("_:b0", "<http://www.w3.org/2006/vcard/ns#country-name>", "\"Country\""));
@@ -542,7 +542,7 @@ public class VerificationServiceTest {
     schemaStore.initializeDefaultSchemas();
     ContentAccessor content = getAccessor("VerificationService/syntax/specialCharacters.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
     Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#Resource>"));
     expectedClaims.add(new CredentialClaim("<did:web:example.com:fad49ec6-d488-4bf9-bae5-d0ffa62a9bd2>", "<http://purl.org/dc/terms/description>", "\"\\n \\\\ Test with </\\\"s>pecial\\\" \\\\ / characters \\b </\\f \\n \\r \\t 🔥\""));
@@ -578,7 +578,7 @@ public class VerificationServiceTest {
 
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
     assertNotNull(result, "Claims extraction should succeed with additional contexts");
-    assertNotNull(result.getClaims(), "Claims should not be null");
+    assertNotNull(result.getGraphClaims(), "Claims should not be null");
   }
 
   @Test
@@ -586,7 +586,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantTwoCSs.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, true, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
 
     Set<RdfClaim> expectedClaims = new HashSet<>();
     expectedClaims.add(new CredentialClaim("<https://w3id.org/gaia-x/2511#Provider1>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://w3id.org/gaia-x/2511#LegalPerson>"));
@@ -682,7 +682,7 @@ public class VerificationServiceTest {
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
-    List<RdfClaim> actualClaims = result.getClaims();
+    List<RdfClaim> actualClaims = result.getGraphClaims();
 
     for (RdfClaim claim : actualClaims) {
       assertFalse(claim.getPredicateString().contains(protectedNsProps.getNamespace()),
@@ -724,7 +724,7 @@ public class VerificationServiceTest {
   void extractClaims_allFcmetaClaimsFiltered_returnsEmptyList() {
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-only-fcmeta.jsonld");
     CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
-    List<RdfClaim> claims = result.getClaims();
+    List<RdfClaim> claims = result.getGraphClaims();
     assertNotNull(claims, "Result should not be null even when all claims are filtered");
     assertTrue(claims.isEmpty(), "All fcmeta: claims should have been filtered, leaving an empty list");
     assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");
@@ -1111,9 +1111,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertNotNull(result.getClaims());
-        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from non-credential JSON-LD");
-        assertTrue(result.getClaims().stream()
+      assertNotNull(result.getGraphClaims());
+      assertEquals(3, result.getGraphClaims().size(), "All 3 triples must be extracted from non-credential JSON-LD");
+      assertTrue(result.getGraphClaims().stream()
                         .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
                 "Subject IRI must appear in extracted claims");
     }
@@ -1125,9 +1125,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertNotNull(result.getClaims());
-        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from Turtle");
-        assertTrue(result.getClaims().stream()
+      assertNotNull(result.getGraphClaims());
+      assertEquals(3, result.getGraphClaims().size(), "All 3 triples must be extracted from Turtle");
+      assertTrue(result.getGraphClaims().stream()
                         .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
                 "Subject IRI must appear in extracted claims");
     }
@@ -1139,9 +1139,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertNotNull(result.getClaims());
-        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from N-Triples");
-        assertTrue(result.getClaims().stream()
+      assertNotNull(result.getGraphClaims());
+      assertEquals(3, result.getGraphClaims().size(), "All 3 triples must be extracted from N-Triples");
+      assertTrue(result.getGraphClaims().stream()
                         .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
                 "Subject IRI must appear in extracted claims");
     }
@@ -1153,9 +1153,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertNotNull(result.getClaims());
-        assertEquals(3, result.getClaims().size(), "All 3 triples must be extracted from RDF/XML");
-        assertTrue(result.getClaims().stream()
+      assertNotNull(result.getGraphClaims());
+      assertEquals(3, result.getGraphClaims().size(), "All 3 triples must be extracted from RDF/XML");
+      assertTrue(result.getGraphClaims().stream()
                         .anyMatch(c -> c.getSubjectString().equals("<http://example.org/item1>")),
                 "Subject IRI must appear in extracted claims");
     }
@@ -1167,9 +1167,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertFalse(result.getClaims().isEmpty());
-        assertInstanceOf(RdfClaim.class, result.getClaims().get(0));
-        assertFalse(result.getClaims().get(0) instanceof CredentialClaim,
+      assertFalse(result.getGraphClaims().isEmpty());
+      assertInstanceOf(RdfClaim.class, result.getGraphClaims().get(0));
+      assertFalse(result.getGraphClaims().get(0) instanceof CredentialClaim,
                 "Non-credential extractor must return RdfClaim, not CredentialClaim");
     }
 
@@ -1181,9 +1181,9 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertNotNull(result.getClaims(), "VC credential must return non-null claims");
-        assertFalse(result.getClaims().isEmpty(), "VC credential must return non-empty claims");
-        boolean hasIssuerSubject = result.getClaims().stream()
+      assertNotNull(result.getGraphClaims(), "VC credential must return non-null claims");
+      assertFalse(result.getGraphClaims().isEmpty(), "VC credential must return non-empty claims");
+      boolean hasIssuerSubject = result.getGraphClaims().stream()
                 .anyMatch(c -> c.getSubjectString().contains("issuer.example.com"));
         assertFalse(hasIssuerSubject, "Issuer IRI must not appear as credentialSubject — only subject triples");
     }
@@ -1196,8 +1196,8 @@ public class VerificationServiceTest {
         CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
 
         assertNotNull(result);
-        assertFalse(result.getClaims().isEmpty());
-        assertInstanceOf(CredentialClaim.class, result.getClaims().get(0),
+      assertFalse(result.getGraphClaims().isEmpty());
+      assertInstanceOf(CredentialClaim.class, result.getGraphClaims().get(0),
                 "VC credential extractor must return CredentialClaim instances");
     }
 

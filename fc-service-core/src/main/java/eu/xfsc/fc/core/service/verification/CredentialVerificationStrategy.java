@@ -467,33 +467,37 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * Phase 5: Build the typed result object based on the resolved role.
      */
     private CredentialVerificationResult assembleResult(ResolvedRole resolvedRole,
-                                                        TypedCredentials typedCredentials, List<RdfClaim> claims, List<Validator> validators) {
+                                                        TypedCredentials typedCredentials, List<RdfClaim> graphClaims,
+                                                        List<Validator> validators) {
         String id = typedCredentials.getID();
         String issuer = typedCredentials.getIssuer();
         Instant issuedDate = typedCredentials.getIssuanceDate();
         Instant now = Instant.now();
         String status = AssetStatus.ACTIVE.getValue();
+      String role = resolvedRole.role();
+      String profileId = resolvedRole.frameworkProfileId();
 
-      if (ROLE_PARTICIPANT.equals(resolvedRole.role())) {
+      if (ROLE_PARTICIPANT.equals(role)) {
             if (issuer == null) {
                 issuer = id;
             }
             String method = validators.isEmpty() ? null : validators.getFirst().getDidURI();
             String holder = typedCredentials.getHolder();
             String name = holder == null ? issuer : holder;
+        // For Participant: the result id is the issuer DID (the legal entity), not the credentialSubject IRI.
             return new CredentialVerificationResultParticipant(now, status, issuer, issuedDate,
-                    claims, validators, name, method);
+                issuer, graphClaims, validators, role, profileId, name, method);
         }
-      if (ROLE_SERVICE_OFFERING.equals(resolvedRole.role())) {
+      if (ROLE_SERVICE_OFFERING.equals(role)) {
             return new CredentialVerificationResultOffering(now, status, issuer, issuedDate,
-                    id, claims, validators);
+                id, graphClaims, validators, role, profileId);
         }
-      if (ROLE_RESOURCE.equals(resolvedRole.role())) {
+      if (ROLE_RESOURCE.equals(role)) {
             return new CredentialVerificationResultResource(now, status, issuer, issuedDate,
-                    id, claims, validators);
+                id, graphClaims, validators, role, profileId);
         }
         return new CredentialVerificationResult(now, status, issuer, issuedDate,
-                id, claims, validators);
+            id, graphClaims, validators, role, profileId);
     }
 
     private TypedCredentials parseCredentials(JsonLDObject ld, boolean vpRequired, boolean verifySemantics,

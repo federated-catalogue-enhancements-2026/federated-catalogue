@@ -164,8 +164,8 @@ public class GaiaxTrustFrameworkTest {
 
         assertNotNull(result, "Should return result");
         assertTrue(result instanceof CredentialVerificationResultParticipant, "Should be participant result");
-        assertNotNull(result.getClaims(), "Claims should be extracted");
-        assertFalse(result.getClaims().isEmpty(), "Should have claims");
+      assertNotNull(result.getGraphClaims(), "Claims should be extracted");
+      assertFalse(result.getGraphClaims().isEmpty(), "Should have claims");
     }
 
     // ==================== Enabled Behavior Tests ====================

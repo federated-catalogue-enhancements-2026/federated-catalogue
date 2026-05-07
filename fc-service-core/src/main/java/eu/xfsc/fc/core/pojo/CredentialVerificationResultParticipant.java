@@ -5,8 +5,11 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * POJO Class for holding validation results.
+ * POJO Class for holding validation results for the Participant role.
+ *
+ * @deprecated Will be removed in story 002-3 AC-5. Use {@link CredentialVerificationResult} directly.
  */
+@Deprecated
 @lombok.Getter
 @lombok.Setter
 public class CredentialVerificationResultParticipant extends CredentialVerificationResult {
@@ -16,42 +19,49 @@ public class CredentialVerificationResultParticipant extends CredentialVerificat
    */
   @JsonIgnore
   private String participantName;
+
   /**
    * The public key of the participant.
    */
   @JsonIgnore
   private String participantPublicKey;
+
   /**
-   * Constructor for the VerificationResultParticipant
+   * Creates a participant credential verification result.
    *
-   * @param participantName Name of participant
-   * @param id id of credential
-   * @param participantPublicKey public key of participant
    * @param verificationTimestamp time stamp of verification
    * @param lifecycleStatus status according to GAIA-X lifecycle
+   * @param issuer issuer of the credential
    * @param issuedDateTime issuing date of the credential
-   * @param validators Validators, signing parts of the credential
-   * @param claims List of claims in the credential
+   * @param id id of credential
+   * @param graphClaims RDF triples for graph-DB insertion
+   * @param validators validators signing parts of the credential
+   * @param role resolved role name
+   * @param frameworkProfileId bundle profile identifier
+   * @param participantName display name of the participant
+   * @param participantPublicKey DID URI of the first validator
    */
-  public CredentialVerificationResultParticipant(Instant verificationTimestamp, String lifecycleStatus, String id, Instant issuedDateTime,
-                                                 List<RdfClaim> claims, List<Validator> validators, String participantName, String participantPublicKey) {
-    super(verificationTimestamp, lifecycleStatus, id, issuedDateTime, id, claims, validators);
+  public CredentialVerificationResultParticipant(Instant verificationTimestamp, String lifecycleStatus,
+                                                 String issuer, Instant issuedDateTime,
+                                                 String id, List<RdfClaim> graphClaims, List<Validator> validators,
+                                                 String role, String frameworkProfileId,
+                                                 String participantName, String participantPublicKey) {
+    super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, id, graphClaims, validators,
+        role, frameworkProfileId);
     this.participantName = participantName;
     this.participantPublicKey = participantPublicKey;
   }
-  
+
   @Override
   public String toString() {
-    List<RdfClaim> claims = getClaims();
-    String cls = claims == null ? "null" : "" + claims.size();
-    List<Validator> validators = getValidators();
-    String vls = validators == null ? "null" : "" + validators.size();
+    int claimCount = getGraphClaims() == null ? 0 : getGraphClaims().size();
+    int validatorCount = getValidators() == null ? 0 : getValidators().size();
     return "CredentialVerificationResultParticipant [id=" + getId() + ", participantName=" + participantName
-            + ", issuer=" + getIssuer()  + ", validatorDids=" + getValidatorDids() + ", issuedDateTime=" + getIssuedDateTime()
-            + ", participantPublicKey=" + participantPublicKey + ", claims=" + cls + ", validators=" + vls
-            + ", verificationTimestamp=" + getVerificationTimestamp() + ", lifecycleStatus=" + getLifecycleStatus() + "]";
+        + ", issuer=" + getIssuer() + ", validatorDids=" + getValidatorDids()
+        + ", issuedDateTime=" + getIssuedDateTime()
+        + ", participantPublicKey=" + participantPublicKey
+        + ", graphClaims=" + claimCount + ", validators=" + validatorCount
+        + ", verificationTimestamp=" + getVerificationTimestamp()
+        + ", lifecycleStatus=" + getLifecycleStatus() + "]";
   }
-  
 }
-
-

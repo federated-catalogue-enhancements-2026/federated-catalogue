@@ -16,17 +16,18 @@ public class NonCredentialVerificationResult extends CredentialVerificationResul
    *
    * @param verificationTimestamp time stamp of verification
    * @param lifecycleStatus       status according to GAIA-X lifecycle
-   * @param claims                extracted RDF claims (may be empty, not null)
+   * @param graphClaims           extracted RDF claims (may be empty, not null)
    */
-  public NonCredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus, List<RdfClaim> claims) {
-    super(verificationTimestamp, lifecycleStatus, null, null, null, claims, null);
+  public NonCredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus,
+                                         List<RdfClaim> graphClaims) {
+    super(verificationTimestamp, lifecycleStatus, null, null, null, graphClaims, null, "", "");
   }
 
   @Override
   public String toString() {
-    List<RdfClaim> claims = getClaims();
-    String cls = claims == null ? "null" : "" + claims.size();
-    return "NonCredentialVerificationResult [claims=" + cls
+    List<RdfClaim> graphClaims = getGraphClaims();
+    int claimCount = graphClaims == null ? 0 : graphClaims.size();
+    return "NonCredentialVerificationResult [graphClaims=" + claimCount
         + ", verificationTimestamp=" + getVerificationTimestamp()
         + ", lifecycleStatus=" + getLifecycleStatus() + "]";
   }

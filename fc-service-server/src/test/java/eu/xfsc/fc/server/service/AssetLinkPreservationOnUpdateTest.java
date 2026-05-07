@@ -198,7 +198,7 @@ public class AssetLinkPreservationOnUpdateTest {
     meta.setContentAccessor(new ContentAccessorDirect(content));
     CredentialVerificationResult vr = new CredentialVerificationResult(
         Instant.now(), AssetStatus.ACTIVE.getValue(), TEST_ISSUER, Instant.now(), MR_IRI,
-        List.of(), List.of());
+        List.of(), List.of(), "", "");
     assetStore.storeCredential(meta, vr);
   }
 

@@ -4,35 +4,42 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * POJO Class for holding validation results.
+ * POJO Class for holding validation results for the ServiceOffering role.
+ *
+ * @deprecated Will be removed in story 002-3 AC-5. Use {@link CredentialVerificationResult} directly.
  */
+@Deprecated
 public class CredentialVerificationResultOffering extends CredentialVerificationResult {
 
   /**
-   * Constructor for the CredentialVerificationResultOffering
+   * Creates a service-offering credential verification result.
    *
-   * @param id id of credential
-   * @param claims List of claims in the credential
-   * @param validators Validators, signing parts of the credential
    * @param verificationTimestamp time stamp of verification
    * @param lifecycleStatus status according to GAIA-X lifecycle
-   * @param issuer Issuer of the offering
+   * @param issuer issuer of the offering
    * @param issuedDateTime issuing date of the credential
+   * @param id id of credential
+   * @param graphClaims RDF triples for graph-DB insertion
+   * @param validators validators signing parts of the credential
+   * @param role resolved role name
+   * @param frameworkProfileId bundle profile identifier
    */
-  public CredentialVerificationResultOffering(Instant verificationTimestamp, String lifecycleStatus, String issuer, Instant issuedDateTime,
-                                              String id, List<RdfClaim> claims, List<Validator> validators) {
-    super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, id, claims, validators);
+  public CredentialVerificationResultOffering(Instant verificationTimestamp, String lifecycleStatus, String issuer,
+                                              Instant issuedDateTime, String id, List<RdfClaim> graphClaims,
+                                              List<Validator> validators, String role, String frameworkProfileId) {
+    super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, id, graphClaims, validators,
+        role, frameworkProfileId);
   }
 
   @Override
   public String toString() {
-    List<RdfClaim> claims = getClaims();
-    String cls = claims == null ? "null" : "" + claims.size();
-    List<Validator> validators = getValidators();
-    String vls = validators == null ? "null" : "" + validators.size();
-    return "CredentialVerificationResultOffering [id=" + getId() + ", issuer=" + getIssuer() + ", validatorDids=" + getValidatorDids()
-            + ", issuedDateTime=" + getIssuedDateTime() + ", claims=" + cls + ", validators=" + vls
-            + ", verificationTimestamp=" + getVerificationTimestamp() + ", lifecycleStatus=" + getLifecycleStatus() + "]";
+    int claimCount = getGraphClaims() == null ? 0 : getGraphClaims().size();
+    int validatorCount = getValidators() == null ? 0 : getValidators().size();
+    return "CredentialVerificationResultOffering [id=" + getId() + ", issuer=" + getIssuer()
+        + ", validatorDids=" + getValidatorDids()
+        + ", issuedDateTime=" + getIssuedDateTime()
+        + ", graphClaims=" + claimCount + ", validators=" + validatorCount
+        + ", verificationTimestamp=" + getVerificationTimestamp()
+        + ", lifecycleStatus=" + getLifecycleStatus() + "]";
   }
-  
 }

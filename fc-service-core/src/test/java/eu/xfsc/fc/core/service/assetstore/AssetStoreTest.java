@@ -140,7 +140,7 @@ public class AssetStoreTest {
 
     private static CredentialVerificationResult createVerificationResult(final int idSuffix, String subject) {
         return new CredentialVerificationResultOffering(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer" + idSuffix, Instant.now(),
-                "id" + idSuffix, createClaims(subject), new ArrayList<>());
+            "id" + idSuffix, createClaims(subject), new ArrayList<>(), "", "");
     }
 
     private static CredentialVerificationResult createVerificationResult(final int idSuffix) {
@@ -156,7 +156,7 @@ public class AssetStoreTest {
             }
         }
         return new CredentialVerificationResultOffering(assetMeta.getStatusDatetime(), AssetStatus.ACTIVE.getValue(), assetMeta.getIssuer(), assetMeta.getUploadDatetime(),
-                assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals);
+            assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals, "", "");
     }
 
     /**
@@ -627,7 +627,7 @@ public class AssetStoreTest {
         signatures.add(new Validator("did:second", "", Instant.now().plus(1, ChronoUnit.DAYS)));
         signatures.add(new Validator("did:third", "", Instant.now().plus(2, ChronoUnit.DAYS)));
         return new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer", Instant.now(),
-                id, new ArrayList<>(), signatures);
+            id, new ArrayList<>(), signatures, "", "");
     }
 
     @Test

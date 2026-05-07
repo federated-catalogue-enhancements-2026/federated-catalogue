@@ -128,7 +128,7 @@ public class AssetStoreTest {
 
   private static CredentialVerificationResult createVerificationResult(final int idSuffix, String subject) {
     return new CredentialVerificationResultOffering(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer" + idSuffix, Instant.now(),
-        "id" + idSuffix, createClaims(subject), new ArrayList<>());
+        "id" + idSuffix, createClaims(subject), new ArrayList<>(), "", "");
   }
 
   private static CredentialVerificationResult createVerificationResult(final int idSuffix) {
@@ -144,7 +144,7 @@ public class AssetStoreTest {
 		}
 	}
     return new CredentialVerificationResultOffering(assetMeta.getStatusDatetime(), AssetStatus.ACTIVE.getValue(), assetMeta.getIssuer(), assetMeta.getUploadDatetime(),
-            assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals); 
+        assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals, "", "");
   }
   
   /**

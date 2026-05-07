@@ -93,8 +93,8 @@ public class RoleResolutionCharacterisationTest {
         assertNotNull(result);
         assertInstanceOf(CredentialVerificationResultParticipant.class, result,
             "gx:LegalPerson (subclass of gx:Participant) must resolve to PARTICIPANT result type");
-        assertNotNull(result.getClaims());
-        assertFalse(result.getClaims().isEmpty(), "Participant credential must produce non-empty claims");
+      assertNotNull(result.getGraphClaims());
+      assertFalse(result.getGraphClaims().isEmpty(), "Participant credential must produce non-empty claims");
     }
 
     @Test
@@ -106,8 +106,8 @@ public class RoleResolutionCharacterisationTest {
         assertNotNull(result);
         assertInstanceOf(CredentialVerificationResultOffering.class, result,
             "gx:ServiceOffering must resolve to SERVICE_OFFERING result type");
-        assertNotNull(result.getClaims());
-        assertFalse(result.getClaims().isEmpty(), "ServiceOffering credential must produce non-empty claims");
+      assertNotNull(result.getGraphClaims());
+      assertFalse(result.getGraphClaims().isEmpty(), "ServiceOffering credential must produce non-empty claims");
     }
 
     @Test
@@ -121,8 +121,8 @@ public class RoleResolutionCharacterisationTest {
         assertNotNull(result);
         assertInstanceOf(CredentialVerificationResultOffering.class, result,
             "gx:DigitalServiceOffering must resolve to SERVICE_OFFERING result type (gx-2511 edge case)");
-        assertNotNull(result.getClaims());
-        assertFalse(result.getClaims().isEmpty(), "DigitalServiceOffering credential must produce non-empty claims");
+      assertNotNull(result.getGraphClaims());
+      assertFalse(result.getGraphClaims().isEmpty(), "DigitalServiceOffering credential must produce non-empty claims");
     }
 
     @Test
@@ -135,8 +135,8 @@ public class RoleResolutionCharacterisationTest {
         assertNotNull(result);
         assertInstanceOf(CredentialVerificationResultResource.class, result,
             "gx:Resource must resolve to RESOURCE result type");
-        assertNotNull(result.getClaims());
-        assertFalse(result.getClaims().isEmpty(), "Resource credential must produce non-empty claims");
+      assertNotNull(result.getGraphClaims());
+      assertFalse(result.getGraphClaims().isEmpty(), "Resource credential must produce non-empty claims");
     }
 
     @Test

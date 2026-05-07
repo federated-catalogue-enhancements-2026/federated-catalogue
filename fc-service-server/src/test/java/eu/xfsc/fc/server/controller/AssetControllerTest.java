@@ -591,7 +591,7 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeAsset_validRequest_returnsOk() throws Exception {
         final CredentialVerificationResult vr = new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer",
-                Instant.now(), "vhash", List.of(), List.of());
+            Instant.now(), "vhash", List.of(), List.of(), "", "");
         assetStorePublisher.storeCredential(assetMeta, vr);
         mockMvc.perform(MockMvcRequestBuilders.post("/assets/{asset_hash}/revoke", assetMeta.getAssetHash())
                         .with(csrf())
@@ -672,7 +672,7 @@ public class AssetControllerTest {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void revokeAsset_nonActiveStatus_returnsConflict() throws Exception {
         final CredentialVerificationResult vr = new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer",
-                Instant.now(), "vhash", List.of(), List.of());
+            Instant.now(), "vhash", List.of(), List.of(), "", "");
         AssetMetadata deprecatedMeta = createAssetMetadata();
         deprecatedMeta.setStatus(AssetStatus.DEPRECATED);
         assetStorePublisher.storeCredential(deprecatedMeta, vr);

@@ -61,7 +61,9 @@ public class CesAssetPublisherTest {
 	@Test
 	public void test01AssetPublishSuccess() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
-		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
+      CredentialVerificationResult vr =
+          new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(),
+              "https://sagresearch.de/participant.json", null, null, "", "");
 		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		ContentAccessor response = getAccessor("Pub-Sub-Tests/sag-research-response.jsonld");
 		mockCompService.enqueue(new MockResponse()
@@ -78,7 +80,9 @@ public class CesAssetPublisherTest {
 	@Test
 	public void test02AssetPublishCompFail() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
-		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
+      CredentialVerificationResult vr =
+          new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(),
+              "https://sagresearch.de/participant.json", null, null, "", "");
 		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
@@ -91,7 +95,9 @@ public class CesAssetPublisherTest {
 	@Test
 	public void test03AssetPublishCesFail() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
-		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
+      CredentialVerificationResult vr =
+          new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(),
+              "https://sagresearch.de/participant.json", null, null, "", "");
 		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		ContentAccessor response = getAccessor("Pub-Sub-Tests/comp-response.jsonld");
 		mockCompService.enqueue(new MockResponse()
@@ -108,7 +114,9 @@ public class CesAssetPublisherTest {
 	@Test
 	public void test04AssetPublishTxOff() throws Exception {
 		ContentAccessor content = getAccessor("Pub-Sub-Tests/sag-research.jsonld");
-		CredentialVerificationResult vr = new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(), "https://sagresearch.de/participant.json", null, null);
+      CredentialVerificationResult vr =
+          new CredentialVerificationResultOffering(Instant.now(), "ACTIVE", "did:web:sagresearch.de", Instant.now(),
+              "https://sagresearch.de/participant.json", null, null, "", "");
 		AssetMetadata assetMetadata = new AssetMetadata(content, vr);
 		mockCompService.enqueue(new MockResponse()
 			      .setBody("{\"error\": \"Conflict\"}")
