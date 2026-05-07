@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
@@ -139,6 +140,13 @@ public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
   @Override
   public Collection<TrustFrameworkBundle> getBundles() {
     return List.copyOf(bundleIndex.values());
+  }
+
+  @Override
+  public Collection<TrustFrameworkBundle> getActiveBundles() {
+    return bundleIndex.values().stream()
+        .filter(b -> activeProfileIds.contains(b.config().id()))
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override

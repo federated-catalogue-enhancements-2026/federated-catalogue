@@ -362,4 +362,24 @@ class TrustFrameworkRegistryImplTest {
     assertThatCode(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
         .doesNotThrowAnyException();
   }
+
+  @Test
+  void getActiveBundles_excludesDeferredBundles() {
+    // SHACL bundle is active; JSON_SCHEMA bundle is deferred — getActiveBundles() must exclude deferred
+    var active = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
+    var deferred = jsonSchemaBundle("untp-v1");
+    var registry = new TrustFrameworkRegistryImpl(List.of(active, deferred));
+
+    assertThat(registry.getActiveBundles())
+        .containsExactly(active)
+        .doesNotContain(deferred);
+  }
+
+  @Test
+  void getActiveBundles_allDeferred_returnsEmpty() {
+    var deferred = jsonSchemaBundle("untp-v1");
+    var registry = new TrustFrameworkRegistryImpl(List.of(deferred));
+
+    assertThat(registry.getActiveBundles()).isEmpty();
+  }
 }

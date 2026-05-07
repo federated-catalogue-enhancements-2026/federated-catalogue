@@ -129,7 +129,7 @@ public class VerificationServiceImpl implements VerificationService {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, false, "",
             verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     if (!(result instanceof NonCredentialVerificationResult) && result.getRole() == null) {
-      String bundleInfo = trustFrameworkRegistry.getBundles().stream()
+      String bundleInfo = trustFrameworkRegistry.getActiveBundles().stream()
           .map(b -> b.config().id() + "=" + b.config().roles().keySet())
           .collect(Collectors.joining(", "));
       throw new ClientException(

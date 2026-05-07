@@ -143,8 +143,8 @@ public class GaiaxTrustFrameworkTest {
             // Success - trust anchor check was skipped
             assertNotNull(result, "Should return result when Gaia-X is disabled");
         } catch (ClientException e) {
-          // ClientException = unresolvable type (fixture has no domain type) — acceptable here
-          log.info("Got acceptable unresolvable-type error: {}", e.getMessage());
+          assertTrue(e.getMessage().contains("not resolvable"),
+              "ClientException must be unresolvable-type rejection, got: " + e.getMessage());
         } catch (VerificationException e) {
             // Should NOT get trust anchor error when Gaia-X is disabled
             assertFalse(e.getMessage().contains("must contain x5c or x5u"),
@@ -227,7 +227,8 @@ public class GaiaxTrustFrameworkTest {
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (ClientException e) {
-          // ClientException = unresolvable type (fixture has no domain type) — acceptable here
+          assertTrue(e.getMessage().contains("not resolvable"),
+              "ClientException must be unresolvable-type rejection, got: " + e.getMessage());
         } catch (VerificationException e) {
             assertFalse(e.getMessage().contains("must contain x5c or x5u"),
                 "Should NOT require trust chain when disabled. Got: " + e.getMessage());
@@ -247,7 +248,8 @@ public class GaiaxTrustFrameworkTest {
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (ClientException e) {
-          // ClientException = unresolvable type (fixture has no domain type) — acceptable here
+          assertTrue(e.getMessage().contains("not resolvable"),
+              "ClientException must be unresolvable-type rejection, got: " + e.getMessage());
         } catch (VerificationException e) {
             if (e.getMessage().contains("must contain x5c or x5u")) {
                 fail("Should NOT require trust chain when Gaia-X is disabled. Got: " + e.getMessage());
@@ -279,7 +281,8 @@ public class GaiaxTrustFrameworkTest {
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (ClientException e) {
-          // ClientException = unresolvable type (fixture has no domain type) — acceptable here
+          assertTrue(e.getMessage().contains("not resolvable"),
+              "ClientException must be unresolvable-type rejection, got: " + e.getMessage());
         } catch (VerificationException e) {
             assertFalse(e.getMessage().contains("must contain x5c or x5u"),
                 "Should NOT require trust chain when Gaia-X is disabled. Got: " + e.getMessage());

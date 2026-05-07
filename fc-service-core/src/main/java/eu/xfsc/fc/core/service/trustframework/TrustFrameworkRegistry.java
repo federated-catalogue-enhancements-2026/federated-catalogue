@@ -10,6 +10,17 @@ public interface TrustFrameworkRegistry {
 
   Collection<TrustFrameworkBundle> getBundles();
 
+  /**
+   * Returns only the bundles that are currently active (i.e. their validation engine is wired and
+   * their types participate in role resolution).
+   *
+   * <p>Deferred bundles — those registered with an unsupported {@code validationType} — are
+   * excluded.
+   *
+   * @return immutable collection of active bundles; never null
+   */
+  Collection<TrustFrameworkBundle> getActiveBundles();
+
   Optional<TrustFrameworkBundle> getBundle(String profileId);
 
   Set<String> getEffectiveRoles(String profileId);
