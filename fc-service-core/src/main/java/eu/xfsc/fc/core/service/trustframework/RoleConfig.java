@@ -7,8 +7,14 @@ import java.util.List;
 /**
  * Per-role configuration entry from a bundle's {@code framework.yaml}.
  *
- * <p>{@code additionalRoots} enables SHACL sibling-class grouping (e.g. the gx-2511
- * DigitalServiceOffering workaround that was required when migrating to Loire from Tagus) to map DSO to ServiceOffering.
+ * <p>{@code additionalRoots} enables SHACL sibling-class grouping: explicit URIs that
+ * resolve to the role even though they are not OWL subclasses of its primary root.
+ * The mechanism is general; reach for it only when an external ontology genuinely
+ * declares siblings without subsumption. The current gx-2511 use (DigitalServiceOffering
+ * routed to ServiceOffering) is known semantic debt: the catalogue would otherwise have
+ * no landing site for DSO credentials because the role -> result-POJO dispatch is still
+ * hardcoded to Gaia-X roles. Routing DSO through ServiceOffering makes the catalogue
+ * silently assert an ontology-level equivalence the spec does not declare.
  * {@code types} is defined for forward-compatibility with JSON Schema validation engines
  * and is intentionally unused in the SHACL resolver until other trust frameworks with different validations are integrated.
  * {@code resultType} is a stable string identifier that maps this role to a result-materialization strategy;
