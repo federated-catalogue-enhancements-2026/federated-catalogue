@@ -4,17 +4,22 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_PA
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_RESOURCE;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.ROLE_SERVICE_OFFERING;
 
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -46,6 +51,9 @@ public class VerificationServiceImpl implements VerificationService {
 
   @Autowired
   private SchemaValidationService schemaValidationService;
+
+  @Autowired
+  private TrustFrameworkRegistry trustFrameworkRegistry;
 
   /** Package-private for testing: allows overriding the schema verification toggle. */
   void setVerifySchema(boolean verifySchema) {
@@ -118,8 +126,17 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    return resolveStrategy(payload).verifyCredential(payload, false, "",
+    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, false, "",
             verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
+    if (!(result instanceof NonCredentialVerificationResult) && result.getRole() == null) {
+      String bundleInfo = trustFrameworkRegistry.getBundles().stream()
+          .map(b -> b.config().id() + "=" + b.config().roles().keySet())
+          .collect(Collectors.joining(", "));
+      throw new ClientException(
+          "Credential type is not resolvable in any active trust-framework bundle."
+              + " Active bundles: [" + bundleInfo + "]");
+    }
+    return result;
   }
 
   /* Credential validation against SHACL Schemas — delegated to SchemaValidationService */

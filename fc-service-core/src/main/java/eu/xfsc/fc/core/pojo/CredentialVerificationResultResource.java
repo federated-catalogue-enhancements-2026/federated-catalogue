@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * POJO Class for holding validation results for the Resource role.
  *
- * @deprecated Will be removed in story 002-3 AC-5. Use {@link CredentialVerificationResult} directly.
+ * @deprecated Use {@link CredentialVerificationResult} directly.
  */
 @Deprecated
 public class CredentialVerificationResultResource extends CredentialVerificationResult {

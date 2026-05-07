@@ -5,7 +5,6 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,36 +43,6 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
   private List<Validator> validators;
 
   /**
-   * Resolved trust-framework role name (e.g. {@code "Participant"}, {@code "ServiceOffering"}).
-   */
-  @Setter
-  private String role;
-
-  /**
-   * Active bundle profile identifier that resolved the role (e.g. {@code "gaia-x-2511"}).
-   */
-  @Setter
-  private String frameworkProfileId;
-
-  /**
-   * Display name of the credential holder. Populated for the Participant role only.
-   */
-  @Setter
-  private String name;
-
-  /**
-   * DID URI of the first validator. Populated for the Participant role only.
-   */
-  @Setter
-  private String publicKey;
-
-  /**
-   * Raw claims from the credential, keyed by claim property URI.
-   */
-  @Setter
-  private Map<String, Object> claims = new HashMap<>();
-
-  /**
    * Creates a generic credential verification result.
    *
    * @param verificationTimestamp time the verification was performed
@@ -89,15 +58,20 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
   public CredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus, String issuer,
                                       Instant issuedDateTime, String id, List<RdfClaim> graphClaims,
                                       List<Validator> validators, String role, String frameworkProfileId) {
-    super(verificationTimestamp, lifecycleStatus, issuer, issuedDateTime, new java.util.ArrayList<>(),
-        new java.util.ArrayList<>());
+    super();
+    setVerificationTimestamp(verificationTimestamp);
+    setLifecycleStatus(lifecycleStatus);
+    setIssuer(issuer);
+    setIssuedDateTime(issuedDateTime);
+    setValidatorDids(new java.util.ArrayList<>());
+    setWarnings(new java.util.ArrayList<>());
     this.id = id;
     this.graphClaims = graphClaims;
-    this.role = role;
-    this.frameworkProfileId = frameworkProfileId;
+    setRole(role);
+    setFrameworkProfileId(frameworkProfileId);
     setValidators(validators);
     if (graphClaims != null && !graphClaims.isEmpty()) {
-      this.claims = buildClaimsMap(graphClaims);
+      setClaims(buildClaimsMap(graphClaims));
     }
   }
 
@@ -137,7 +111,7 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
     int graphClaimCount = graphClaims == null ? 0 : graphClaims.size();
     int validatorCount = validators == null ? 0 : validators.size();
     return "CredentialVerificationResult [id=" + id + ", issuer=" + getIssuer()
-        + ", role=" + role + ", frameworkProfileId=" + frameworkProfileId
+        + ", role=" + getRole() + ", frameworkProfileId=" + getFrameworkProfileId()
         + ", validatorDids=" + getValidatorDids()
         + ", issuedDateTime=" + getIssuedDateTime()
         + ", graphClaims=" + graphClaimCount + ", validators=" + validatorCount

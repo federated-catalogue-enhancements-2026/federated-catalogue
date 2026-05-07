@@ -12,13 +12,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 
-/**
- * Unit tests for AC-2: generic verification result schema (story 002-3).
- *
- * <p>RED phase: these tests will not compile until {@link CredentialVerificationResult}
- * gains {@code role}, {@code frameworkProfileId}, {@code name}, {@code publicKey} fields
- * and {@code getClaims()} is changed to return {@code Map<String, Object>}.
- */
 class CredentialVerificationResultTest {
 
   private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");

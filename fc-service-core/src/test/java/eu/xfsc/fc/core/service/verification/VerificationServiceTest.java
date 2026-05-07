@@ -194,17 +194,10 @@ public class VerificationServiceTest {
 
   @Test
   void validVCUnknownType() {
-    // With gaiax disabled (default in tests), non-Gaia-X credentials pass the semantics check.
-    // verifyVCSignatures=false because input.vc.jsonld has a dummy proof that would fail verification.
     String path = "VerificationService/jsonld/input.vc.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
-    boolean verifySemantics = true;
-    boolean verifyVcSigs = false;
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path),
-        verifySemantics, false, false, verifyVcSigs);
-    assertNotNull(vr);
-    assertEquals("did:example:ebfeb1f712ebc6f1c276e12ec21", vr.getId());
-    assertEquals("https://example.edu/issuers/565049", vr.getIssuer());
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, false));
   }
 
   @Test
@@ -235,17 +228,12 @@ public class VerificationServiceTest {
 
   @Test
   void validVPUnknownType() {
-    // With gaiax disabled (default in tests), non-Gaia-X VP credentials pass the semantics check.
-    // verifyVPSignatures=false because input.vp.jsonld uses Ed25519Signature2018 which is unsupported.
+    // input.vp.jsonld's credentialSubject type fails JSON-LD parsing (PROTECTED_TERM_REDEFINITION)
+    // → resolveSubjectRole returns UNKNOWN → ClientException.
     String path = "VerificationService/jsonld/input.vp.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
-    boolean verifySemantics = true;
-    boolean verifyVpSigs = false;
-    CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path),
-        verifySemantics, false, verifyVpSigs, false);
-    assertNotNull(vr);
-    assertEquals("did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd", vr.getId());
-    assertEquals("did:v1:test:nym:z6MkhdmzFu659ZJ4XKj31vtEDmjvsi5yDZG5L7Caz63oP39k", vr.getIssuer());
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, false));
   }
 
   @Test
@@ -387,13 +375,11 @@ public class VerificationServiceTest {
 
       jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
 
-      // With the framework disabled, even an unknown type (no ontology loaded) is accepted.
+      // AC-3: ext:CustomParticipant is not in any active bundle (gaia-x disabled, no ontology loaded)
+      // → resolveSubjectRole returns UNKNOWN → ClientException.
       ContentAccessor customExtContent = getAccessor("VerificationService/syntax/customExtParticipant.jsonld");
-      CredentialVerificationResult vrDisabled = verificationService.verifyCredential(
-          customExtContent, true, false, false, false);
-      assertNotNull(vrDisabled);
-      assertFalse(vrDisabled instanceof CredentialVerificationResultParticipant,
-          "Unknown type with no ontology loaded must not resolve to Participant when framework is disabled");
+      assertThrowsExactly(ClientException.class,
+          () -> verificationService.verifyCredential(customExtContent, true, false, false, false));
     } finally {
       jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
     }
@@ -424,28 +410,12 @@ public class VerificationServiceTest {
 
   @Test
   void validComplexCredentialPartType() {
+    // AC-3: VCs whose outer "type" array has only "VerifiableCredential" (no domain type) are rejected.
+    // complexCredentialPartType.jsonld's VCs all have type=["VerifiableCredential"], so role=null → 400.
     schemaStore.initializeDefaultSchemas();
     String path = "VerificationService/syntax/complexCredentialPartType.jsonld";
-    CredentialVerificationResult result = verificationService.verifyCredential(getAccessor(path), true, true, false, false);
-    assertNotNull(result);
-    assertEquals(12, result.getGraphClaims().size());
-    List<RdfClaim> expectedClaims = new ArrayList<>();
-    expectedClaims.add(new CredentialClaim("_:b0", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
-    expectedClaims.add(new CredentialClaim("_:b1", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#countrySubdivisionCode>", "\"FR-59\""));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#LegalParticipant>"));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#headquarterAddress>", "_:b0"));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalAddress>", "_:b1"));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalName>", "\"Riphixel\""));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/8255722c-35de-4741-90b2-650040b3fa57.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>", "<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>"));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#GaiaXTermsAndConditions>"));
-    // cannot compare the multiline claim below
-    //expectedClaims.add(new Claim("<https://www.riphixel.fr/workshop/demo2023/be662688-2a48-48ea-bf23-43a4e83ee6e5.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#termsAndConditions>", "\"The PARTICIPANT signing the Self-Description agrees as follows:\n- to update its descriptions about any changes, be it technical, organizational, or legal - especially but not limited to contractual in regards to the indicated attributes present in the descriptions.\n\nThe keypair used to sign Verifiable Credentials will be revoked where Gaia-X Association becomes aware of any inaccurate statements in regards to the claims which result in a non-compliance with the Trust Framework and policy rules defined in the Policy Rules and Labelling Document (PRLD).\""));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#legalRegistrationNumber>"));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID>", "\"FR52899103360\""));
-    expectedClaims.add(new CredentialClaim("<https://www.riphixel.fr/workshop/demo2023/743ad60a-431c-4f45-bf15-e7bf19d64b10.json>", "<https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#vatID-countryCode>", "\"FR\""));
-    for (RdfClaim claim: expectedClaims) {
-      assertTrue(result.getGraphClaims().contains(claim));
-    }
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(getAccessor(path), true, true, false, false));
   }
 
   @Test
@@ -720,13 +690,12 @@ public class VerificationServiceTest {
 
   @Test
   void extractClaims_allFcmetaClaimsFiltered_returnsEmptyList() {
+    // AC-3: credentialSubject has no @type → UNKNOWN → ClientException.
+    // The fcmeta-only fixture's credentialSubject carries only protected-namespace predicates and no type,
+    // so role resolution fails before claims are returned.
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-only-fcmeta.jsonld");
-    CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
-    List<RdfClaim> claims = result.getGraphClaims();
-    assertNotNull(claims, "Result should not be null even when all claims are filtered");
-    assertTrue(claims.isEmpty(), "All fcmeta: claims should have been filtered, leaving an empty list");
-    assertNotNull(result.getWarnings(), "Warning should be set when fcmeta triples were filtered");
-    assertFalse(result.getWarnings().isEmpty(), "Warning list should not be empty when all claims are filtered");
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false));
   }
 
   // --- T5: JWT signature verification smoke tests ---
@@ -799,7 +768,9 @@ public class VerificationServiceTest {
 
     Validator testValidator = new Validator("did:test:key-1", "{\"kty\":\"EC\"}", null);
     when(jwtVerifierMock.verify(any())).thenReturn(testValidator);
-    ContentAccessor vpJsonLd = getAccessor("VerificationService/syntax/input.vp.jsonld");
+    // input.vp.jsonld causes PROTECTED_TERM_REDEFINITION during role resolution (AC-3 would reject it).
+    // Use legalParticipant.jsonld instead — a proper Gaia-X VP whose type resolves to Participant.
+    ContentAccessor vpJsonLd = getAccessor("VerificationService/syntax/legalParticipant.jsonld");
     doReturn(vpJsonLd).when(vc2ProcessorSpy).preProcess(any());
 
     // verifySemantics=false to skip class detection; verifyVPSignatures=true for JWT verification
@@ -1008,19 +979,16 @@ public class VerificationServiceTest {
   // --- VC 2.0 non-Gaia-X RDF asset tests ---
 
   /**
-   * VC 2.0 credential without any Gaia-X type must pass semantic verification
-   * when gaiaxTrustFrameworkEnabled=false (default). Gating hasClasses() on the
-   * Gaia-X flag allows generic VC 2.0 assets to be accepted as RDF claims.
+   * AC-3: VC 2.0 credential without any recognised trust-framework type must be rejected
+   * regardless of whether the Gaia-X bundle is enabled or not. Type resolution returns
+   * UNKNOWN → 400 ClientException.
    */
   @Test
-  void verifyCredential_vc2NonGaiaxRdfAsset_passesWithSemanticsEnabled() {
+  void verifyCredential_vc2NonGaiaxRdfAsset_throwsClientException() {
     ContentAccessor content = getAccessor("Claims-Tests/vc2NonGaiax.jsonld");
 
-    CredentialVerificationResult vr = verificationService.verifyCredential(content, true, false, false, false);
-
-    assertNotNull(vr, "VC 2.0 without Gaia-X type must pass when gaiax is disabled");
-    assertEquals("did:web:subject.example.com", vr.getId());
-    assertEquals("did:web:issuer.example.com", vr.getIssuer());
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, true, false, false, false));
   }
 
   /**
@@ -1047,31 +1015,32 @@ public class VerificationServiceTest {
   @Test
   void verifyCredential_evcWrapper_innerVcJwtUnwrappedAndProcessed() {
     // EVC per ICAM 24.07: outer JSON-LD wrapper with data: URI carrying a Loire VC JWT.
-    // The wrapper is stripped and the inner JWT is routed through the Loire (GAIAX_V2_LOIRE) path.
+    // The wrapper is stripped; inner JWT routes through Loire path. fakeLoireJwt has no domain type
+    // → AC-3 throws ClientException after unwrap. The spy call still happens before the exception.
     String innerJwt = TestUtil.fakeLoireJwt("did:example:issuer");
     String evcBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
         + "\"type\":\"EnvelopedVerifiableCredential\","
         + "\"id\":\"data:application/vc+ld+json+jwt," + innerJwt + "\"}";
     ContentAccessor content = new ContentAccessorDirect(evcBody, "application/vc+ld+json");
 
-    CredentialVerificationResult result = verificationService.verifyCredential(content, false, false, false, false);
-
-    assertNotNull(result, "EVC wrapper must be unwrapped and inner Loire VC processed");
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false));
     verify(loireJwtParserSpy).unwrap(any());
   }
 
   @Test
   void verifyCredential_evpWrapper_innerVpJwtUnwrappedAndProcessed() {
     // EVP per ICAM 24.07: outer JSON-LD wrapper with data: URI carrying a Loire VP JWT.
-    // The wrapper is stripped and the inner JWT is routed through the Loire (GAIAX_V2_LOIRE) path.
+    // The wrapper is stripped; inner JWT routes through Loire path. fakeLoireVpJwt has no domain type
+    // → AC-3 throws ClientException after unwrap. The spy call still happens before the exception.
     String innerJwt = fakeLoireVpJwt("did:example:issuer");
     String evpBody = "{\"@context\":\"https://www.w3.org/ns/credentials/v2\","
         + "\"type\":\"EnvelopedVerifiablePresentation\","
         + "\"id\":\"data:application/vp+ld+jwt," + innerJwt + "\"}";
     ContentAccessor content = new ContentAccessorDirect(evpBody, "application/vp+ld+json");
 
-    verificationService.verifyCredential(content, false, false, false, false);
-
+    assertThrowsExactly(ClientException.class,
+        () -> verificationService.verifyCredential(content, false, false, false, false));
     verify(loireJwtParserSpy).unwrap(any());
   }
 

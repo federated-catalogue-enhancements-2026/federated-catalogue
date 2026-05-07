@@ -1,7 +1,6 @@
 package eu.xfsc.fc.core.service.verification;
 
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,6 +19,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import eu.xfsc.fc.core.config.VerificationStackTestConfig;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
@@ -148,8 +148,9 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    void verifyCredential_unknownTypePresentInVp_returnsBaseResult() {
-        // Inline VP: credentialSubject type is ex:CustomEntity — not in any Gaia-X hierarchy.
+    void verifyCredential_unknownTypePresentInVp_throwsClientException() {
+      // credentialSubject type is ex:CustomEntity — not in any active bundle hierarchy.
+      // resolveSubjectRole returns UNKNOWN → ClientException (400).
         ContentAccessorDirect vp = new ContentAccessorDirect("""
             {
               "@context": ["https://www.w3.org/ns/credentials/v2"],
@@ -170,11 +171,8 @@ public class RoleResolutionCharacterisationTest {
             }
             """);
 
-        CredentialVerificationResult result = verificationService.verifyCredential(
-            vp, SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
-
-        assertNotNull(result);
-        assertEquals(CredentialVerificationResult.class, result.getClass(),
-            "Non-Gaia-X credentialSubject type must resolve to base CredentialVerificationResult, not a typed subclass");
+      assertThrowsExactly(ClientException.class,
+          () -> verificationService.verifyCredential(
+              vp, SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES));
     }
 }
