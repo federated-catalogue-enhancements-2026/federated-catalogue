@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.util.UriUtils;
@@ -16,11 +15,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.core.exception.ServerException;
-import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
-import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.server.service.AssetUploadService;
+import eu.xfsc.fc.server.service.UploadResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,8 +51,7 @@ public class AssetUploadController {
         }
 
         String contentType = file.getContentType() != null ? file.getContentType() : DEFAULT_CONTENT_TYPE;
-        AssetMetadata result = assetUploadService.processUpload(content, contentType, file.getOriginalFilename());
-        return buildUploadResponse(result);
+        return buildUploadResponse(assetUploadService.processUpload(content, contentType, file.getOriginalFilename()));
     }
 
     @PostMapping(value = "/assets", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE,
@@ -65,24 +61,25 @@ public class AssetUploadController {
             @RequestHeader(value = "Content-Type", defaultValue = DEFAULT_CONTENT_TYPE) String contentType) {
         log.debug("addAssetOctetStream.enter; contentType: {}, size: {}", contentType, content.length);
 
-        AssetMetadata result = assetUploadService.processUpload(content, contentType, null);
-        return buildUploadResponse(result);
+        return buildUploadResponse(assetUploadService.processUpload(content, contentType, null));
     }
 
-    private ResponseEntity<?> buildUploadResponse(AssetMetadata result) {
-        // Check if enrichment occurred (ThreadLocal set by service)
-        var enrichmentResponse = assetUploadService.getLastEnrichmentResponse();
-        if (enrichmentResponse.isPresent()) {
-            // Enrichment: return HTTP 200 with enrichment details
-            log.debug("buildUploadResponse; enrichment completed with {} triples added", enrichmentResponse.get().getTriplesAdded());
-            return ResponseEntity.ok(enrichmentResponse.get());
-        }
-        // New asset creation: return HTTP 201
-        // encodePathSegment encodes colons (:) and slashes (/) in IRIs like urn:uuid:... or http://...
-        // so the Location header contains a valid single path segment after /assets/
-        log.debug("buildUploadResponse; asset created with hash: {}", result.getAssetHash());
-        return ResponseEntity.created(
-                URI.create("/assets/" + UriUtils.encodePathSegment(result.getId(), StandardCharsets.UTF_8)))
-            .body(result);
+    private ResponseEntity<?> buildUploadResponse(UploadResult result) {
+        return switch (result) {
+            case UploadResult.AssetEnriched ae -> {
+                log.debug("buildUploadResponse; enrichment completed with {} triples added",
+                        ae.response().getTriplesAdded());
+                yield ResponseEntity.ok(ae.response());
+            }
+            case UploadResult.AssetCreated ac -> {
+                // encodePathSegment encodes colons (:) and slashes (/) in IRIs like urn:uuid:... or http://...
+                // so the Location header contains a valid single path segment after /assets/
+                log.debug("buildUploadResponse; asset created with hash: {}", ac.metadata().getAssetHash());
+                yield ResponseEntity.created(
+                        URI.create("/assets/" + UriUtils.encodePathSegment(
+                                ac.metadata().getId(), StandardCharsets.UTF_8)))
+                    .body(ac.metadata());
+            }
+        };
     }
 }

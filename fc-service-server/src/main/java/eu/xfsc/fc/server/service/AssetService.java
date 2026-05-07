@@ -440,8 +440,8 @@ public class AssetService implements AssetsApiDelegate {
       throw new ServerException("Failed to read uploaded file", ex);
     }
 
-    final AssetMetadata hrMetadata = assetUploadService.processUpload(
-        content, contentType, StringUtils.sanitizeFilename(file.getOriginalFilename()), existingHrId);
+    final AssetMetadata hrMetadata = ((UploadResult.AssetCreated) assetUploadService.processUpload(
+        content, contentType, StringUtils.sanitizeFilename(file.getOriginalFilename()), existingHrId)).metadata();
     assetStorePublisher.linkAssets(decodedId, hrMetadata.getId());
     try {
       assetStorePublisher.writeAssetLinkTriples(decodedId, hrMetadata.getId());

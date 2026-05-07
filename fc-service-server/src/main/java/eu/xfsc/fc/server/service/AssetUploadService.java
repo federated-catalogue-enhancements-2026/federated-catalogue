@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -21,8 +20,8 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
+import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
@@ -64,13 +63,7 @@ public class AssetUploadService {
     private final GraphStore graphStore;
     private final ObjectMapper objectMapper;
 
-    /**
-     * ThreadLocal to hold the enrichment response from the last processUpload call.
-     * Used by the controller to determine HTTP response code.
-     */
-    private static final ThreadLocal<AssetEnrichmentResponse> ENRICHMENT_RESPONSE = new ThreadLocal<>();
-
-    public AssetMetadata processUpload(byte[] content, String contentType, String originalFilename) {
+    public UploadResult processUpload(byte[] content, String contentType, String originalFilename) {
         return processUpload(content, contentType, originalFilename, null);
     }
 
@@ -79,44 +72,28 @@ public class AssetUploadService {
      *
      * @param existingId when non-null, the IRI of an existing active asset to update (new Envers revision);
      *                   when null, a fresh asset is created with a generated IRI
-     * @return AssetMetadata for new/updated assets
      */
-    public AssetMetadata processUpload(byte[] content, String contentType, String originalFilename, String existingId) {
-        // Clear any previous enrichment response from ThreadLocal
-        ENRICHMENT_RESPONSE.remove();
-
+    public UploadResult processUpload(byte[] content, String contentType, String originalFilename, String existingId) {
         if (content == null || content.length == 0) {
             throw new ClientException("Upload content must not be empty");
         }
 
         if (!rdfDetector.isRdf(contentType, content)) {
-            return handleNonRdfAsset(content, contentType, originalFilename, existingId);
+            return new UploadResult.AssetCreated(handleNonRdfAsset(content, contentType, originalFilename, existingId));
         }
 
         // Try enrichment path: check if RDF describes an existing non-RDF asset
         String subjectId = extractSubjectIdFromRdf(content, contentType);
         if (subjectId != null) {
-            Optional<AssetRecord> existing = assetStorePublisher.findEnrichableAsset(subjectId);
+            var existing = assetStorePublisher.findEnrichableAsset(subjectId);
             if (existing.isPresent()) {
                 log.debug("processUpload; detected enrichment case for non-RDF asset {}", subjectId);
-                AssetEnrichmentResponse enrichmentResponse = enrichAsset(existing.get(), content, contentType);
-                // Store in ThreadLocal for controller to access
-                ENRICHMENT_RESPONSE.set(enrichmentResponse);
-                // Return a placeholder AssetMetadata (not used by controller in enrichment case)
-                return new AssetMetadata(existing.get().getId(), null, null, null, null, null, null, null);
+                return new UploadResult.AssetEnriched(enrichAsset(existing.get(), content, contentType));
             }
         }
 
         // Not an enrichment case; process as new RDF asset
-        return handleCredential(content, contentType);
-    }
-
-    /**
-     * Returns the enrichment response from the last processUpload call, if one occurred.
-     * Must be called immediately after processUpload to get the result before the ThreadLocal is cleared.
-     */
-    public Optional<AssetEnrichmentResponse> getLastEnrichmentResponse() {
-        return Optional.ofNullable(ENRICHMENT_RESPONSE.get());
+        return new UploadResult.AssetCreated(handleCredential(content, contentType));
     }
 
     private AssetMetadata handleCredential(byte[] content, String contentType) {
