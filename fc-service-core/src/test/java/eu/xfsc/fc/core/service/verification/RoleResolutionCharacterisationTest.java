@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,7 +85,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("gx:LegalPerson VP -> CredentialVerificationResultParticipant with claims")
     void verifyParticipant_legalPersonVp_returnsParticipantResultWithClaims() {
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("VerificationService/syntax/participantCredential2.jsonld"),
@@ -100,7 +98,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("gx:ServiceOffering VP -> CredentialVerificationResultOffering with claims")
     void verifyOffering_serviceOfferingVp_returnsOfferingResultWithClaims() {
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor("VerificationService/syntax/serviceOffering1.jsonld"),
@@ -114,7 +111,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("gx:DigitalServiceOffering VP -> CredentialVerificationResultOffering (gx-2511 edge case)")
     void verifyOffering_digitalServiceOfferingVp_returnsOfferingResultWithClaims() {
       // gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering in gx-2511.
       // It is covered via additionalRoots in framework.yaml — the correct long-term mechanism.
@@ -130,7 +126,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("gx:VirtualResource VP -> CredentialVerificationResultResource with claims")
     void verifyResource_resourceVp_returnsResourceResultWithClaims() {
         // gx:VirtualResource rdfs:subClassOf gx:Resource — exercises the OWL subclass walk for RESOURCE role
         CredentialVerificationResult result = verificationService.verifyCredential(
@@ -145,7 +140,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("ServiceOffering VP submitted as Participant -> VerificationException (type mismatch)")
     void verifyParticipant_serviceOfferingVp_throwsVerificationException() {
         assertThrowsExactly(VerificationException.class,
             () -> verificationService.verifyParticipantCredential(
@@ -154,7 +148,6 @@ public class RoleResolutionCharacterisationTest {
     }
 
     @Test
-    @DisplayName("VP with non-Gaia-X credentialSubject type -> base CredentialVerificationResult (UNKNOWN role)")
     void verifyCredential_unknownTypePresentInVp_returnsBaseResult() {
         // Inline VP: credentialSubject type is ex:CustomEntity — not in any Gaia-X hierarchy.
         ContentAccessorDirect vp = new ContentAccessorDirect("""

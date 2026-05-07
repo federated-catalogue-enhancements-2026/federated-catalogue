@@ -51,7 +51,6 @@ public class TrustFrameworkBundleLoader {
       }
     }
     if (bundles.isEmpty()) {
-      // zero bundles indicates a mis-deployment; WARN is appropriate
       log.warn("No trust-framework bundles loaded — catalogue may not function correctly");
     } else {
       log.info("Loaded {} trust-framework bundle(s) from classpath", bundles.size());
@@ -65,7 +64,6 @@ public class TrustFrameworkBundleLoader {
    */
   TrustFrameworkBundle loadBundle(Resource yamlResource) throws IOException {
     FrameworkBundleConfig config;
-    // try-with-resources ensures the YAML stream is closed even when Jackson throws
     try (var stream = yamlResource.getInputStream()) {
       config = YAML_MAPPER.readValue(stream, FrameworkBundleConfig.class);
     }
@@ -86,7 +84,6 @@ public class TrustFrameworkBundleLoader {
       if (!sibling.exists()) {
         return null;
       }
-      // try-with-resources ensures the sibling stream is closed even when readAllBytes() throws
       try (var stream = sibling.getInputStream()) {
         return new ContentAccessorDirect(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
       }

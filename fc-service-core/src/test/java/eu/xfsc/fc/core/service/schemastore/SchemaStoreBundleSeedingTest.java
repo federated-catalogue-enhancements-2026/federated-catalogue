@@ -30,7 +30,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Tests AC-8: SchemaStoreImpl seeds the schema-store DB from TrustFrameworkRegistry bundles
+ * SchemaStoreImpl seeds the schema-store DB from TrustFrameworkRegistry bundles
  * instead of reading directly from defaultschema/.
  */
 @Slf4j
