@@ -20,6 +20,7 @@ import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import eu.xfsc.fc.core.service.trustframework.ValidationType;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.util.HashUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -34,7 +35,6 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.SKOS;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -56,7 +56,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,29 +63,19 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *
- */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SchemaStoreImpl implements SchemaStore {
 
-  @Autowired
   @Qualifier("schemaFileStore")
-  private FileStore fileStore;
-
-  @Autowired
-  private SchemaDao dao;
-
-  @Autowired
-  private ProtectedNamespaceFilter protectedNamespaceFilter;
-
-  @Autowired
-  private TrustFrameworkRegistry trustFrameworkRegistry;
+  private final FileStore fileStore;
+  private final SchemaDao dao;
+  private final ProtectedNamespaceFilter protectedNamespaceFilter;
+  private final TrustFrameworkRegistry trustFrameworkRegistry;
 
   private static final Map<SchemaType, ContentAccessor> COMPOSITE_SCHEMAS = new ConcurrentHashMap<>();
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
 
   @Override
   public int initializeDefaultSchemas() {

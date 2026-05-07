@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
@@ -22,6 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
+
+  /**
+   * Regex pattern for validating SPARQL URIs.
+   * Matches URIs that do NOT contain characters unsafe for SPARQL injection:
+   * - angle brackets: < >
+   * - whitespace: space, newline, carriage return
+   */
+  private static final Pattern VALID_SPARQL_URI_PATTERN = Pattern.compile("^[^<>\\s\\n\\r]*$");
 
   private final Map<String, ResolvedRole> typeIndex;
   private final Map<String, TrustFrameworkBundle> bundleIndex;
@@ -111,15 +120,15 @@ public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
   }
 
   /**
-   * Returns false if the URI contains characters that would break a SPARQL string literal.
+   * Returns true if the URI is safe for use in SPARQL queries.
+   * Rejects URIs containing characters that could break SPARQL string literals:
+   * angle brackets, whitespace (space, newline, carriage return).
+   *
+   * @param uri the URI to validate
+   * @return true if the URI matches the safe pattern, false otherwise
    */
   private static boolean isValidSparqlUri(String uri) {
-    return uri != null
-        && !uri.contains(">")
-        && !uri.contains("<")
-        && !uri.contains(" ")
-        && !uri.contains("\n")
-        && !uri.contains("\r");
+    return uri != null && VALID_SPARQL_URI_PATTERN.matcher(uri).matches();
   }
 
   @Override

@@ -8,8 +8,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
 import org.erdtman.jcs.JsonCanonicalizer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class CesAssetProcessor {
 
     @Value("${subscriber.verify.semantics:true}")
@@ -45,24 +46,17 @@ public class CesAssetProcessor {
     private boolean verifyVCSignature;
     @Value("${subscriber.verify.integrity:true}")
     private boolean verifyIntegrity;
-	
-    @Autowired
-	protected AssetStore assetStore;
-    @Autowired 
-	protected VerificationService verificationService;
-    @Autowired 
-	protected ObjectMapper jsonMapper;
-	
-	@Autowired
-	private CesTrackerDao ctDao;
-	@Autowired
-	private DidDocumentResolver didResolver;
-	@Autowired
-	private HttpDocumentResolver httpResolver;
-  @Autowired
-  private TrustFrameworkRegistry trustFrameworkRegistry;
-	
-	@Transactional(propagation = Propagation.REQUIRES_NEW) //, rollbackFor = Exception.class)
+
+  protected final AssetStore assetStore;
+  protected final VerificationService verificationService;
+  protected final ObjectMapper jsonMapper;
+
+  private final CesTrackerDao ctDao;
+  private final DidDocumentResolver didResolver;
+  private final HttpDocumentResolver httpResolver;
+  private final TrustFrameworkRegistry trustFrameworkRegistry;
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
 	public int processCesEvent(CesTracking ctr, Map<String, Object> data) {
 	    List<Map<String, Object>> subjects = (List<Map<String, Object>>) data.get("credentialSubject");
 	    try {
