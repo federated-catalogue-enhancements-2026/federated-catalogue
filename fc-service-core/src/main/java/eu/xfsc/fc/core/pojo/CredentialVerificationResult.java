@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -87,6 +89,26 @@ public class CredentialVerificationResult extends eu.xfsc.fc.api.generated.model
     this.role = role;
     this.frameworkProfileId = frameworkProfileId;
     setValidators(validators);
+    if (graphClaims != null && !graphClaims.isEmpty()) {
+      this.claims = buildClaimsMap(graphClaims);
+    }
+  }
+
+  private static Map<String, Object> buildClaimsMap(List<RdfClaim> graphClaims) {
+    Map<String, List<String>> grouped = new LinkedHashMap<>();
+    for (RdfClaim claim : graphClaims) {
+      String key = claim.getPredicateValue();
+      String val = claim.getObjectValue();
+      if (key != null) {
+        grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(val);
+      }
+    }
+    Map<String, Object> result = new LinkedHashMap<>(grouped.size());
+    for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
+      List<String> values = entry.getValue();
+      result.put(entry.getKey(), values.size() == 1 ? values.getFirst() : values);
+    }
+    return result;
   }
 
   /**

@@ -20,7 +20,7 @@ public class NonCredentialVerificationResult extends CredentialVerificationResul
    */
   public NonCredentialVerificationResult(Instant verificationTimestamp, String lifecycleStatus,
                                          List<RdfClaim> graphClaims) {
-    super(verificationTimestamp, lifecycleStatus, null, null, null, graphClaims, null, "", "");
+    super(verificationTimestamp, lifecycleStatus, null, null, null, graphClaims, null, null, null);
   }
 
   @Override

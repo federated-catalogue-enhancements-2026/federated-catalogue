@@ -50,6 +50,8 @@ public class CredentialVerificationResultParticipant extends CredentialVerificat
         role, frameworkProfileId);
     this.participantName = participantName;
     this.participantPublicKey = participantPublicKey;
+    setName(participantName);
+    setPublicKey(participantPublicKey);
   }
 
   @Override
