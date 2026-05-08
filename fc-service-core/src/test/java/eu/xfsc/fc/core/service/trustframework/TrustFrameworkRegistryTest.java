@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import org.junit.jupiter.api.Test;
 
 class TrustFrameworkRegistryTest {
@@ -60,7 +61,7 @@ class TrustFrameworkRegistryTest {
   private static TrustFrameworkBundle shaclBundle(String profileId, String namespace,
                                                   Map<String, RoleConfig> roles, String ontologyTtl) {
     var config = new FrameworkBundleConfig(profileId, "gaia-x", namespace, ValidationType.SHACL, roles, Map.of());
-    var ontology = new eu.xfsc.fc.core.pojo.ContentAccessorDirect(ontologyTtl);
+    var ontology = new ContentAccessorDirect(ontologyTtl);
     return new TrustFrameworkBundle(config, ontology, null);
   }
 
@@ -287,7 +288,7 @@ class TrustFrameworkRegistryTest {
     var config = new FrameworkBundleConfig("bad-bundle", "test", null, ValidationType.SHACL,
         Map.of("Role", new RoleConfig(List.of(), List.of())), Map.of());
     var bundle = new TrustFrameworkBundle(config,
-        new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
+        new ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
     assertThatThrownBy(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .isInstanceOf(IllegalArgumentException.class);
@@ -299,7 +300,7 @@ class TrustFrameworkRegistryTest {
     var config = new FrameworkBundleConfig("bad-bundle", "test", "https://example.org", ValidationType.SHACL,
         Map.of("Role", new RoleConfig(List.of(), List.of())), Map.of());
     var bundle = new TrustFrameworkBundle(config,
-        new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
+        new ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
     assertThatThrownBy(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .isInstanceOf(IllegalArgumentException.class);
