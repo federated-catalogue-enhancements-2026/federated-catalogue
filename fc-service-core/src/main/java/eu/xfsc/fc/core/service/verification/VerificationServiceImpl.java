@@ -74,9 +74,7 @@ public class VerificationServiceImpl implements VerificationService {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, false,
         verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     if (!(result instanceof NonCredentialVerificationResult) && result.getRole() == null) {
-      String bundleInfo = trustFrameworkRegistry.getActiveBundles().stream()
-          .map(b -> b.config().id() + "=" + b.config().roles().keySet())
-          .collect(Collectors.joining(", "));
+      String bundleInfo = getActiveTrustFrameworkBundleInfos();
       throw new ClientException(
           "Credential type is not resolvable in any active trust-framework bundle."
               + " Active bundles: [" + bundleInfo + "]");
@@ -104,4 +102,9 @@ public class VerificationServiceImpl implements VerificationService {
     return schemaValidationService.validateCredentialAgainstSchema(payload, schema);
   }
 
+  private String getActiveTrustFrameworkBundleInfos() {
+    return trustFrameworkRegistry.getActiveBundles().stream()
+        .map(b -> b.config().id() + "=" + b.config().roles().keySet())
+        .collect(Collectors.joining(", "));
+  }
 }
