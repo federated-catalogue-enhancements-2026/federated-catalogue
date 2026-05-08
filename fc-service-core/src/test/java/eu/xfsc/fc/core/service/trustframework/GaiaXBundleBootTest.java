@@ -37,14 +37,14 @@ class GaiaXBundleBootTest {
 
   @Test
   void registry_gaiaX2511_isEnabled() throws IOException {
-    var registry = new TrustFrameworkRegistryImpl(loadBundles());
+    var registry = new TrustFrameworkRegistry(loadBundles());
 
     assertThat(registry.isFrameworkEnabled("gaia-x-2511")).isTrue();
   }
 
   @Test
   void registry_allLegacyUris_resolve() throws IOException {
-    var registry = new TrustFrameworkRegistryImpl(loadBundles());
+    var registry = new TrustFrameworkRegistry(loadBundles());
 
     assertThat(registry.resolveRole(GX_PARTICIPANT)).isNotEqualTo(ResolvedRole.UNKNOWN);
     assertThat(registry.resolveRole(GX_SERVICE_OFFERING)).isNotEqualTo(ResolvedRole.UNKNOWN);
@@ -54,7 +54,7 @@ class GaiaXBundleBootTest {
 
   @Test
   void registry_typeIndex_isSupersetOfLegacy_includesSubclasses() throws IOException {
-    var registry = new TrustFrameworkRegistryImpl(loadBundles());
+    var registry = new TrustFrameworkRegistry(loadBundles());
 
     // gx:LegalPerson rdfs:subClassOf gx:Participant — was NOT in legacy hardcoded list
     assertThat(registry.resolveRole(GX_LEGAL_PERSON))
@@ -64,7 +64,7 @@ class GaiaXBundleBootTest {
 
   @Test
   void registry_legacyUris_resolveToCorrectRoles() throws IOException {
-    var registry = new TrustFrameworkRegistryImpl(loadBundles());
+    var registry = new TrustFrameworkRegistry(loadBundles());
 
     assertThat(registry.resolveRole(GX_PARTICIPANT))
         .isEqualTo(new ResolvedRole("gaia-x-2511", "Participant"));

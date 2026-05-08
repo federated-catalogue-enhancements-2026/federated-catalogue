@@ -12,7 +12,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-class TrustFrameworkRegistryImplTest {
+class TrustFrameworkRegistryTest {
 
   // Minimal ontology: Participant as a root class, no subclasses declared.
   private static final String MINIMAL_ONTOLOGY = """
@@ -72,7 +72,7 @@ class TrustFrameworkRegistryImplTest {
 
   @Test
   void resolveRole_unknownType_returnsUnknown() {
-    var registry = new TrustFrameworkRegistryImpl(List.of());
+    var registry = new TrustFrameworkRegistry(List.of());
 
     assertThat(registry.resolveRole("https://example.org/Unknown")).isEqualTo(ResolvedRole.UNKNOWN);
   }
@@ -82,7 +82,7 @@ class TrustFrameworkRegistryImplTest {
     var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.resolveRole("https://w3id.org/gaia-x/Participant"))
         .isEqualTo(new ResolvedRole("gaia-x-2511", "Participant"));
@@ -93,7 +93,7 @@ class TrustFrameworkRegistryImplTest {
     var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, SUBCLASS_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     // gx:LegalPerson rdfs:subClassOf gx:Participant — must resolve to Participant
     assertThat(registry.resolveRole("https://w3id.org/gaia-x/LegalPerson"))
@@ -108,7 +108,7 @@ class TrustFrameworkRegistryImplTest {
         List.of("https://w3id.org/gaia-x/DigitalServiceOffering"), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, DSO_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.resolveRole("https://w3id.org/gaia-x/DigitalServiceOffering"))
         .isEqualTo(new ResolvedRole("gaia-x-2511", "ServiceOffering"));
@@ -121,7 +121,7 @@ class TrustFrameworkRegistryImplTest {
     var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, TWO_HOP_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.resolveRole("https://w3id.org/gaia-x/PrivateLegalPerson"))
         .isEqualTo(new ResolvedRole("gaia-x-2511", "Participant"));
@@ -134,7 +134,7 @@ class TrustFrameworkRegistryImplTest {
     var bundle1 = shaclBundle("framework-a", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
     var bundle2 = shaclBundle("framework-b", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle1, bundle2));
+    var registry = new TrustFrameworkRegistry(List.of(bundle1, bundle2));
 
     assertThat(registry.resolveRole("https://w3id.org/gaia-x/Participant"))
         .isEqualTo(new ResolvedRole("framework-a", "Participant"));
@@ -144,7 +144,7 @@ class TrustFrameworkRegistryImplTest {
   @Test
   void getBundles_returnsAllLoadedBundles() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.getBundles()).containsExactly(bundle);
   }
@@ -152,7 +152,7 @@ class TrustFrameworkRegistryImplTest {
   @Test
   void getBundles_returnsImmutableSnapshot() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThatThrownBy(() -> registry.getBundles().clear())
         .isInstanceOf(UnsupportedOperationException.class);
@@ -161,14 +161,14 @@ class TrustFrameworkRegistryImplTest {
   @Test
   void getBundle_knownProfileId_returnsBundle() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.getBundle("gaia-x-2511")).contains(bundle);
   }
 
   @Test
   void getBundle_unknownProfileId_returnsEmpty() {
-    var registry = new TrustFrameworkRegistryImpl(List.of());
+    var registry = new TrustFrameworkRegistry(List.of());
 
     assertThat(registry.getBundle("no-such-framework")).isEmpty();
   }
@@ -176,14 +176,14 @@ class TrustFrameworkRegistryImplTest {
   @Test
   void isFrameworkEnabled_knownBundle_returnsTrue() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.isFrameworkEnabled("gaia-x-2511")).isTrue();
   }
 
   @Test
   void isFrameworkEnabled_unknownBundle_returnsFalse() {
-    var registry = new TrustFrameworkRegistryImpl(List.of());
+    var registry = new TrustFrameworkRegistry(List.of());
 
     assertThat(registry.isFrameworkEnabled("no-such-framework")).isFalse();
   }
@@ -194,7 +194,7 @@ class TrustFrameworkRegistryImplTest {
         "Participant", new RoleConfig(List.of(), List.of(), null),
         "ServiceOffering", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.getEffectiveRoles("gaia-x-2511"))
         .containsExactlyInAnyOrder("Participant", "ServiceOffering");
@@ -202,7 +202,7 @@ class TrustFrameworkRegistryImplTest {
 
   @Test
   void getEffectiveRoles_unknownBundle_returnsEmpty() {
-    var registry = new TrustFrameworkRegistryImpl(List.of());
+    var registry = new TrustFrameworkRegistry(List.of());
 
     assertThat(registry.getEffectiveRoles("no-such-framework")).isEmpty();
   }
@@ -211,7 +211,7 @@ class TrustFrameworkRegistryImplTest {
   void getEffectiveRoles_returnsImmutableSnapshot() {
     var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThatThrownBy(() -> registry.getEffectiveRoles("gaia-x-2511").add("fake"))
         .isInstanceOf(UnsupportedOperationException.class);
@@ -221,7 +221,7 @@ class TrustFrameworkRegistryImplTest {
   @Test
   void resolveRole_jsonSchemaBundle_returnsUnknown() {
     var bundle = jsonSchemaBundle("untp-v1");
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.resolveRole("https://example.org/SomeType")).isEqualTo(ResolvedRole.UNKNOWN);
   }
@@ -230,7 +230,7 @@ class TrustFrameworkRegistryImplTest {
   void isFrameworkEnabled_jsonSchemaBundle_returnsFalse() {
     // JSON_SCHEMA bundles are loaded but deferred — not actively resolving, so not "enabled"
     var bundle = jsonSchemaBundle("untp-v1");
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.isFrameworkEnabled("untp-v1")).isFalse();
   }
@@ -241,7 +241,7 @@ class TrustFrameworkRegistryImplTest {
     var config = new FrameworkBundleConfig("unknown-fw", "test", "https://test/",
         ValidationType.UNKNOWN, Map.of(), Map.of());
     var bundle = new TrustFrameworkBundle(config, null, null);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
+    var registry = new TrustFrameworkRegistry(List.of(bundle));
 
     assertThat(registry.isFrameworkEnabled("unknown-fw")).isFalse();
   }
@@ -252,7 +252,7 @@ class TrustFrameworkRegistryImplTest {
     var bundle1 = shaclBundle("gaia-x-2511", "https://namespace-a.org/", Map.of(), MINIMAL_ONTOLOGY);
     var bundle2 = shaclBundle("gaia-x-2511", "https://namespace-b.org/", Map.of(), MINIMAL_ONTOLOGY);
 
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle1, bundle2));
+    var registry = new TrustFrameworkRegistry(List.of(bundle1, bundle2));
 
     assertThat(registry.getBundle("gaia-x-2511").get().config().namespace())
         .isEqualTo("https://namespace-a.org/");
@@ -267,7 +267,7 @@ class TrustFrameworkRegistryImplTest {
         List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", rolesWithNull, MINIMAL_ONTOLOGY);
 
-    assertThatCode(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
+    assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .doesNotThrowAnyException();
   }
 
@@ -277,7 +277,7 @@ class TrustFrameworkRegistryImplTest {
     var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, BLANK_NODE_ONTOLOGY);
 
-    assertThatCode(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
+    assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .doesNotThrowAnyException();
   }
 
@@ -289,7 +289,7 @@ class TrustFrameworkRegistryImplTest {
     var bundle = new TrustFrameworkBundle(config,
         new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
-    assertThatThrownBy(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
+    assertThatThrownBy(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -301,7 +301,7 @@ class TrustFrameworkRegistryImplTest {
     var bundle = new TrustFrameworkBundle(config,
         new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
-    assertThatThrownBy(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
+    assertThatThrownBy(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -359,7 +359,7 @@ class TrustFrameworkRegistryImplTest {
         List.of("https://example.org/bad>uri"), List.of(), null));
     var bundle = shaclBundle("test", "https://example.org/", roles, DSO_ONTOLOGY);
 
-    assertThatCode(() -> new TrustFrameworkRegistryImpl(List.of(bundle)))
+    assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
         .doesNotThrowAnyException();
   }
 

@@ -24,7 +24,9 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -45,11 +47,10 @@ import org.xml.sax.SAXException;
 @RequiredArgsConstructor
 public class XmlSchemaValidationStrategy implements ValidationStrategy {
 
-  private static final String MEDIA_TYPE_XML = "application/xml";
-  private static final String MEDIA_TYPE_TEXT_XML = "text/xml";
-
   @Qualifier("assetFileStore")
   private final FileStore fileStore;
+  private final ObjectProvider<DocumentBuilderFactory> secureDocumentBuilderFactoryProvider;
+  private final ObjectProvider<SchemaFactory> secureXmlSchemaFactoryProvider;
 
   @Override
   public ValidatorType type() {
@@ -76,7 +77,9 @@ public class XmlSchemaValidationStrategy implements ValidationStrategy {
       return false;
     }
     String ct = asset.getContentType();
-    return ct != null && (ct.contains(MEDIA_TYPE_XML) || ct.contains(MEDIA_TYPE_TEXT_XML));
+    return ct != null
+        && (ct.contains(MediaType.APPLICATION_XML_VALUE)
+        || ct.contains(MediaType.TEXT_XML_VALUE));
   }
 
   @Override
@@ -143,27 +146,12 @@ public class XmlSchemaValidationStrategy implements ValidationStrategy {
 
   private Schema loadXsdSchema(ContentAccessor schemaContent)
       throws ParserConfigurationException, SAXException, IOException {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-    dbf.setNamespaceAware(true);
-    // XXE prevention — defense-in-depth per OWASP XXE cheat sheet:
-    // disallow-doctype-decl blocks DOCTYPE entirely (primary mitigation);
-    // the entity-entity features cover parsers that ignore disallow-doctype-decl.
-    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-    dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-    dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-    dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    dbf.setExpandEntityReferences(false);
+    DocumentBuilderFactory dbf = secureDocumentBuilderFactoryProvider.getObject();
     Document schemaDoc;
     try (InputStream schemaStream = schemaContent.getContentAsStream()) {
       schemaDoc = dbf.newDocumentBuilder().parse(schemaStream);
     }
-
-    SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-    // XXE prevention — FEATURE_SECURE_PROCESSING disables inline schemas and limits entity expansion;
-    // ACCESS_EXTERNAL_* blocks all URI-based DTD and schema loading.
-    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+    SchemaFactory factory = secureXmlSchemaFactoryProvider.getObject();
     return factory.newSchema(new DOMSource(schemaDoc));
   }
 }

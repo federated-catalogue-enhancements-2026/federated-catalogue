@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,7 @@ import eu.xfsc.fc.api.generated.model.ValidationReport;
 import eu.xfsc.fc.api.generated.model.ValidationRequest;
 import eu.xfsc.fc.api.generated.model.ValidationResponse;
 import eu.xfsc.fc.api.generated.model.ValidationViolation;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.core.dao.validation.ValidatorType;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.NotFoundException;
@@ -26,81 +28,67 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
+import eu.xfsc.fc.core.service.validation.strategy.ValidationStrategy;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.validation.SchemaFactory;
 import eu.xfsc.fc.core.service.validation.strategy.JsonSchemaValidationStrategy;
 import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationStrategy;
 import eu.xfsc.fc.core.service.validation.strategy.XmlSchemaValidationStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.test.util.ReflectionTestUtils;
 
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = AssetValidationServiceImpl.class)
-@TestPropertySource(properties = {"federated-catalogue.validation.max-assets-per-request=20"})
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 class AssetValidationServiceImplTest {
 
-  @MockitoBean
+  @Mock
   private AssetStore assetStore;
-  @MockitoBean
+  @Mock
   private SchemaStore schemaStore;
-  @MockitoBean
+  @Mock
   private SchemaModuleConfigService moduleConfigService;
-  @MockitoBean
+  @Mock
   private ShaclValidationStrategy shaclValidationStrategy;
-  @MockitoBean
+  @Mock
   private JsonSchemaValidationStrategy jsonSchemaValidationStrategy;
-  @MockitoBean
+  @Mock
   private XmlSchemaValidationStrategy xmlSchemaValidationStrategy;
-  @MockitoBean
+  @Mock
   private ValidationResultStore validationResultStore;
+  @Mock
+  private List<ValidationStrategy> strategies;
 
-  @Autowired
+  @InjectMocks
   private AssetValidationServiceImpl service;
 
 
   @BeforeEach
   void setUpStrategies() {
-    when(shaclValidationStrategy.type()).thenReturn(ValidatorType.SHACL);
-    when(shaclValidationStrategy.moduleType()).thenReturn(SchemaModuleType.SHACL);
-    when(shaclValidationStrategy.acceptsSchema(any())).thenAnswer(
-        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.SHAPE);
-    when(shaclValidationStrategy.appliesTo(any())).thenAnswer(
-        inv -> ((AssetMetadata) inv.getArgument(0)).getContentAccessor() != null);
+    ReflectionTestUtils.setField(service, "maxAssetsPerRequest", 20);
+  }
 
-    when(jsonSchemaValidationStrategy.type()).thenReturn(ValidatorType.JSON_SCHEMA);
-    when(jsonSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.JSON_SCHEMA);
-    when(jsonSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
-        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.JSON);
-    when(jsonSchemaValidationStrategy.appliesTo(any())).thenAnswer(inv -> {
-        AssetMetadata a = (AssetMetadata) inv.getArgument(0);
-        if (a.getContentAccessor() != null) return false;
-        String ct = a.getContentType();
-        return ct != null && (ct.contains("application/json") || ct.contains("application/schema+json"));
-    });
-
-    when(xmlSchemaValidationStrategy.type()).thenReturn(ValidatorType.XML_SCHEMA);
-    when(xmlSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.XML_SCHEMA);
-    when(xmlSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
-        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.XML);
-    when(xmlSchemaValidationStrategy.appliesTo(any())).thenAnswer(inv -> {
-        AssetMetadata a = (AssetMetadata) inv.getArgument(0);
-        if (a.getContentAccessor() != null) return false;
-        String ct = a.getContentType();
-        return ct != null && (ct.contains("application/xml") || ct.contains("text/xml"));
-    });
+  @SuppressWarnings("unchecked") // Mockito can only mock raw Class literals; cast is safe for test providers.
+  private static <T> ObjectProvider<T> createProviderMock() {
+    return (ObjectProvider<T>) mock(ObjectProvider.class);
   }
 
 
@@ -201,6 +189,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_shaclModuleDisabled_throwsVerificationException() {
+    registerStrategyList();
+    registerShaclStrategy();
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(false);
@@ -214,6 +204,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonLdRdfAsset_withExplicitJsonSchema_jsonModuleDisabled_throwsClientException() {
+    registerStrategyList();
+    registerJsonStrategy();
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
@@ -229,6 +221,8 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfXmlAsset_withExplicitXmlSchema_xmlModuleDisabled_throwsClientException() {
+    registerStrategyList();
+    registerXmlStrategy();
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfXmlAsset(ASSET_ID));
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
@@ -284,6 +278,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_rdfAsset_validateAll_allModulesDisabled_throwsVerificationException() {
+    registerStrategyList();
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     // no module mocked → all return false
 
@@ -472,11 +467,11 @@ class AssetValidationServiceImplTest {
     verify(validationResultStore, times(1)).store(any());
   }
 
-  // === validateAsset — JSON path (Case D) ===
+  // === validateAsset — non-RDF JSON path ===
 
   @Test
   void validateAsset_jsonAsset_explicitJsonSchema_returnsConformingResponse() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/json");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -500,7 +495,9 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_jsonModuleDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
+    registerStrategyList();
+    registerJsonStrategy();
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/json"));
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(false);
 
@@ -513,7 +510,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_schemaTypeNotJson_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
     // Caller provided a SHAPE schema for a JSON asset — must be rejected
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
@@ -527,7 +524,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_multipleExplicitSchemas_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
     when(schemaStore.getSchemaRecord(JSON_SCHEMA_ID)).thenReturn(buildJsonRecord(JSON_SCHEMA_ID));
     when(schemaStore.getSchemaRecord("https://example.org/schema/json/2"))
@@ -542,7 +539,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_validateAll_usesLatestSchema() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/json");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -565,7 +562,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
 
     assertThrows(NotFoundException.class,
@@ -574,7 +571,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_validateAll_noSchemaFound_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/json"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/json"));
     givenJsonModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.JSON)).thenReturn(null);
 
@@ -585,11 +582,11 @@ class AssetValidationServiceImplTest {
     assertThrows(NotFoundException.class, () -> service.validateAssets(request));
   }
 
-  // === validateAsset — XML path (Case E) ===
+  // === validateAsset — non-RDF XML path ===
 
   @Test
   void validateAsset_xmlAsset_explicitXmlSchema_returnsConformingResponse() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/xml");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/xml");
     ContentAccessor schemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -613,7 +610,9 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_xmlModuleDisabled_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
+    registerStrategyList();
+    registerXmlStrategy();
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/xml"));
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(false);
 
@@ -626,7 +625,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_schemaTypeNotXml_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(buildShapeRecord(SCHEMA_ID));
 
@@ -639,7 +638,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_multipleExplicitSchemas_throwsClientException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
     when(schemaStore.getSchemaRecord(XML_SCHEMA_ID)).thenReturn(buildXmlRecord(XML_SCHEMA_ID));
     when(schemaStore.getSchemaRecord("https://example.org/schema/xml/2"))
@@ -654,7 +653,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_noSchemasNoValidateAll_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
 
     assertThrows(NotFoundException.class,
@@ -663,7 +662,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_validateAll_noSchemaFound_throwsNotFoundException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/xml"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/xml"));
     givenXmlModuleEnabled();
     when(schemaStore.getLatestSchemaByType(SchemaType.XML)).thenReturn(null);
 
@@ -674,11 +673,11 @@ class AssetValidationServiceImplTest {
     assertThrows(NotFoundException.class, () -> service.validateAssets(request));
   }
 
-  // === validateAsset — unsupported type (Case F) ===
+  // === validateAsset — unsupported asset type path ===
 
   @Test
   void validateAsset_unsupportedContentType_throwsVerificationException() {
-    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAsset(ASSET_ID, "application/pdf"));
+    when(assetStore.getById(ASSET_ID)).thenReturn(buildNonRdfAssetWithContentType(ASSET_ID, "application/pdf"));
 
     ValidationRequest request = new ValidationRequest();
     request.setAssetIds(List.of(ASSET_ID));
@@ -689,7 +688,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_nonRdfAsset_nullContentType_throwsVerificationException() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, null);
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, null);
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
 
@@ -813,7 +812,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_nonRdfAsset_throwsVerificationException() {
-    AssetMetadata nonRdf = buildNonRdfAsset("https://example.org/asset/pdf", "application/pdf");
+    AssetMetadata nonRdf = buildNonRdfAssetWithContentType("https://example.org/asset/pdf", "application/pdf");
 
     when(assetStore.getById(nonRdf.getId())).thenReturn(nonRdf);
 
@@ -943,7 +942,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_jsonAsset_storesResultWithJsonSchemaValidatorType() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/json");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -972,7 +971,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAsset_xmlAsset_storesResultWithXmlSchemaValidatorType() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/xml");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/xml");
     ContentAccessor schemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -1054,7 +1053,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_jsonAsset_explicitJsonSchema_dispatchesToJsonStrategyOnly() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/json");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/json");
     ContentAccessor schemaContent = new ContentAccessorDirect("{\"$schema\":\"...\"}");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -1077,7 +1076,7 @@ class AssetValidationServiceImplTest {
 
   @Test
   void validateAssets_xmlAsset_explicitXmlSchema_dispatchesToXmlStrategyOnly() {
-    AssetMetadata asset = buildNonRdfAsset(ASSET_ID, "application/xml");
+    AssetMetadata asset = buildNonRdfAssetWithContentType(ASSET_ID, "application/xml");
     ContentAccessor schemaContent = new ContentAccessorDirect("<xs:schema/>");
 
     when(assetStore.getById(ASSET_ID)).thenReturn(asset);
@@ -1140,7 +1139,7 @@ class AssetValidationServiceImplTest {
         new ContentAccessorDirect("@prefix ex: <https://example.org/> ."));
   }
 
-  private static AssetMetadata buildNonRdfAsset(String id, String contentType) {
+  private static AssetMetadata buildNonRdfAssetWithContentType(String id, String contentType) {
     AssetMetadata asset = new AssetMetadata(NONRDF_HASH, id, AssetStatus.ACTIVE,
         ISSUER_DID, List.of(), Instant.now(), Instant.now(), null);
     asset.setContentType(contentType);
@@ -1160,15 +1159,70 @@ class AssetValidationServiceImplTest {
     return new SchemaRecord(id, id, SchemaType.XML, "<xs:schema/>", null);
   }
 
+  private void registerStrategyList() {
+    when(strategies.iterator()).thenAnswer(inv ->
+        List.of(shaclValidationStrategy, jsonSchemaValidationStrategy, xmlSchemaValidationStrategy).iterator());
+    when(strategies.stream()).thenAnswer(inv ->
+        Stream.of(shaclValidationStrategy, jsonSchemaValidationStrategy, xmlSchemaValidationStrategy));
+  }
+
+  private void registerShaclStrategy() {
+    when(shaclValidationStrategy.type()).thenReturn(ValidatorType.SHACL);
+    when(shaclValidationStrategy.moduleType()).thenReturn(SchemaModuleType.SHACL);
+    when(shaclValidationStrategy.acceptsSchema(any())).thenAnswer(
+        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.SHAPE);
+    when(shaclValidationStrategy.appliesTo(any())).thenAnswer(
+        inv -> ((AssetMetadata) inv.getArgument(0)).getContentAccessor() != null);
+  }
+
+  private void registerJsonStrategy() {
+    JsonSchemaValidationStrategy jsonApplicabilityDelegate =
+        new JsonSchemaValidationStrategy(mock(FileStore.class),
+            new ObjectMapper());
+
+    when(jsonSchemaValidationStrategy.type()).thenReturn(ValidatorType.JSON_SCHEMA);
+    when(jsonSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.JSON_SCHEMA);
+    when(jsonSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
+        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.JSON);
+    when(jsonSchemaValidationStrategy.appliesTo(any())).thenAnswer(
+        inv -> jsonApplicabilityDelegate.appliesTo((AssetMetadata) inv.getArgument(0)));
+  }
+
+  private void registerXmlStrategy() {
+    ObjectProvider<DocumentBuilderFactory> documentBuilderFactoryProvider = createProviderMock();
+    ObjectProvider<SchemaFactory> schemaFactoryProvider = createProviderMock();
+    XmlSchemaValidationStrategy xmlApplicabilityDelegate =
+        new XmlSchemaValidationStrategy(
+            mock(FileStore.class),
+            documentBuilderFactoryProvider,
+            schemaFactoryProvider);
+
+    when(xmlSchemaValidationStrategy.type()).thenReturn(ValidatorType.XML_SCHEMA);
+    when(xmlSchemaValidationStrategy.moduleType()).thenReturn(SchemaModuleType.XML_SCHEMA);
+    when(xmlSchemaValidationStrategy.acceptsSchema(any())).thenAnswer(
+        inv -> ((SchemaRecord) inv.getArgument(0)).type() == SchemaType.XML);
+    when(xmlSchemaValidationStrategy.appliesTo(any())).thenAnswer(
+        inv -> xmlApplicabilityDelegate.appliesTo((AssetMetadata) inv.getArgument(0)));
+  }
+
   private void givenShaclModuleEnabled() {
+    registerStrategyList();
+    registerShaclStrategy();
+    when(moduleConfigService.isModuleEnabled(any())).thenReturn(false);
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.SHACL)).thenReturn(true);
   }
 
   private void givenJsonModuleEnabled() {
+    registerStrategyList();
+    registerJsonStrategy();
+    when(moduleConfigService.isModuleEnabled(any())).thenReturn(false);
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.JSON_SCHEMA)).thenReturn(true);
   }
 
   private void givenXmlModuleEnabled() {
+    registerStrategyList();
+    registerXmlStrategy();
+    when(moduleConfigService.isModuleEnabled(any())).thenReturn(false);
     when(moduleConfigService.isModuleEnabled(SchemaModuleType.XML_SCHEMA)).thenReturn(true);
   }
 }
