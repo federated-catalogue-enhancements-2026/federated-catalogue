@@ -16,6 +16,8 @@ import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.service.graphdb.DummyGraphStore;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.util.HashUtils;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -28,9 +30,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -121,8 +120,6 @@ class AssetStoreCascadeDeleteTest {
     assertThrows(NotFoundException.class, () -> assetStore.getByHash(meta.getAssetHash()));
   }
 
-  // ===== helpers =====
-
   private void linkAssets(String mrId, String hrId) {
     Asset mrEntity = assetRepository.findBySubjectIdWithLinkedAsset(mrId).orElseThrow();
     Asset hrEntity = assetRepository.findBySubjectIdWithLinkedAsset(hrId).orElseThrow();
@@ -142,6 +139,6 @@ class AssetStoreCascadeDeleteTest {
     meta.setContentType("application/octet-stream");
     meta.setFileSize((long) content.length);
 
-    return assetStore.storeUnverified(meta, contentText.replaceAll(" ", "_") + ".bin");
+    return assetStore.storeUnverified(meta, contentText.replace(" ", "_") + ".bin");
   }
 }

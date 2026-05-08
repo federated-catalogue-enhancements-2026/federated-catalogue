@@ -28,10 +28,10 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.validation.ValidationResultGraphWriter;
 import eu.xfsc.fc.core.service.validation.ValidationResultHasher;
-import eu.xfsc.fc.core.service.validation.ValidationResultStoreImpl;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
-import eu.xfsc.fc.core.service.verification.FormatDetector;
+import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
@@ -52,6 +52,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -64,10 +65,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
+import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 
 import java.util.List;
 import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import static eu.xfsc.fc.core.util.TestUtil.assertThatAssetHasTheSameData;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
@@ -92,7 +100,7 @@ import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
         DocumentLoaderConfig.class,
         DocumentLoaderProperties.class,
         FileStoreConfig.class,
-        FormatDetector.class,
+        CredentialFormatDetector.class,
         GraphRebuilder.class,
         HttpDocumentResolver.class,
         IriGenerator.class,
@@ -109,12 +117,13 @@ import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
         SchemaJpaDao.class,
         SchemaModuleConfigService.class,
         SchemaStoreImpl.class,
+        RdfAssetParser.class,
+        ShaclValidationExecutor.class,
         SchemaValidationServiceImpl.class,
         SecurityAuditorAware.class,
         ValidatorCacheJpaDao.class,
         ValidationResultGraphWriter.class,
         ValidationResultHasher.class,
-        ValidationResultStoreImpl.class,
         Vc2Processor.class,
         VerificationServiceImpl.class
 })
@@ -133,6 +142,9 @@ public class AssetStoreCompositeTest {
 
     @MockitoBean
     private ProvenanceService provenanceService;
+
+    @MockitoBean
+    private ValidationResultStore validationResultStore;
 
     @Autowired
     private VerificationServiceImpl verificationService;
@@ -154,6 +166,11 @@ public class AssetStoreCompositeTest {
 
     @Autowired
     private GraphRebuilder graphRebuilder;
+
+    @BeforeEach
+    void stubValidationResultStore() {
+        when(validationResultStore.findAll(any())).thenReturn(Page.empty());
+    }
 
     @AfterEach
     public void storageSelfCleaning() {

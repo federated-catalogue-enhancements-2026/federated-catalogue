@@ -6,7 +6,12 @@ import eu.xfsc.fc.core.config.DocumentLoaderConfig;
 import eu.xfsc.fc.core.config.DocumentLoaderProperties;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
-import eu.xfsc.fc.core.pojo.*;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.pojo.CredentialClaim;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.dao.assets.AssetAuditRepository;
 import eu.xfsc.fc.core.dao.assets.AssetJpaDao;
@@ -22,7 +27,7 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
-import eu.xfsc.fc.core.service.verification.FormatDetector;
+import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.LoireMatcher;
@@ -31,10 +36,13 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
+import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
+import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 import eu.xfsc.fc.core.service.provenance.ProvenanceService;
+import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.graphdb.config.GraphDbConfig;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -74,10 +82,11 @@ import java.util.Map;
 	VerificationServiceImpl.class, SchemaStoreImpl.class, SchemaJpaDao.class, SchemaAuditRepository.class, ValidatorCacheJpaDao.class,
 	DidResolverConfig.class, DocumentLoaderConfig.class, DocumentLoaderProperties.class, HttpDocumentResolver.class,
         CredentialVerificationStrategy.class, ClaimExtractionService.class, JenaAllTriplesExtractor.class,
-        SchemaValidationServiceImpl.class, ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
+        RdfAssetParser.class, ShaclValidationExecutor.class, SchemaValidationServiceImpl.class,
+        ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class,
 	AdminConfigRepository.class, SchemaModuleConfigService.class, SecurityAuditorAware.class,
 	JwtContentPreprocessor.class, Vc2Processor.class, JwtSignatureVerifier.class, DidDocumentResolver.class,
-        FormatDetector.class, LoireJwtParser.class, LoireMatcher.class, DanubeTechFormatMatcher.class})
+        CredentialFormatDetector.class, LoireJwtParser.class, LoireMatcher.class, DanubeTechFormatMatcher.class})
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 @Import(EmbeddedNeo4JConfig.class)
 public class Neo4jGraphStoreAccuracyTest {
@@ -98,6 +107,8 @@ public class Neo4jGraphStoreAccuracyTest {
   
   @MockitoBean
   private ProvenanceService provenanceService;
+  @MockitoBean
+  private ValidationResultStore validationResultStore;
 
   @Autowired
   private Neo4j embeddedDatabaseServer;

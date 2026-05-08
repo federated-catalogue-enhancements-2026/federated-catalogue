@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.dao.validation;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,9 +10,11 @@ import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest
@@ -40,21 +44,6 @@ class ValidationResultRepositoryTest {
   @AfterEach
   void cleanUp() {
     repository.deleteAll();
-  }
-
-  // --- helper ---
-
-  private ValidationResult buildResult(String[] assetIds, String[] schemaIds,
-      boolean conforms, GraphSyncStatus syncStatus) {
-    ValidationResult r = new ValidationResult();
-    r.setAssetIds(assetIds);
-    r.setValidatorIds(schemaIds);
-    r.setValidatorType(ValidatorType.SCHEMA);
-    r.setConforms(conforms);
-    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
-    r.setContentHash("aabbccdd".repeat(8));
-    r.setGraphSyncStatus(syncStatus);
-    return r;
   }
 
   // ===== findByAssetId =====
@@ -113,6 +102,70 @@ class ValidationResultRepositoryTest {
     assertNotNull(saved.getCreatedAt(), "createdAt must be set by @CreatedDate");
   }
 
+  // ===== findAllByAssetId =====
+
+  @Test
+  void findAllByAssetId_matchingEntry_returnsAllResults() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"https://example.org/schema/1"},
+        true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"https://example.org/schema/2"},
+        false, GraphSyncStatus.FAILED));
+
+    List<ValidationResult> results = repository.findAllByAssetId("https://example.org/asset/1");
+
+    assertEquals(2, results.size());
+  }
+
+  @Test
+  void findAllByAssetId_noMatch_returnsEmpty() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/OTHER"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    List<ValidationResult> results = repository.findAllByAssetId("https://example.org/asset/NONE");
+
+    assertTrue(results.isEmpty());
+  }
+
+  // ===== deleteAllByAssetId =====
+
+  @Test
+  @Transactional
+  void deleteAllByAssetId_matchingRows_removesOnlyTargetAsset() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/1"},
+        new String[]{"ref/2"}, false, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/2"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.deleteAllByAssetId("https://example.org/asset/1");
+
+    assertEquals(0, repository.findAllByAssetId("https://example.org/asset/1").size(),
+        "All rows for asset/1 must be removed");
+    assertEquals(1, repository.findAllByAssetId("https://example.org/asset/2").size(),
+        "Row for asset/2 must remain");
+  }
+
+  @Test
+  @Transactional
+  void deleteAllByAssetId_noMatch_performsNoop() {
+    repository.save(buildResult(
+        new String[]{"https://example.org/asset/OTHER"},
+        new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.deleteAllByAssetId("https://example.org/asset/NONE");
+
+    assertEquals(1, repository.count(), "Unrelated row must remain");
+  }
+
   // ===== findAll (used by GraphRebuilder) =====
 
   @Test
@@ -153,6 +206,62 @@ class ValidationResultRepositoryTest {
   }
 
   @Test
+  @Transactional
+  void markOutdatedByAssetId_existingResults_marksAllOutdatedWithReason() {
+    final String assetId = "https://example.org/asset/mark-1";
+
+    repository.save(buildResult(
+        new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(
+        new String[]{assetId, "https://example.org/asset/other"}, new String[]{"ref/2"},
+        true, GraphSyncStatus.SYNCED));
+
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_UPDATED.name());
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(2, page.getTotalElements());
+    page.getContent().forEach(r -> {
+      assertTrue(r.isOutdated(), "Result must be marked outdated");
+      assertEquals(OutdatedReason.ASSET_UPDATED, r.getOutdatedReason());
+    });
+  }
+
+  @Test
+  @Transactional
+  void markOutdatedByAssetId_alreadyOutdated_isIdempotent() {
+    final String assetId = "https://example.org/asset/idem-1";
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_REVOKED.name());
+    repository.markOutdatedByAssetId(assetId, OutdatedReason.ASSET_REVOKED.name());
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(1, page.getTotalElements());
+    assertTrue(page.getContent().getFirst().isOutdated());
+    assertEquals(OutdatedReason.ASSET_REVOKED, page.getContent().getFirst().getOutdatedReason());
+  }
+
+  @Test
+  @Transactional
+  void deleteByAssetId_existingResults_deletesAll() {
+    final String assetId = "https://example.org/asset/delete-1";
+
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/1"}, true, GraphSyncStatus.SYNCED));
+    repository.save(buildResult(new String[]{assetId}, new String[]{"ref/2"}, false, GraphSyncStatus.FAILED));
+
+    repository.deleteAllByAssetId(assetId);
+
+    Page<ValidationResult> page = repository.findByAssetId(assetId, PageRequest.of(0, 10));
+    assertEquals(0, page.getTotalElements(), "All results for the asset must be deleted");
+  }
+
+  @Test
+  @Transactional
+  void deleteByAssetId_noMatchingResults_noError() {
+    assertDoesNotThrow(() -> repository.deleteAllByAssetId("https://example.org/asset/none"));
+  }
+
+  @Test
   void findAll_mixedGraphSyncStatuses_returnsAll() {
     repository.save(buildResult(
         new String[]{"https://example.org/asset/1"},
@@ -171,5 +280,19 @@ class ValidationResultRepositoryTest {
         .filter(r -> r.getGraphSyncStatus() == GraphSyncStatus.FAILED)
         .count();
     assertEquals(1, failedCount, "Should include FAILED results for rebuild processing");
+  }
+
+
+  private ValidationResult buildResult(String[] assetIds, String[] schemaIds,
+      boolean conforms, GraphSyncStatus syncStatus) {
+    ValidationResult r = new ValidationResult();
+    r.setAssetIds(assetIds);
+    r.setValidatorIds(schemaIds);
+    r.setValidatorType(ValidatorType.SHACL);
+    r.setConforms(conforms);
+    r.setValidatedAt(Instant.parse("2024-06-01T12:00:00Z"));
+    r.setContentHash("aabbccdd".repeat(8));
+    r.setGraphSyncStatus(syncStatus);
+    return r;
   }
 }

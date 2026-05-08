@@ -13,8 +13,9 @@ import eu.xfsc.fc.core.service.assetstore.IriGenerator;
 import eu.xfsc.fc.core.service.assetstore.PublishingAssetStore;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
-import eu.xfsc.fc.core.service.provenance.ProvenanceService;
 import eu.xfsc.fc.core.service.pubsub.AssetPublisher;
+import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -29,15 +30,28 @@ public class AssetStoreConfig {
       @Qualifier("assetFileStore") FileStore fileStore,
       IriGenerator iriGenerator, AssetRepository assetRepository,
       ProtectedNamespaceProperties namespaceProperties,
-      ProvenanceService provenanceService,
+      ApplicationEventPublisher eventPublisher,
       AssetPublisher assetPublisher) {
     AssetStore assetStore;
     if ("none".equals(pubImpl)) {
-      assetStore = new AssetStoreImpl(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, provenanceService);
+      assetStore = new AssetStoreImpl(
+          dao,
+          graphDb,
+          fileStore,
+          iriGenerator,
+          assetRepository,
+          namespaceProperties,
+          eventPublisher);
     } else {
-      assetStore = new PublishingAssetStore(dao, graphDb, fileStore, iriGenerator, assetRepository,
-          namespaceProperties, provenanceService, assetPublisher);
+      assetStore = new PublishingAssetStore(
+          dao,
+          graphDb,
+          fileStore,
+          iriGenerator,
+          assetRepository,
+          namespaceProperties,
+          eventPublisher,
+          assetPublisher);
     }
     log.debug("getAssetStore; returning {} for impl {}", assetStore, pubImpl);
     return assetStore;

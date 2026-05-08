@@ -18,6 +18,7 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -53,7 +54,7 @@ public class AssetStoreImpl implements AssetStore {
   private final IriGenerator iriGenerator;
   private final AssetRepository assetRepository;
   private final ProtectedNamespaceProperties namespaceProperties;
-  private final ProvenanceService provenanceService;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   public ContentAccessor getFileByHash(final String hash) {
@@ -127,6 +128,8 @@ public class AssetStoreImpl implements AssetStore {
     }
     if (subjectHash != null && subjectHash.subjectId() != null) {
       graphDb.deleteClaims(subjectHash.subjectId());
+      // deleteClaims wipes all triples for the asset, including MR-HR link triples; re-write them
+      tryRewriteLinkTriples(assetMetadata.getId());
     }
     graphDb.addClaims(verificationResult.getClaims(), assetMetadata.getId());
     return subjectHash;
@@ -190,11 +193,13 @@ public class AssetStoreImpl implements AssetStore {
 
   @Override
   public void deleteAsset(final String hash) {
+    deleteAsset(hash, false);
+  }
+
+  private void deleteAsset(final String hash, final boolean cascading) {
     final Optional<Asset> assetOpt = assetRepository.findByAssetHashWithLinkedAsset(hash);
-    final String hrHashToCascade = assetOpt
-        .filter(a -> a.getAssetType() == AssetType.MACHINE_READABLE && a.getLinkedAsset() != null)
-        .map(a -> a.getLinkedAsset().getAssetHash())
-        .orElse(null);
+    // Only cascade from MR → HR once; a cascading call never triggers a further cascade.
+    final String hrHashToCascade = cascading ? null : assetOpt.map(this::findHumanReadableAssetHash).orElse(null);
 
     assetOpt.filter(a -> a.getLinkedAsset() != null).ifPresent(a -> {
       final Asset peer = a.getLinkedAsset();
@@ -209,8 +214,7 @@ public class AssetStoreImpl implements AssetStore {
       throw new NotFoundException("no asset found for hash " + hash);
     }
 
-    provenanceService.deleteByAssetId(ssr.subjectId());
-
+    eventPublisher.publishEvent(new AssetDeletedEvent(ssr.subjectId()));
     if (ssr.getAssetStatus() == AssetStatus.ACTIVE) {
       graphDb.deleteClaims(ssr.subjectId());
     }
@@ -222,7 +226,7 @@ public class AssetStoreImpl implements AssetStore {
 
     if (hrHashToCascade != null) {
       try {
-        deleteAsset(hrHashToCascade);
+        deleteAsset(hrHashToCascade, true);
       } catch (NotFoundException ex) {
         log.debug("deleteAsset; HR asset already gone, skipping cascade");
       }
@@ -327,6 +331,23 @@ public class AssetStoreImpl implements AssetStore {
   @Override
   public void writeAssetLinkTriples(String mrIri, String hrIri) {
     writeLinkTriples(mrIri, hrIri);
+  }
+
+  private void tryRewriteLinkTriples(String assetId) {
+    try {
+      assetRepository.findBySubjectIdWithLinkedAsset(assetId)
+          .filter(a -> a.getLinkedAsset() != null && a.getAssetType() == AssetType.MACHINE_READABLE)
+          .ifPresent(a -> writeAssetLinkTriples(assetId, a.getLinkedAsset().getSubjectId()));
+    } catch (Exception ex) {
+      log.warn("tryRewriteLinkTriples; failed to restore link triples after graph rebuild for asset {}", assetId, ex);
+    }
+  }
+
+  private String findHumanReadableAssetHash(Asset asset) {
+    if (asset.getAssetType() != AssetType.MACHINE_READABLE || asset.getLinkedAsset() == null) {
+      return null;
+    }
+    return asset.getLinkedAsset().getAssetHash();
   }
 
   private void writeLinkTriples(String mrIri, String hrIri) {

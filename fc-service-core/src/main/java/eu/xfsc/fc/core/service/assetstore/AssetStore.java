@@ -63,6 +63,7 @@ public interface AssetStore {
 
   /**
    * Remove the asset with the given hash from the store.
+   * If the asset has a linked human-readable representation, it is also deleted.
    *
    * @param hash The hash of the asset to work on.
    */
@@ -117,12 +118,12 @@ public interface AssetStore {
   AssetMetadata getById(String id);
 
   /**
-    * Check whether an active asset exists for the given IRI (subjectId).
+   * Check whether an active asset exists for the given IRI (subjectId).
    *
    * @param id The IRI that identifies the asset.
-    * @return true if an active asset exists, false otherwise.
+   * @return true if an active asset exists, false otherwise.
    */
-    boolean existsById(String id);
+  boolean existsById(String id);
 
   /**
    * Fetch an active asset's file content by its IRI (subjectId).
@@ -189,9 +190,8 @@ public interface AssetStore {
   Optional<LinkedAssetRef> findLink(String assetIri);
 
   /**
-   * Write {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
+   * Writes {@code fcmeta:hasHumanReadable} and {@code fcmeta:hasMachineReadable} triples
    * to the graph store for the given MR–HR pair.
-   * Used during graph rebuilds to restore link triples from PostgreSQL state.
    *
    * @param mrIri IRI of the machine-readable asset
    * @param hrIri IRI of the human-readable asset
