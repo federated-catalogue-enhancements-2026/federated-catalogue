@@ -21,7 +21,6 @@ import eu.xfsc.fc.core.service.trustframework.ResolvedRole;
 import eu.xfsc.fc.core.service.trustframework.RoleConfig;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkBundle;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
-import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistryImpl;
 import eu.xfsc.fc.core.service.trustframework.ValidationType;
 import eu.xfsc.fc.core.util.ClaimValidator;
 
@@ -63,7 +62,7 @@ class LoireTypeResolutionTest {
     );
     FrameworkBundleConfig loireConfig = new FrameworkBundleConfig(
         PROFILE_ID, "gaia-x", NAMESPACE, ValidationType.SHACL, loireRoles, Map.of());
-    loireRegistry = new TrustFrameworkRegistryImpl(
+    loireRegistry = new TrustFrameworkRegistry(
         List.of(new TrustFrameworkBundle(loireConfig, gx2511Ontology, null)));
 
     // Legacy gax-core roles — intentionally different namespace
@@ -75,7 +74,7 @@ class LoireTypeResolutionTest {
     FrameworkBundleConfig legacyConfig = new FrameworkBundleConfig(
         "gaia-x-legacy", "gaia-x", "https://w3id.org/gaia-x/core#",
         ValidationType.SHACL, legacyRoles, Map.of());
-    legacyRegistry = new TrustFrameworkRegistryImpl(
+    legacyRegistry = new TrustFrameworkRegistry(
         List.of(new TrustFrameworkBundle(legacyConfig, gx2511Ontology, null)));
   }
 
@@ -203,7 +202,7 @@ class LoireTypeResolutionTest {
     );
     FrameworkBundleConfig config = new FrameworkBundleConfig(
         PROFILE_ID, "gaia-x", NAMESPACE, ValidationType.SHACL, roles, Map.of());
-    return new TrustFrameworkRegistryImpl(
+    return new TrustFrameworkRegistry(
         List.of(new TrustFrameworkBundle(config, null, null)));
   }
 

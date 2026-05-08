@@ -2,7 +2,6 @@ package eu.xfsc.fc.core.config;
 
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkBundleLoader;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
-import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistryImpl;
 
 import java.io.IOException;
 
@@ -17,6 +16,6 @@ public class TrustFrameworkRegistryConfig {
 
   @Bean
   public TrustFrameworkRegistry trustFrameworkRegistry() throws IOException {
-    return new TrustFrameworkRegistryImpl(new TrustFrameworkBundleLoader().loadFromClasspath());
+    return new TrustFrameworkRegistry(new TrustFrameworkBundleLoader().loadFromClasspath());
   }
 }
