@@ -79,7 +79,7 @@ class TrustFrameworkRegistryTest {
 
   @Test
   void resolveRole_rootUri_returnsResolvedRole() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
 
     var registry = new TrustFrameworkRegistry(List.of(bundle));
@@ -90,7 +90,7 @@ class TrustFrameworkRegistryTest {
 
   @Test
   void resolveRole_subclassOfRoot_returnsResolvedRole() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, SUBCLASS_ONTOLOGY);
 
     var registry = new TrustFrameworkRegistry(List.of(bundle));
@@ -105,7 +105,7 @@ class TrustFrameworkRegistryTest {
   @Test
   void resolveRole_additionalRoot_returnsResolvedRole() {
     var roles = Map.of("ServiceOffering", new RoleConfig(
-        List.of("https://w3id.org/gaia-x/DigitalServiceOffering"), List.of(), null));
+        List.of("https://w3id.org/gaia-x/DigitalServiceOffering"), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, DSO_ONTOLOGY);
 
     var registry = new TrustFrameworkRegistry(List.of(bundle));
@@ -118,7 +118,7 @@ class TrustFrameworkRegistryTest {
   void resolveRole_2hopSubclassOfRoot_returnsResolvedRole() {
     // gx:PrivateLegalPerson rdfs:subClassOf gx:LegalPerson rdfs:subClassOf gx:Participant
     // OWL_MEM_MICRO_RULE_INF infers the transitive closure — both hops must be covered
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, TWO_HOP_ONTOLOGY);
 
     var registry = new TrustFrameworkRegistry(List.of(bundle));
@@ -130,7 +130,7 @@ class TrustFrameworkRegistryTest {
   @Test
   void resolveRole_firstBundleWinsOnRootUriConflict() {
     // Same root URI claimed by two bundles — first registration must win (putIfAbsent semantics)
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle1 = shaclBundle("framework-a", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
     var bundle2 = shaclBundle("framework-b", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
 
@@ -146,7 +146,7 @@ class TrustFrameworkRegistryTest {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
-    assertThat(registry.getBundles()).containsExactly(bundle);
+    assertThat(registry.getActiveBundles()).containsExactly(bundle);
   }
 
   @Test
@@ -154,7 +154,7 @@ class TrustFrameworkRegistryTest {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
-    assertThatThrownBy(() -> registry.getBundles().clear())
+    assertThatThrownBy(() -> registry.getActiveBundles().clear())
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -191,8 +191,8 @@ class TrustFrameworkRegistryTest {
   @Test
   void getEffectiveRoles_knownBundle_returnsRoleNames() {
     var roles = Map.of(
-        "Participant", new RoleConfig(List.of(), List.of(), null),
-        "ServiceOffering", new RoleConfig(List.of(), List.of(), null));
+        "Participant", new RoleConfig(List.of(), List.of()),
+        "ServiceOffering", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
@@ -209,7 +209,7 @@ class TrustFrameworkRegistryTest {
 
   @Test
   void getEffectiveRoles_returnsImmutableSnapshot() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
@@ -264,7 +264,7 @@ class TrustFrameworkRegistryTest {
     var rolesWithNull = new HashMap<String, RoleConfig>();
     rolesWithNull.put("Participant", new RoleConfig(
         new ArrayList<>(Arrays.asList(null, "https://w3id.org/gaia-x/Participant")),
-        List.of(), null));
+        List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", rolesWithNull, MINIMAL_ONTOLOGY);
 
     assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
@@ -274,7 +274,7 @@ class TrustFrameworkRegistryTest {
   @Test
   void constructor_blankNodeSubclass_doesNotThrow() {
     // An anonymous (blank-node) subclass in the ontology must be skipped, not NPE
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
+    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of()));
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, BLANK_NODE_ONTOLOGY);
 
     assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
@@ -285,7 +285,7 @@ class TrustFrameworkRegistryTest {
   void constructor_nullNamespaceWithRoles_throwsIllegalArgument() {
     // A SHACL bundle with roles but null namespace cannot construct valid role URIs
     var config = new FrameworkBundleConfig("bad-bundle", "test", null, ValidationType.SHACL,
-        Map.of("Role", new RoleConfig(List.of(), List.of(), null)), Map.of());
+        Map.of("Role", new RoleConfig(List.of(), List.of())), Map.of());
     var bundle = new TrustFrameworkBundle(config,
         new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
@@ -297,7 +297,7 @@ class TrustFrameworkRegistryTest {
   void constructor_namespaceMissingTrailingSeparator_throwsIllegalArgument() {
     // Namespace without trailing '/' or '#' produces "https://example.orgRole" — invalid
     var config = new FrameworkBundleConfig("bad-bundle", "test", "https://example.org", ValidationType.SHACL,
-        Map.of("Role", new RoleConfig(List.of(), List.of(), null)), Map.of());
+        Map.of("Role", new RoleConfig(List.of(), List.of())), Map.of());
     var bundle = new TrustFrameworkBundle(config,
         new eu.xfsc.fc.core.pojo.ContentAccessorDirect(MINIMAL_ONTOLOGY), null);
 
@@ -305,58 +305,11 @@ class TrustFrameworkRegistryTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  // getResultType
-
-  @Test
-  void getResultType_knownProfileAndRole_returnsType() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), "Participant"));
-    var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
-
-    assertThat(registry.getResultType("gaia-x-2511", "Participant")).contains("Participant");
-  }
-
-  @Test
-  void getResultType_roleWithNoResultType_returnsEmpty() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), null));
-    var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
-
-    assertThat(registry.getResultType("gaia-x-2511", "Participant")).isEmpty();
-  }
-
-  @Test
-  void getResultType_unknownRole_returnsEmpty() {
-    var roles = Map.of("Participant", new RoleConfig(List.of(), List.of(), "Participant"));
-    var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", roles, MINIMAL_ONTOLOGY);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
-
-    assertThat(registry.getResultType("gaia-x-2511", "UnknownRole")).isEmpty();
-  }
-
-  @Test
-  void getResultType_unknownProfile_returnsEmpty() {
-    var registry = new TrustFrameworkRegistryImpl(List.of());
-
-    assertThat(registry.getResultType("no-such-framework", "Participant")).isEmpty();
-  }
-
-  @Test
-  void getResultType_deferredBundle_returnsEmpty() {
-    var roles = Map.of("Producer", new RoleConfig(List.of(), List.of(), "Producer"));
-    var config =
-        new FrameworkBundleConfig("untp-v1", "untp", "https://untp/", ValidationType.JSON_SCHEMA, roles, Map.of());
-    var bundle = new TrustFrameworkBundle(config, null, null);
-    var registry = new TrustFrameworkRegistryImpl(List.of(bundle));
-
-    assertThat(registry.getResultType("untp-v1", "Producer")).isEmpty();
-  }
-
   @Test
   void constructor_uriWithInjectionCharacter_doesNotThrow() {
     // A URI containing '>' in additionalRoots must not break SPARQL query construction
     var roles = Map.of("ServiceOffering", new RoleConfig(
-        List.of("https://example.org/bad>uri"), List.of(), null));
+        List.of("https://example.org/bad>uri"), List.of()));
     var bundle = shaclBundle("test", "https://example.org/", roles, DSO_ONTOLOGY);
 
     assertThatCode(() -> new TrustFrameworkRegistry(List.of(bundle)))
@@ -368,7 +321,7 @@ class TrustFrameworkRegistryTest {
     // SHACL bundle is active; JSON_SCHEMA bundle is deferred — getActiveBundles() must exclude deferred
     var active = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
     var deferred = jsonSchemaBundle("untp-v1");
-    var registry = new TrustFrameworkRegistryImpl(List.of(active, deferred));
+    var registry = new TrustFrameworkRegistry(List.of(active, deferred));
 
     assertThat(registry.getActiveBundles())
         .containsExactly(active)
@@ -378,7 +331,7 @@ class TrustFrameworkRegistryTest {
   @Test
   void getActiveBundles_allDeferred_returnsEmpty() {
     var deferred = jsonSchemaBundle("untp-v1");
-    var registry = new TrustFrameworkRegistryImpl(List.of(deferred));
+    var registry = new TrustFrameworkRegistry(List.of(deferred));
 
     assertThat(registry.getActiveBundles()).isEmpty();
   }

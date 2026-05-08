@@ -110,8 +110,10 @@ public class TrustFrameworkRegistry {
    *
    * @return immutable collection of active bundles; never null
    */
-  Collection<TrustFrameworkBundle> getActiveBundles() {
-    return List.copyOf(bundleIndex.values());
+  public Collection<TrustFrameworkBundle> getActiveBundles() {
+    return bundleIndex.values().stream()
+        .filter(b -> activeProfileIds.contains(b.config().id()))
+        .toList();
   }
 
   /**

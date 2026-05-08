@@ -11,7 +11,6 @@
 #                        without subsumption — not as a workaround to collapse two distinct concepts
 #                        into the same role.
 #     types            — explicit type list for JSON Schema engines (forward-compat; unused for SHACL)
-#     result_type      — stable string identifier for result-materialization dispatch; empty = generic result
 #   properties     — framework-specific key/value metadata (reserved; not used by the resolver)
 
 id: gaia-x-2511
@@ -23,27 +22,20 @@ roles:
   Participant:
     additional_roots: [ ]
     types: [ ]
-    result_type: Participant
 
   ServiceOffering:
     # KNOWN SEMANTIC DEBT:
     # gx:DigitalServiceOffering is not an OWL subclass of gx:ServiceOffering in gx-2511.
-    # It is mapped here so DSO credentials resolve to the ServiceOffering role and reuse
-    # the typed result POJO. This is a stop-gap: the role -> result-POJO dispatch is
-    # still hardcoded to Gaia-X roles in the verification core (only the result_type
-    # *declaration* is bundle-driven today; the *consumption* is not), so DSO has no
-    # place to land otherwise. Once dispatch is bundle-driven end-to-end and the
-    # typed-POJO coupling is removed, DSO should be modelled as its own bundle role
-    # with its own result_type and removed from this list — the catalogue should not
-    # silently assert ontology-level equivalence the spec does not declare.
+    # It is mapped here so DSO credentials resolve to the ServiceOffering role. This is a
+    # stop-gap; once dispatch is bundle-driven end-to-end, DSO should be modelled as its
+    # own bundle role and removed from this list — the catalogue should not silently
+    # assert ontology-level equivalence the spec does not declare.
     additional_roots:
       - "https://w3id.org/gaia-x/2511#DigitalServiceOffering"
     types: [ ]
-    result_type: ServiceOffering
 
   Resource:
     additional_roots: [ ]
     types: [ ]
-    result_type: Resource
 
 properties: { }

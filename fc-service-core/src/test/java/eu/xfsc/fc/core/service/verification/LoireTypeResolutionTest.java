@@ -55,10 +55,10 @@ class LoireTypeResolutionTest {
 
     // 2511 roles — mirrors the production gaia-x-2511 bundle
     Map<String, RoleConfig> loireRoles = Map.of(
-        "Participant", new RoleConfig(List.of(), List.of(), null),
+        "Participant", new RoleConfig(List.of(), List.of()),
         "ServiceOffering", new RoleConfig(
-            List.of(NAMESPACE + "DigitalServiceOffering"), List.of(), null),
-        "Resource", new RoleConfig(List.of(), List.of(), null)
+            List.of(NAMESPACE + "DigitalServiceOffering"), List.of()),
+        "Resource", new RoleConfig(List.of(), List.of())
     );
     FrameworkBundleConfig loireConfig = new FrameworkBundleConfig(
         PROFILE_ID, "gaia-x", NAMESPACE, ValidationType.SHACL, loireRoles, Map.of());
@@ -67,9 +67,9 @@ class LoireTypeResolutionTest {
 
     // Legacy gax-core roles — intentionally different namespace
     Map<String, RoleConfig> legacyRoles = Map.of(
-        "Participant", new RoleConfig(List.of(), List.of(), null),
-        "ServiceOffering", new RoleConfig(List.of(), List.of(), null),
-        "Resource", new RoleConfig(List.of(), List.of(), null)
+        "Participant", new RoleConfig(List.of(), List.of()),
+        "ServiceOffering", new RoleConfig(List.of(), List.of()),
+        "Resource", new RoleConfig(List.of(), List.of())
     );
     FrameworkBundleConfig legacyConfig = new FrameworkBundleConfig(
         "gaia-x-legacy", "gaia-x", "https://w3id.org/gaia-x/core#",
@@ -195,10 +195,10 @@ class LoireTypeResolutionTest {
 
   private TrustFrameworkRegistry buildRootsOnlyRegistry() {
     Map<String, RoleConfig> roles = Map.of(
-        "Participant", new RoleConfig(List.of(), List.of(), null),
+        "Participant", new RoleConfig(List.of(), List.of()),
         "ServiceOffering", new RoleConfig(
-            List.of(NAMESPACE + "DigitalServiceOffering"), List.of(), null),
-        "Resource", new RoleConfig(List.of(), List.of(), null)
+            List.of(NAMESPACE + "DigitalServiceOffering"), List.of()),
+        "Resource", new RoleConfig(List.of(), List.of())
     );
     FrameworkBundleConfig config = new FrameworkBundleConfig(
         PROFILE_ID, "gaia-x", NAMESPACE, ValidationType.SHACL, roles, Map.of());

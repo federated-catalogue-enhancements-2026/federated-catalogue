@@ -105,25 +105,5 @@ class FoundationRecordsTest {
 
     assertThat(roleConfig.additionalRoots()).isNotNull().isEmpty();
     assertThat(roleConfig.types()).isNotNull().isEmpty();
-    assertThat(roleConfig.resultType()).isEqualTo("");
-  }
-
-  @Test
-  void roleConfig_withResultType_deserializesResultType() throws Exception {
-    var mapper = new YAMLMapper();
-
-    String yaml = """
-        id: x
-        family: x
-        namespace: https://x/
-        validation_type: shacl
-        roles:
-          Participant:
-            result_type: Participant
-        """;
-
-    var config = mapper.readValue(yaml, FrameworkBundleConfig.class);
-
-    assertThat(config.roles().get("Participant").resultType()).isEqualTo("Participant");
   }
 }
