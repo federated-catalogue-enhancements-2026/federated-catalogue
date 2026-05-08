@@ -48,7 +48,7 @@ class ValidationResultStoreImplTest {
   @Test
   void store_graphWriteSucceeds_statusTransitionsToSynced() {
     ValidationResultRecord record = buildRecord(true);
-    ValidationResult saved = entityWithId(1L);
+    ValidationResult saved = buildEntityWithId(1L);
     when(hasher.hash(any())).thenReturn("aabbcc");
     when(repository.save(any())).thenReturn(saved);
 
@@ -65,7 +65,7 @@ class ValidationResultStoreImplTest {
   @Test
   void store_graphWriteSucceeds_returnsId() {
     ValidationResultRecord record = buildRecord(false);
-    ValidationResult saved = entityWithId(99L);
+    ValidationResult saved = buildEntityWithId(99L);
     when(hasher.hash(any())).thenReturn("hash");
     when(repository.save(any())).thenReturn(saved);
 
@@ -79,7 +79,7 @@ class ValidationResultStoreImplTest {
   @Test
   void store_graphWriteFails_statusMarkedFailed() {
     ValidationResultRecord record = buildRecord(true);
-    ValidationResult saved = entityWithId(2L);
+    ValidationResult saved = buildEntityWithId(2L);
     when(hasher.hash(any())).thenReturn("aabbcc");
     when(repository.save(any())).thenReturn(saved);
     doThrow(new RuntimeException("graph unavailable"))
@@ -96,7 +96,7 @@ class ValidationResultStoreImplTest {
 
   @Test
   void getByAssetId_delegatesWithPageable() {
-    ValidationResult entity = entityWithId(5L);
+    ValidationResult entity = buildEntityWithId(5L);
     Pageable pageable = PageRequest.of(0, 10);
     Page<ValidationResult> page = new PageImpl<>(List.of(entity));
     when(repository.findByAssetId(eq("https://example.org/asset/1"), eq(pageable)))
@@ -112,7 +112,7 @@ class ValidationResultStoreImplTest {
 
   @Test
   void getById_existingId_returnsPopulatedOptional() {
-    ValidationResult entity = entityWithId(10L);
+    ValidationResult entity = buildEntityWithId(10L);
     when(repository.findById(10L)).thenReturn(Optional.of(entity));
 
     Optional<ValidationResult> result = service.getById(10L);
@@ -134,8 +134,8 @@ class ValidationResultStoreImplTest {
 
   @Test
   void deleteByAssetId_existingResults_deletesGraphAndPostgresRows() {
-    ValidationResult result1 = entityWithId(10L);
-    ValidationResult result2 = entityWithId(11L);
+    ValidationResult result1 = buildEntityWithId(10L);
+    ValidationResult result2 = buildEntityWithId(11L);
     when(repository.findAllByAssetId("https://example.org/asset/1"))
         .thenReturn(List.of(result1, result2));
     when(graphWriter.resultIri(10L)).thenReturn("https://fc.example.org/meta/ValidationResult/10");
@@ -161,7 +161,7 @@ class ValidationResultStoreImplTest {
 
   @Test
   void deleteByAssetId_graphThrows_deletesDbRowsAnyway() {
-    ValidationResult result = entityWithId(20L);
+    ValidationResult result = buildEntityWithId(20L);
     when(repository.findAllByAssetId("https://example.org/asset/1"))
         .thenReturn(List.of(result));
     when(graphWriter.resultIri(20L)).thenReturn("https://fc.example.org/meta/ValidationResult/20");
@@ -184,7 +184,7 @@ class ValidationResultStoreImplTest {
         null);
   }
 
-  private static ValidationResult entityWithId(long id) {
+  private static ValidationResult buildEntityWithId(long id) {
     ValidationResult e = new ValidationResult();
     e.setAssetIds(new String[]{"https://example.org/asset/1"});
     e.setValidatorIds(new String[]{"https://example.org/schema/1"});

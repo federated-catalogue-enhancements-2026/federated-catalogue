@@ -19,6 +19,7 @@ import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,11 +90,13 @@ public class AssetValidationServiceImpl implements AssetValidationService {
         if (ct == null) {
           throw new VerificationException(
               "Asset " + asset.getId() + " has no content type. Cannot determine validation schema type. "
-                  + "Validatable types: application/json, application/xml");
+                  + "Validatable types: " + MediaType.APPLICATION_JSON_VALUE
+                  + ", " + MediaType.APPLICATION_XML_VALUE);
         }
         throw new VerificationException(
             "Asset " + asset.getId() + " has unsupported content type for validation: " + ct
-                + ". Validatable types: application/json, application/xml");
+                + ". Validatable types: " + MediaType.APPLICATION_JSON_VALUE
+                + ", " + MediaType.APPLICATION_XML_VALUE);
       }
     }
 
@@ -207,7 +210,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
       }
 
       anyApplicableEnabled = true;
-      SchemaType schemaType = schemaStoreType(strategy);
+      SchemaType schemaType = resolveSchemaStoreType(strategy);
       ContentAccessor content = resolveAllSchemasContent(strategy, schemaType);
       if (content == null) {
         continue;
@@ -303,7 +306,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
                 + " which is not supported for on-demand validation. Supported types: SHAPE, JSON, XML."));
   }
 
-  private SchemaType schemaStoreType(ValidationStrategy strategy) {
+  private SchemaType resolveSchemaStoreType(ValidationStrategy strategy) {
     return switch (strategy.type()) {
       case SHACL -> SchemaType.SHAPE;
       case JSON_SCHEMA -> SchemaType.JSON;

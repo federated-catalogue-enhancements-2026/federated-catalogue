@@ -8,9 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 /**
- * Write and read boundary interface for validation results.
- *
- * <p>{@link ValidationResultStoreImpl} is the production implementation.</p>
+ * Write and read boundary interface for validation result records and their graph projection.
  */
 public interface ValidationResultStore {
 
@@ -41,7 +39,6 @@ public interface ValidationResultStore {
   /**
    * Writes {@code fcmeta:} triples for the given result to the graph store and updates
    * {@code graph_sync_status} to {@code SYNCED} on success or {@code FAILED} on error.
-   * Used during graph rebuild to restore triples from the relational DB.
    */
   void syncToGraph(ValidationResult result, GraphStore graphStore);
 

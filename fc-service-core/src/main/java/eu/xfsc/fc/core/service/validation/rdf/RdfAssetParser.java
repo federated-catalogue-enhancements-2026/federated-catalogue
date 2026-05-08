@@ -7,7 +7,9 @@ import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
+import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
+import eu.xfsc.fc.core.util.FormatDetectionConstants;
 import eu.xfsc.fc.core.util.RdfFormatDetector;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +87,7 @@ public class RdfAssetParser {
           "Asset " + asset.getId() + " is not an RDF asset and cannot be validated with SHACL");
     }
     String rawContent = content.getContentAsString().strip();
-    if (rawContent.startsWith(RdfFormatDetector.JWT_PREFIX)) {
+    if (rawContent.startsWith(VerificationConstants.JWT_PREFIX)) {
       ContentAccessor unwrapped = loireJwtParser.unwrap(content);
       return parseRdfContent(unwrapped, Lang.JSONLD11);
     }
@@ -120,12 +122,12 @@ public class RdfAssetParser {
   public boolean isJsonLd(AssetMetadata asset) {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
-      return content.getContentAsString().strip().startsWith(RdfFormatDetector.JSON_LD_PREFIX);
+      return content.getContentAsString().strip().startsWith(FormatDetectionConstants.JSON_LD_PREFIX);
     }
     String ct = asset.getContentType();
-    return ct != null && (ct.contains("application/ld+json")
-        || ct.contains("application/vc+ld+json")
-        || ct.contains("application/vp+ld+json"));
+    return ct != null && (ct.contains(VerificationConstants.MEDIA_TYPE_LD_JSON)
+        || ct.contains(VerificationConstants.MEDIA_TYPE_VC_LD_JSON)
+        || ct.contains(VerificationConstants.MEDIA_TYPE_VP_LD_JSON));
   }
 
   /**
@@ -136,10 +138,11 @@ public class RdfAssetParser {
     ContentAccessor content = asset.getContentAccessor();
     if (content != null) {
       String raw = content.getContentAsString().strip();
-      return raw.startsWith(RdfFormatDetector.RDF_XML_PREFIX_1) || raw.startsWith(RdfFormatDetector.RDF_XML_PREFIX_2);
+      return raw.startsWith(FormatDetectionConstants.RDF_XML_PREFIX_1)
+          || raw.startsWith(FormatDetectionConstants.RDF_XML_PREFIX_2);
     }
     String ct = asset.getContentType();
-    return ct != null && ct.contains("rdf+xml");
+    return ct != null && ct.contains(VerificationConstants.MEDIA_TYPE_RDF_XML);
   }
 
   private Model parseRdfContent(ContentAccessor content, Lang lang) {
