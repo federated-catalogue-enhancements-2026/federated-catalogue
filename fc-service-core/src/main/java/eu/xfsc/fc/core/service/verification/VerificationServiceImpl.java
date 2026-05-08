@@ -92,9 +92,13 @@ public class VerificationServiceImpl implements VerificationService {
     if (!"ServiceOffering".equals(result.getRole())) {
       throw new VerificationException("Expected ServiceOffering credential but found role: " + result.getRole());
     }
-    return new CredentialVerificationResultOffering(result.getVerificationTimestamp(), result.getLifecycleStatus(),
+    CredentialVerificationResultOffering typed = new CredentialVerificationResultOffering(
+        result.getVerificationTimestamp(), result.getLifecycleStatus(),
         result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
         result.getValidators(), result.getRole(), result.getFrameworkProfileId());
+    typed.setName(result.getName());
+    typed.setPublicKey(result.getPublicKey());
+    return typed;
   }
 
   /**
@@ -110,9 +114,13 @@ public class VerificationServiceImpl implements VerificationService {
     if (!"Resource".equals(result.getRole())) {
       throw new VerificationException("Expected Resource credential but found role: " + result.getRole());
     }
-    return new CredentialVerificationResultResource(result.getVerificationTimestamp(), result.getLifecycleStatus(),
+    CredentialVerificationResultResource typed = new CredentialVerificationResultResource(
+        result.getVerificationTimestamp(), result.getLifecycleStatus(),
         result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
         result.getValidators(), result.getRole(), result.getFrameworkProfileId());
+    typed.setName(result.getName());
+    typed.setPublicKey(result.getPublicKey());
+    return typed;
   }
 
   /**

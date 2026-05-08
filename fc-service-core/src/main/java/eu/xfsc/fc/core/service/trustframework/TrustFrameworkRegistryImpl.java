@@ -146,7 +146,7 @@ public class TrustFrameworkRegistryImpl implements TrustFrameworkRegistry {
   public Collection<TrustFrameworkBundle> getActiveBundles() {
     return bundleIndex.values().stream()
         .filter(b -> activeProfileIds.contains(b.config().id()))
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
   }
 
   @Override

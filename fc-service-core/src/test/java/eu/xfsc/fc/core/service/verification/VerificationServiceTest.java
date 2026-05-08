@@ -243,7 +243,7 @@ public class VerificationServiceTest {
     CredentialVerificationResult vr = verificationService.verifyCredential(getAccessor(path), true, false, false, false);
     assertNotNull(vr);
     assertEquals("Participant", vr.getRole());
-    assertEquals("https://www.handelsregister.de/", vr.getId());
+    assertEquals("http://example.org/test-issuer", vr.getId());
     assertEquals("https://www.handelsregister.de/", vr.getIssuer());
     assertEquals(Instant.parse("2010-01-01T19:37:24Z"), vr.getIssuedDateTime());
   }
