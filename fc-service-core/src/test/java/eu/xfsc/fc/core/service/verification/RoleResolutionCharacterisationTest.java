@@ -234,7 +234,7 @@ public class RoleResolutionCharacterisationTest {
   }
 
   @Test
-  void verifyOfferingCredential_nameAndPublicKeyPropagatedToResult() {
+  void verifyCredential_serviceOffering_nameAndPublicKeyPropagatedToResult() {
     CredentialVerificationResult result =
         verificationService.verifyCredential(getAccessor("VerificationService/syntax/serviceOffering1.jsonld"));
 

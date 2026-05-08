@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.verification;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -17,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import eu.xfsc.fc.core.exception.ClientException;
-import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
@@ -46,7 +44,7 @@ class VerificationServiceImplTest {
         NOW, "active", "did:web:example.com", NOW,
         "did:web:example.com", List.of(), List.of(), null, null);
 
-    when(credentialStrategy.verifyCredential(any(), anyBoolean(), anyString(),
+    when(credentialStrategy.verifyCredential(any(), anyBoolean(),
         anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(unknownRoleResult);
 

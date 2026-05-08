@@ -176,12 +176,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         Validator jwtValidator
     ) {}
 
-  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean strict, String expectedRole,
-                                                         boolean verifySemantics, boolean verifySchema, boolean verifyVPSignatures,
+  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean strict,
+                                                       boolean verifySemantics, boolean verifySchema,
+                                                       boolean verifyVPSignatures,
                                                          boolean verifyVCSignatures) throws VerificationException {
     log.debug(
         "verifyCredential.enter; strict: {}, expectedRole: {}, verifySemantics: {}, verifySchema: {}, verifyVPSignatures: {}, verifyVCSignatures: {}",
-        strict, expectedRole, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
+        strict, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
         long stamp = System.currentTimeMillis();
 
         VerificationContext ctx = detectAndUnwrap(payload, verifyVCSignatures || verifyVPSignatures);
@@ -222,7 +223,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
-    ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics, expectedRole);
+    ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
 
         FilteredClaims filtered = extractAndValidateClaims(ctx.payload(), verifySemantics && strict);
 
@@ -333,34 +334,18 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     /**
      * Phase 2: Resolve the dominant role from typed credentials and validate type constraints.
      */
-    private ResolvedRole resolvePrimaryRole(TypedCredentials typedCredentials,
-                                            boolean verifySemantics, String expectedRole) {
-      ResolvedRole primaryRole = ResolvedRole.UNKNOWN;
+    private ResolvedRole resolvePrimaryRole(TypedCredentials typedCredentials, boolean verifySemantics) {
       Collection<ResolvedRole> roles = typedCredentials.getBaseClasses();
-
-      if (roles.size() > 1) {
-        if (verifySemantics) {
-          long distinctRoles = roles.stream().map(ResolvedRole::role).distinct().count();
-          if (distinctRoles > 1) {
-            throw new VerificationException("Semantic error: credential has several types: " + roles);
-          }
-        }
-        if (expectedRole != null && !expectedRole.isBlank()) {
-          primaryRole = roles.stream().filter(r -> expectedRole.equals(r.role()))
-              .findFirst().orElse(ResolvedRole.UNKNOWN);
-        } else {
-          primaryRole = roles.iterator().next();
-        }
-      } else if (!roles.isEmpty()) {
-        primaryRole = roles.iterator().next();
+      if (roles.isEmpty()) {
+        return ResolvedRole.UNKNOWN;
       }
-
-      if (verifySemantics && expectedRole != null && !expectedRole.isBlank()
-          && !expectedRole.equals(primaryRole.role())) {
-        throw new VerificationException(
-            "Semantic error: expected credential of type " + expectedRole + " but found " + primaryRole.role());
+      if (roles.size() > 1 && verifySemantics) {
+        long distinctRoles = roles.stream().map(ResolvedRole::role).distinct().count();
+        if (distinctRoles > 1) {
+          throw new VerificationException("Semantic error: credential has several types: " + roles);
+        }
       }
-      return primaryRole;
+      return roles.iterator().next();
     }
 
     /**
