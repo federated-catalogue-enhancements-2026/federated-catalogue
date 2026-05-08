@@ -44,7 +44,7 @@ class VerificationServiceImplTest {
         NOW, "active", "did:web:example.com", NOW,
         "did:web:example.com", List.of(), List.of(), null, null);
 
-    when(credentialStrategy.verifyCredential(any(), anyBoolean(),
+    when(credentialStrategy.verifyCredential(any(),
         anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(unknownRoleResult);
 

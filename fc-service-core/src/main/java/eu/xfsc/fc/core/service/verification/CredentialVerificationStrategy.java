@@ -114,21 +114,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private final TrustFrameworkRepository trustFrameworkRepository;
     private final SchemaModuleConfigService schemaModuleConfigService;
-
-    /**
-     * Checks if the Gaia-X trust framework is enabled.
-     * Precedence: DB record (when present) overrides env var.
-     * When DB record is missing, falls back to the env var / property value.
-     */
-    private boolean isGaiaxTrustFrameworkEnabled() {
-      return trustFrameworkRepository.findById("gaia-x")
-          .map(TrustFramework::isEnabled)
-          .orElse(gaiaxTrustFrameworkEnabledEnv);
-    }
-
-
   private final TrustFrameworkRegistry trustFrameworkRegistry;
-
     private final JwtContentPreprocessor jwtPreprocessor;
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
     private final SchemaStore schemaStore;
@@ -176,13 +162,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         Validator jwtValidator
     ) {}
 
-  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean strict,
-                                                       boolean verifySemantics, boolean verifySchema,
+  public CredentialVerificationResult verifyCredential(ContentAccessor payload,
+                                                       boolean verifySemantics,
+                                                       boolean verifySchema,
                                                        boolean verifyVPSignatures,
                                                          boolean verifyVCSignatures) throws VerificationException {
     log.debug(
-        "verifyCredential.enter; strict: {}, expectedRole: {}, verifySemantics: {}, verifySchema: {}, verifyVPSignatures: {}, verifyVCSignatures: {}",
-        strict, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
+        "verifyCredential.enter; verifySemantics: {}, verifySchema: {}, verifyVPSignatures: {}, verifyVCSignatures: {}",
+        verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
         long stamp = System.currentTimeMillis();
 
         VerificationContext ctx = detectAndUnwrap(payload, verifyVCSignatures || verifyVPSignatures);
@@ -217,15 +204,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         ld.setDocumentLoader(this.documentLoader);
         log.debug("verifyCredential; content parsed, time taken: {}", System.currentTimeMillis() - stamp);
 
-        TypedCredentials typedCredentials = parseCredentials(ld, strict && requireVP, verifySemantics, ctx.format());
+    TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
         if (verifySemantics && isGaiaxTrustFrameworkEnabled() && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
     ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
-
-        FilteredClaims filtered = extractAndValidateClaims(ctx.payload(), verifySemantics && strict);
+    FilteredClaims filtered = extractAndValidateClaims(ctx.payload(), verifySemantics);
 
         if (verifySchema) {
             if (!schemaModuleConfigService.isModuleEnabled(SchemaModuleType.SHACL)) {
@@ -301,6 +287,17 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);
     }
+
+  /**
+   * Checks if the Gaia-X trust framework is enabled.
+   * Precedence: DB record (when present) overrides env var.
+   * When DB record is missing, falls back to the env var / property value.
+   */
+  private boolean isGaiaxTrustFrameworkEnabled() {
+    return trustFrameworkRepository.findById("gaia-x")
+        .map(TrustFramework::isEnabled)
+        .orElse(gaiaxTrustFrameworkEnabledEnv);
+  }
 
     /**
      * Validates that an explicit VC/VP content-type header matches the actual body format.

@@ -71,7 +71,7 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, false,
+    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload,
         verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     if (!(result instanceof NonCredentialVerificationResult) && result.getRole() == null) {
       String bundleInfo = getActiveTrustFrameworkBundleInfos();
