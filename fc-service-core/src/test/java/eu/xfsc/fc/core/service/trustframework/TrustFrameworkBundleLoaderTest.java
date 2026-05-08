@@ -29,10 +29,6 @@ class TrustFrameworkBundleLoaderTest {
   private static final String MINIMAL_YAML =
       "id: test-fw\nfamily: test\nnamespace: \"https://example.org/test#\"\nvalidation_type: shacl\n";
 
-  // ──────────────────────────────────────────────────────────────────
-  // Patch 1 — loadSibling: InputStream not closed on readAllBytes exception
-  // ──────────────────────────────────────────────────────────────────
-
   @Test
   void loadBundle_siblingStream_closedEvenWhenReadThrows() throws Exception {
     var streamClosed = new AtomicBoolean(false);
@@ -74,10 +70,6 @@ class TrustFrameworkBundleLoaderTest {
         .isTrue();
   }
 
-  // ──────────────────────────────────────────────────────────────────
-  // Patch 2 — loadBundle: YAML InputStream not closed on parse error
-  // ──────────────────────────────────────────────────────────────────
-
   @Test
   void loadBundle_yamlStream_closedEvenWhenIOExceptionDuringRead() throws Exception {
     var streamClosed = new AtomicBoolean(false);
@@ -90,7 +82,7 @@ class TrustFrameworkBundleLoaderTest {
       }
 
       @Override
-      public void close() throws IOException {
+      public void close() {
         streamClosed.set(true);
       }
     };
@@ -106,10 +98,6 @@ class TrustFrameworkBundleLoaderTest {
         .as("YAML InputStream must be closed even when Jackson throws during parse")
         .isTrue();
   }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Patch 3 — loadBundles: yaml.getURI() in catch block aborts the loop
-  // ──────────────────────────────────────────────────────────────────
 
   @Test
   void loadBundles_getURIThrowsInCatch_doesNotAbortRemainingBundles() throws Exception {
@@ -132,16 +120,12 @@ class TrustFrameworkBundleLoaderTest {
     assertThat(bundles)
         .as("valid bundle must load even when the preceding bundle's getURI() throws in catch")
         .hasSize(1);
-    assertThat(bundles.get(0).config().id()).isEqualTo("good-fw");
+    assertThat(bundles.getFirst().config().id()).isEqualTo("good-fw");
   }
 
-  // ──────────────────────────────────────────────────────────────────
-  // Patch 4 — loadBundles: zero-bundle result logged at INFO, not WARN
-  // ──────────────────────────────────────────────────────────────────
-
   @Test
-  void loadBundles_emptyArray_logsAtWARN() throws Exception {
-    var logs = startCapturingLogs(TrustFrameworkBundleLoader.class);
+  void loadBundles_emptyArray_logsAtWARN() {
+    var logs = startCapturingLogs();
 
     loader.loadBundles(new Resource[0]);
 
@@ -149,10 +133,6 @@ class TrustFrameworkBundleLoaderTest {
         .as("loading zero bundles must produce at least one WARN log")
         .anyMatch(e -> e.getLevel() == Level.WARN);
   }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Patch 5 — loadBundle: null config.id() silently registered in bundleIndex
-  // ──────────────────────────────────────────────────────────────────
 
   @Test
   void loadBundle_nullId_throwsIllegalArgumentException() throws Exception {
@@ -163,10 +143,6 @@ class TrustFrameworkBundleLoaderTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("id");
   }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────
 
   /**
    * Builds a minimal valid Resource for a bundle with the given id.
@@ -193,8 +169,8 @@ class TrustFrameworkBundleLoaderTest {
     return resource;
   }
 
-  private static ListAppender<ILoggingEvent> startCapturingLogs(Class<?> cls) {
-    var logger = (Logger) LoggerFactory.getLogger(cls);
+  private static ListAppender<ILoggingEvent> startCapturingLogs() {
+    var logger = (Logger) LoggerFactory.getLogger(TrustFrameworkBundleLoader.class);
     var appender = new ListAppender<ILoggingEvent>();
     appender.start();
     logger.addAppender(appender);
