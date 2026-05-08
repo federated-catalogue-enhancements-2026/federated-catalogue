@@ -56,6 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eu.xfsc.fc.core.config.DatabaseConfig;
 import eu.xfsc.fc.core.config.TrustFrameworkRegistryConfig;
+import eu.xfsc.fc.core.config.XmlSecurityConfig;
 import eu.xfsc.fc.core.security.SecurityAuditorAware;
 import eu.xfsc.fc.core.config.FileStoreConfig;
 import eu.xfsc.fc.core.config.ProtectedNamespaceProperties;
@@ -80,7 +81,7 @@ import lombok.extern.slf4j.Slf4j;
 @ContextConfiguration(classes = {SchemaStoreTest.TestApplication.class, FileStoreConfig.class,
   SchemaStoreTest.class, SchemaStoreImpl.class, DatabaseConfig.class, SchemaJpaDao.class, SchemaAuditRepository.class,
     ProtectedNamespaceFilter.class, ProtectedNamespaceProperties.class, SecurityAuditorAware.class,
-    TrustFrameworkRegistryConfig.class})
+    TrustFrameworkRegistryConfig.class, XmlSecurityConfig.class})
 @Transactional
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class SchemaStoreTest {

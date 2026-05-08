@@ -45,12 +45,8 @@ public class ValidationReportFactory {
    */
   public static ValidationReport fromShacl(Resource reportResource) {
     boolean conforms = reportResource.getProperty(SH.conforms).getBoolean();
-    ValidationReport report = new ValidationReport();
-    report.setConforms(conforms);
-
     if (conforms) {
-      report.setViolations(List.of());
-      return report;
+      return conforming();
     }
 
     List<ValidationViolation> violations = new ArrayList<>();
@@ -67,9 +63,10 @@ public class ValidationReportFactory {
       violation.setSourceShape(getStringProperty(result, SH.sourceShape));
       violations.add(violation);
     }
-    report.setViolations(violations);
-    report.setRawReport(ModelPrinter.get().print(reportResource.getModel()));
-    return report;
+    return new ValidationReport()
+      .conforms(false)
+      .violations(violations)
+      .rawReport(ModelPrinter.get().print(reportResource.getModel()));
   }
 
   /**
@@ -82,14 +79,13 @@ public class ValidationReportFactory {
     if (errors.isEmpty()) {
       return conforming();
     }
-    ValidationReport report = new ValidationReport();
-    report.setConforms(false);
-    report.setViolations(errors.stream().map(ValidationReportFactory::toJsonViolation).toList());
-    report.setRawReport(errors.stream()
-        .map(Error::getMessage)
-        .reduce((a, b) -> a + "\n" + b)
-        .orElse(null));
-    return report;
+    return new ValidationReport()
+        .conforms(false)
+        .violations(errors.stream().map(ValidationReportFactory::toJsonViolation).toList())
+        .rawReport(errors.stream()
+            .map(Error::getMessage)
+            .reduce((a, b) -> a + "\n" + b)
+            .orElse(null));
   }
 
   /**
@@ -99,13 +95,12 @@ public class ValidationReportFactory {
    * @return report with conforms=false, one violation, and the exception message as raw report
    */
   public static ValidationReport fromSaxException(SAXException e) {
-    ValidationReport report = new ValidationReport();
-    report.setConforms(false);
-    report.setViolations(List.of(new ValidationViolation()
+    return new ValidationReport()
+      .conforms(false)
+      .violations(List.of(new ValidationViolation()
         .message(e.getMessage())
-        .severity(ValidationViolation.SeverityEnum.VIOLATION)));
-    report.setRawReport(e.getMessage());
-    return report;
+        .severity(ValidationViolation.SeverityEnum.VIOLATION)))
+      .rawReport(e.getMessage());
   }
 
   private static ValidationViolation toJsonViolation(Error error) {

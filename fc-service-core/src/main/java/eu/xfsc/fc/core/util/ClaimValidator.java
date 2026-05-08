@@ -29,6 +29,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.stream.StreamManager;
+import org.apache.jena.shared.impl.JenaParameters;
 import org.apache.jena.vocabulary.RDF;
 
 import eu.xfsc.fc.core.exception.QueryException;
@@ -54,19 +55,19 @@ public class ClaimValidator {
         // save the actual settings to not interfere with other modules which
         // rely on other settings
         eagerJenaLiteralValidation =
-                org.apache.jena.shared.impl.JenaParameters.enableEagerLiteralValidation;
+                JenaParameters.enableEagerLiteralValidation;
         jenaAcceptanceOfUnknownLiteralDatatypes =
-                org.apache.jena.shared.impl.JenaParameters.enableSilentAcceptanceOfUnknownDatatypes;
+                JenaParameters.enableSilentAcceptanceOfUnknownDatatypes;
 
         // Now switch to picky mode
-        org.apache.jena.shared.impl.JenaParameters.enableEagerLiteralValidation = true;
-        org.apache.jena.shared.impl.JenaParameters.enableSilentAcceptanceOfUnknownDatatypes = false;
+        JenaParameters.enableEagerLiteralValidation = true;
+        JenaParameters.enableSilentAcceptanceOfUnknownDatatypes = false;
     }
 
     private void resetJenaLiteralValidation() {
-        org.apache.jena.shared.impl.JenaParameters.enableEagerLiteralValidation =
+        JenaParameters.enableEagerLiteralValidation =
                 eagerJenaLiteralValidation;
-        org.apache.jena.shared.impl.JenaParameters.enableSilentAcceptanceOfUnknownDatatypes =
+        JenaParameters.enableSilentAcceptanceOfUnknownDatatypes =
                 jenaAcceptanceOfUnknownLiteralDatatypes;
     }
 
