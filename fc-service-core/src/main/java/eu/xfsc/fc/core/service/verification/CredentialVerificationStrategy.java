@@ -68,12 +68,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 
 
@@ -107,7 +105,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return val != null ? val : map.get("@id");
     }
 
-    @Value("${federated-catalogue.verification.require-vp:true}")
+  @Value("${federated-catalogue.verification.require-vp:false}")
     private boolean requireVP;
     @Value("${federated-catalogue.verification.trust-framework.gaiax.enabled:false}")
     private boolean gaiaxTrustFrameworkEnabledEnv;
@@ -211,7 +209,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
     ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
-    FilteredClaims filtered = extractAndValidateClaims(ctx.payload(), verifySemantics);
+    FilteredClaims filtered = extractAndValidateClaims(ctx.payload());
 
         if (verifySchema) {
             if (!schemaModuleConfigService.isModuleEnabled(SchemaModuleType.SHACL)) {
@@ -346,9 +344,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Phase 3: Extract claims, filter protected namespaces, and validate subject uniqueness.
+     * Phase 3: Extract claims and filter protected namespaces.
      */
-    private FilteredClaims extractAndValidateClaims(ContentAccessor payload, boolean strictSemantics) {
+    private FilteredClaims extractAndValidateClaims(ContentAccessor payload) {
         long stamp = System.currentTimeMillis();
         // Resolve inner EVCs before claim extraction — claim extractors cannot handle
         // EVC wrappers with data: URIs. This is intentionally NOT in detectAndUnwrap()
@@ -356,38 +354,10 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         ContentAccessor claimPayload = resolveInnerEnvelopedCredentials(payload);
         List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(claimPayload);
         FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
-        claims = filtered.claims();
         log.debug("verifyCredential; claims extracted: {}, time taken: {}",
-                (claims == null ? "null" : claims.size()), System.currentTimeMillis() - stamp);
-
-        if (strictSemantics) {
-            validateSubjectUniqueness(claims);
-        }
+            (filtered.claims() == null ? "null" : filtered.claims().size()),
+            System.currentTimeMillis() - stamp);
         return filtered;
-    }
-
-    private void validateSubjectUniqueness(List<RdfClaim> claims) {
-        Set<String> subjects = new HashSet<>();
-        Set<String> objects = new HashSet<>();
-        if (claims != null && !claims.isEmpty()) {
-            for (RdfClaim claim : claims) {
-                subjects.add(claim.getSubjectString());
-                objects.add(claim.getObjectString());
-            }
-        }
-        subjects.removeAll(objects);
-
-        if (subjects.size() > 1) {
-            String sep = System.lineSeparator();
-            StringBuilder sb = new StringBuilder(
-                "Semantic Errors: There are different subject ids in credential subjects: ").append(sep);
-            for (String s : subjects) {
-                sb.append(s).append(sep);
-            }
-            throw new VerificationException(sb.toString());
-        } else if (subjects.isEmpty()) {
-            throw new VerificationException("Semantic Errors: There is no uniquely identified credential subject");
-        }
     }
 
     private void validateSchema(List<RdfClaim> claims) {
