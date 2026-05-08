@@ -32,20 +32,16 @@ roles:
     types: [ ]
 
   ServiceOffering:
-    # additional_roots: gx:DigitalServiceOffering is mapped here defensively. The spec is
-    # internally inconsistent on DSO — its skos:definition declares it abstract ("the
-    # virtual base class for any kind of digital service (for inheritance not for
-    # instanciation)"), the ontology defines no rdfs:subClassOf gx:ServiceOffering link
-    # and no concrete subclasses, yet the SHACL layer assigns it its own sh:targetClass.
-    # Empirically (verified May 2026 against the gxdch repo:
-    # the GXDCH Loire compliance flow has no DSO-specific component, no DSO criteria doc,
-    # and no test payload that mints DSO at the top level - official Loire VPs contain only gx:
-    # LegalPerson / gx:Issuer / gx:VatID under the Participant family.
-    # This mapping is therefore inactive in practice today.
-    # Action item: drop this entry once we have confirmation from Gaia-X that no GXDCH
-    # operator (current or planned) issues DSO credentials. Until then it remains as a
-    # zero-cost safety net so DSO credentials, if they ever appear, land somewhere
-    # rather than failing with "no proper CredentialSubject found."
+    # additional_roots:
+    # It is mapped here defensively. The spec is internally inconsistent on DSO.
+    # - its skos:definition declares it abstract "(for inheritance not for
+    # instanciation)"
+    # $ the ontology defines no rdfs:subClassOf gx:ServiceOffering link and no concrete subclasses
+    # - but the SHACL layer assigns it its own sh:targetClass.
+    # Empirically (verified May 2026 against the gxdch repo):
+    # This mapping is inactive in practice today.
+    # additional_roots is the correct mechanism for this case: the intended
+    # way to map sibling classes that are genuinely declared without OWL subsumption.
     additional_roots:
       - "https://w3id.org/gaia-x/2511#DigitalServiceOffering"
     types: [ ]
