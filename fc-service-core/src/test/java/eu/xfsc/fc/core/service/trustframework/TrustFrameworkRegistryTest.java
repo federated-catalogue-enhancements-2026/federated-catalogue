@@ -142,7 +142,7 @@ class TrustFrameworkRegistryTest {
 
   // bundle index methods
   @Test
-  void getBundles_returnsAllLoadedBundles() {
+  void getActiveBundles_returnsAllLoadedBundles() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
@@ -150,7 +150,7 @@ class TrustFrameworkRegistryTest {
   }
 
   @Test
-  void getBundles_returnsImmutableSnapshot() {
+  void getActiveBundles_returnsImmutableSnapshot() {
     var bundle = shaclBundle("gaia-x-2511", "https://w3id.org/gaia-x/", Map.of(), MINIMAL_ONTOLOGY);
     var registry = new TrustFrameworkRegistry(List.of(bundle));
 
