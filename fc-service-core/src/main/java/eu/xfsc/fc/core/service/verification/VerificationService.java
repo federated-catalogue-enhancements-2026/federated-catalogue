@@ -4,9 +4,6 @@ import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 
 import org.springframework.stereotype.Service;
 
@@ -24,28 +21,34 @@ import org.springframework.stereotype.Service;
 public interface VerificationService {
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates a Participant credential (JSON-LD format) and returns the generic verification result
+   * with {@code role = "Participant"}. Throws {@link VerificationException} if the resolved role
+   * does not match.
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Participant metadata validation result. If the validation fails, the reason explains the issue.
+   * @return verification result with resolved role and all populated fields.
    */
-  CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException;
+  CredentialVerificationResult verifyParticipantCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates a ServiceOffering credential (JSON-LD format) and returns the generic verification
+   * result with {@code role = "ServiceOffering"}. Throws {@link VerificationException} if the
+   * resolved role does not match.
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Verification result. If the verification fails, the reason explains the issue.
+   * @return verification result with resolved role and all populated fields.
    */
-  CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException;
+  CredentialVerificationResult verifyOfferingCredential(ContentAccessor payload) throws VerificationException;
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed metadata.
+   * Validates a Resource credential (JSON-LD format) and returns the generic verification result
+   * with {@code role = "Resource"}. Throws {@link VerificationException} if the resolved role
+   * does not match.
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Verification result. If the verification fails, the reason explains the issue.
+   * @return verification result with resolved role and all populated fields.
    */
-  CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException;
+  CredentialVerificationResult verifyResourceCredential(ContentAccessor payload) throws VerificationException;
 
   /**
    * Validates the credential payload (JSON-LD format) and extracts typed metadata.

@@ -92,10 +92,10 @@ class CredentialVerificationResultTest {
   }
 
   @Test
-  void getName_participantSubclass_returnsBridgedNameOnBaseClass() {
-    CredentialVerificationResultParticipant result = new CredentialVerificationResultParticipant(
-        NOW, "active", ISSUER, NOW, ISSUER, List.of(), List.of(),
-        "Participant", PROFILE_ID, "ACME Corp", "did:web:validator.example.com");
+  void getName_setOnBaseClass_isReturned() {
+    CredentialVerificationResult result = minimal("Participant");
+    result.setName("ACME Corp");
+    result.setPublicKey("did:web:validator.example.com");
 
     assertEquals("ACME Corp", result.getName());
     assertEquals("did:web:validator.example.com", result.getPublicKey());

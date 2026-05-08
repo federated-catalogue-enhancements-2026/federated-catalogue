@@ -17,7 +17,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.Validator;
@@ -127,7 +126,8 @@ public class AssetStoreTest {
   }
 
   private static CredentialVerificationResult createVerificationResult(final int idSuffix, String subject) {
-    return new CredentialVerificationResultOffering(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer" + idSuffix, Instant.now(),
+    return new CredentialVerificationResult(Instant.now(), AssetStatus.ACTIVE.getValue(), "issuer" + idSuffix,
+        Instant.now(),
         "id" + idSuffix, createClaims(subject), new ArrayList<>(), "", "");
   }
 
@@ -143,7 +143,8 @@ public class AssetStoreTest {
 			vals.add(new Validator(did, "PK", Instant.now().plusSeconds(3600)));
 		}
 	}
-    return new CredentialVerificationResultOffering(assetMeta.getStatusDatetime(), AssetStatus.ACTIVE.getValue(), assetMeta.getIssuer(), assetMeta.getUploadDatetime(),
+    return new CredentialVerificationResult(assetMeta.getStatusDatetime(), AssetStatus.ACTIVE.getValue(),
+        assetMeta.getIssuer(), assetMeta.getUploadDatetime(),
         assetMeta.getId(), createClaims("<https://delta-dao.com/.well-known/serviceMVGPortal.json>"), vals, "", "");
   }
   

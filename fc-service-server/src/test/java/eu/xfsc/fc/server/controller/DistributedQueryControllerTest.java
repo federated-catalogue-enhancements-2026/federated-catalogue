@@ -32,8 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Results;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
+import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.verification.VerificationService;
@@ -237,7 +236,8 @@ public class DistributedQueryControllerTest {
     //adding 1st credential
     ContentAccessorDirect contentAccessor =
         new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("default-participant.json"));
-    CredentialVerificationResultParticipant verificationResult = verificationService.verifyParticipantCredential(contentAccessor);
+        CredentialVerificationResult verificationResult =
+            verificationService.verifyParticipantCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(verificationResult.getId(),
             verificationResult.getIssuer(), verificationResult.getValidators(), contentAccessor);
     assetStorePublisher.storeCredential(assetMetadata, verificationResult);
@@ -245,7 +245,7 @@ public class DistributedQueryControllerTest {
     //adding second credential
     ContentAccessorDirect contentAccessor2
             = new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("default-credential-service-offering.json"));
-    CredentialVerificationResultOffering verificationResult2
+        CredentialVerificationResult verificationResult2
             = verificationService.verifyOfferingCredential(contentAccessor2);
     AssetMetadata assetMetadata2 = new AssetMetadata(verificationResult2.getId(),
             verificationResult2.getIssuer(), verificationResult2.getValidators(), contentAccessor2);
@@ -254,7 +254,7 @@ public class DistributedQueryControllerTest {
     //adding third credential
    ContentAccessorDirect contentAccessorDirect3 =
         new ContentAccessorDirect(FileReaderHelper.getMockFileDataAsString("unique-participant.json"));
-    CredentialVerificationResultParticipant verificationResult3
+        CredentialVerificationResult verificationResult3
         = verificationService.verifyParticipantCredential(contentAccessorDirect3);
     AssetMetadata assetMetadata3 = new AssetMetadata(verificationResult3.getId(),
         verificationResult3.getIssuer(), verificationResult3.getValidators(), contentAccessorDirect3);

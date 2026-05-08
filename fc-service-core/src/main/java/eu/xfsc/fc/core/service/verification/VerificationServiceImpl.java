@@ -12,9 +12,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultParticipant;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultResource;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,66 +58,55 @@ public class VerificationServiceImpl implements VerificationService {
   }
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed Participant metadata.
+   * Validates a Participant credential (JSON-LD format) and returns the generic verification result.
+   * Throws {@link VerificationException} if the resolved role is not "Participant".
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Participant metadata validation result. If the validation fails, the reason explains the issue.
+   * @return verification result with {@code role = "Participant"} and all populated fields.
    */
   @Override
-  public CredentialVerificationResultParticipant verifyParticipantCredential(ContentAccessor payload) throws VerificationException {
+  public CredentialVerificationResult verifyParticipantCredential(ContentAccessor payload)
+      throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
         "Participant", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
     if (!"Participant".equals(result.getRole())) {
       throw new VerificationException("Expected Participant credential but found role: " + result.getRole());
     }
-    return new CredentialVerificationResultParticipant(result.getVerificationTimestamp(), result.getLifecycleStatus(),
-        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
-        result.getValidators(), result.getRole(), result.getFrameworkProfileId(),
-        result.getName(), result.getPublicKey());
+    return result;
   }
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed Offering metadata.
+   * Validates a ServiceOffering credential (JSON-LD format) and returns the generic verification result.
+   * Throws {@link VerificationException} if the resolved role is not "ServiceOffering".
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Verification result. If the verification fails, the reason explains the issue.
+   * @return verification result with {@code role = "ServiceOffering"} and all populated fields.
    */
   @Override
-  public CredentialVerificationResultOffering verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
+  public CredentialVerificationResult verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
         "ServiceOffering", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
     if (!"ServiceOffering".equals(result.getRole())) {
       throw new VerificationException("Expected ServiceOffering credential but found role: " + result.getRole());
     }
-    CredentialVerificationResultOffering typed = new CredentialVerificationResultOffering(
-        result.getVerificationTimestamp(), result.getLifecycleStatus(),
-        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
-        result.getValidators(), result.getRole(), result.getFrameworkProfileId());
-    typed.setName(result.getName());
-    typed.setPublicKey(result.getPublicKey());
-    return typed;
+    return result;
   }
 
   /**
-   * Validates the credential payload (JSON-LD format) and extracts typed Resource metadata.
+   * Validates a Resource credential (JSON-LD format) and returns the generic verification result.
+   * Throws {@link VerificationException} if the resolved role is not "Resource".
    *
    * @param payload ContentAccessor to credential which should be validated.
-   * @return a Verification result. If the verification fails, the reason explains the issue.
+   * @return verification result with {@code role = "Resource"} and all populated fields.
    */
   @Override
-  public CredentialVerificationResultResource verifyResourceCredential(ContentAccessor payload) throws VerificationException {
+  public CredentialVerificationResult verifyResourceCredential(ContentAccessor payload) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
         "Resource", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
     if (!"Resource".equals(result.getRole())) {
       throw new VerificationException("Expected Resource credential but found role: " + result.getRole());
     }
-    CredentialVerificationResultResource typed = new CredentialVerificationResultResource(
-        result.getVerificationTimestamp(), result.getLifecycleStatus(),
-        result.getIssuer(), result.getIssuedDateTime(), result.getId(), result.getGraphClaims(),
-        result.getValidators(), result.getRole(), result.getFrameworkProfileId());
-    typed.setName(result.getName());
-    typed.setPublicKey(result.getPublicKey());
-    return typed;
+    return result;
   }
 
   /**

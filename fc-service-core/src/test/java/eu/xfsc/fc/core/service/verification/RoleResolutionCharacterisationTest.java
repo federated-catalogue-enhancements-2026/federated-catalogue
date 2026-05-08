@@ -29,7 +29,6 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.CredentialVerificationResultOffering;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -235,13 +234,11 @@ public class RoleResolutionCharacterisationTest {
   }
 
   @Test
-  void verifyOfferingCredential_nameAndPublicKeyPropagatedToTypedResult() {
-    // Patch 3: adapter in VerificationServiceImpl must propagate name/publicKey from the generic
-    // assembleResult to the deprecated typed wrapper — previously these were silently dropped.
-    CredentialVerificationResultOffering result =
+  void verifyOfferingCredential_nameAndPublicKeyPropagatedToResult() {
+    CredentialVerificationResult result =
         verificationService.verifyOfferingCredential(getAccessor("VerificationService/syntax/serviceOffering1.jsonld"));
 
-    assertNotNull(result.getName(), "name must be propagated from generic result to typed wrapper");
+    assertNotNull(result.getName(), "name must be propagated to the result");
     assertEquals(OFFERING_ISSUER, result.getName(),
         "name falls back to issuer when no VP holder is present");
     // Patch 4: effectiveIssuer applied for all roles; issuer is preserved when non-null
