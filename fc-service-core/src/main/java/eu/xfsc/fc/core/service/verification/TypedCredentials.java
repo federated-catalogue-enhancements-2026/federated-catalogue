@@ -29,7 +29,7 @@ record TypedCredentials(VerifiablePresentation presentation,
         return credentials.isEmpty() ? null : credentials.keySet().iterator().next();
     }
 
-  Collection<ResolvedRole> getBaseClasses() {
+  Collection<ResolvedRole> getResolvedRoles() {
         return credentials.values().stream()
             .filter(ResolvedRole::isResolved).distinct().toList();
     }
