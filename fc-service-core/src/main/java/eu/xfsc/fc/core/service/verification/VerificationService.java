@@ -21,36 +21,6 @@ import org.springframework.stereotype.Service;
 public interface VerificationService {
 
   /**
-   * Validates a Participant credential (JSON-LD format) and returns the generic verification result
-   * with {@code role = "Participant"}. Throws {@link VerificationException} if the resolved role
-   * does not match.
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with resolved role and all populated fields.
-   */
-  CredentialVerificationResult verifyParticipantCredential(ContentAccessor payload) throws VerificationException;
-
-  /**
-   * Validates a ServiceOffering credential (JSON-LD format) and returns the generic verification
-   * result with {@code role = "ServiceOffering"}. Throws {@link VerificationException} if the
-   * resolved role does not match.
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with resolved role and all populated fields.
-   */
-  CredentialVerificationResult verifyOfferingCredential(ContentAccessor payload) throws VerificationException;
-
-  /**
-   * Validates a Resource credential (JSON-LD format) and returns the generic verification result
-   * with {@code role = "Resource"}. Throws {@link VerificationException} if the resolved role
-   * does not match.
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with resolved role and all populated fields.
-   */
-  CredentialVerificationResult verifyResourceCredential(ContentAccessor payload) throws VerificationException;
-
-  /**
    * Validates the credential payload (JSON-LD format) and extracts typed metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.

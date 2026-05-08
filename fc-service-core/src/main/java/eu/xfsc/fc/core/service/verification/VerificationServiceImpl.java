@@ -58,58 +58,6 @@ public class VerificationServiceImpl implements VerificationService {
   }
 
   /**
-   * Validates a Participant credential (JSON-LD format) and returns the generic verification result.
-   * Throws {@link VerificationException} if the resolved role is not "Participant".
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with {@code role = "Participant"} and all populated fields.
-   */
-  @Override
-  public CredentialVerificationResult verifyParticipantCredential(ContentAccessor payload)
-      throws VerificationException {
-    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        "Participant", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!"Participant".equals(result.getRole())) {
-      throw new VerificationException("Expected Participant credential but found role: " + result.getRole());
-    }
-    return result;
-  }
-
-  /**
-   * Validates a ServiceOffering credential (JSON-LD format) and returns the generic verification result.
-   * Throws {@link VerificationException} if the resolved role is not "ServiceOffering".
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with {@code role = "ServiceOffering"} and all populated fields.
-   */
-  @Override
-  public CredentialVerificationResult verifyOfferingCredential(ContentAccessor payload) throws VerificationException {
-    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        "ServiceOffering", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!"ServiceOffering".equals(result.getRole())) {
-      throw new VerificationException("Expected ServiceOffering credential but found role: " + result.getRole());
-    }
-    return result;
-  }
-
-  /**
-   * Validates a Resource credential (JSON-LD format) and returns the generic verification result.
-   * Throws {@link VerificationException} if the resolved role is not "Resource".
-   *
-   * @param payload ContentAccessor to credential which should be validated.
-   * @return verification result with {@code role = "Resource"} and all populated fields.
-   */
-  @Override
-  public CredentialVerificationResult verifyResourceCredential(ContentAccessor payload) throws VerificationException {
-    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload, true,
-        "Resource", verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature);
-    if (!"Resource".equals(result.getRole())) {
-      throw new VerificationException("Expected Resource credential but found role: " + result.getRole());
-    }
-    return result;
-  }
-
-  /**
    * Validates the credential payload (JSON-LD format) and extracts generic credential metadata.
    *
    * @param payload ContentAccessor to credential which should be validated.

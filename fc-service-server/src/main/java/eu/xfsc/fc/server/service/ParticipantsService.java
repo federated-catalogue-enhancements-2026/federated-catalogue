@@ -249,7 +249,7 @@ public class ParticipantsService implements ParticipantsApiDelegate {
   private Pair<CredentialVerificationResult, AssetMetadata> validateCredential(String body) {
     ContentAccessorDirect contentAccessorDirect = new ContentAccessorDirect(body);
     CredentialVerificationResult verificationResult =
-        verificationService.verifyParticipantCredential(contentAccessorDirect);
+        verificationService.verifyCredential(contentAccessorDirect);
     log.debug("validateCredential; verification result is: {}", verificationResult);
 
     AssetMetadata assetMetadata = new AssetMetadata(contentAccessorDirect, verificationResult);

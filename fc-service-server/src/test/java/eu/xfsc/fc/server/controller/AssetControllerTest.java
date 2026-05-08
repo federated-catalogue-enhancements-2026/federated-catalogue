@@ -1042,6 +1042,6 @@ public class AssetControllerTest {
     }
 
     private CredentialVerificationResult getStaticVerificationResult() {
-        return verificationService.verifyOfferingCredential(assetMeta.getContentAccessor());
+      return verificationService.verifyCredential(assetMeta.getContentAccessor());
     }
 }

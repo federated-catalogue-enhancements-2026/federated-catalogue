@@ -48,7 +48,7 @@ import lombok.extern.slf4j.Slf4j;
     "federated-catalogue.verification.signature-verifier=uni-res",
     "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
     "federated-catalogue.verification.trust-framework.gaiax.enabled=false",
-    // Disable signature verification for typed-method tests (verifyOfferingCredential etc.).
+    // Disable signature verification for role-resolution tests.
     // Tests that require signature verification pass the flag explicitly via the verifyCredential overload.
     "federated-catalogue.verification.vc-signature=false",
     "federated-catalogue.verification.vp-signature=false"
@@ -236,7 +236,7 @@ public class RoleResolutionCharacterisationTest {
   @Test
   void verifyOfferingCredential_nameAndPublicKeyPropagatedToResult() {
     CredentialVerificationResult result =
-        verificationService.verifyOfferingCredential(getAccessor("VerificationService/syntax/serviceOffering1.jsonld"));
+        verificationService.verifyCredential(getAccessor("VerificationService/syntax/serviceOffering1.jsonld"));
 
     assertNotNull(result.getName(), "name must be propagated to the result");
     assertEquals(OFFERING_ISSUER, result.getName(),
@@ -283,14 +283,6 @@ public class RoleResolutionCharacterisationTest {
     String payload = encoder.encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
     return header + "." + payload + ".AAAA";
   }
-
-    @Test
-    void verifyParticipant_serviceOfferingVp_throwsVerificationException() {
-        assertThrowsExactly(VerificationException.class,
-            () -> verificationService.verifyParticipantCredential(
-                getAccessor("VerificationService/syntax/serviceOffering1.jsonld")),
-            "Expected type mismatch rejection when SERVICE_OFFERING VP is submitted as PARTICIPANT");
-    }
 
     @Test
     void verifyCredential_unknownTypePresentInVp_throwsClientException() {

@@ -40,36 +40,6 @@ class VerificationServiceImplTest {
   private TrustFrameworkRegistry trustFrameworkRegistry;
 
   @Test
-  void verifyParticipantCredential_strategyReturnsNonParticipantResult_throwsVerificationException() {
-    ContentAccessor payload = mock(ContentAccessor.class);
-    CredentialVerificationResult offeringResult = new CredentialVerificationResult(
-        NOW, "active", "did:web:example.com", NOW,
-        "did:web:example.com", List.of(), List.of(), "ServiceOffering", "gaia-x-2511");
-
-    when(credentialStrategy.verifyCredential(any(), anyBoolean(), anyString(),
-        anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
-        .thenReturn(offeringResult);
-
-    assertThrowsExactly(VerificationException.class,
-        () -> verificationServiceImpl.verifyParticipantCredential(payload));
-  }
-
-  @Test
-  void verifyOfferingCredential_strategyReturnsNonOfferingResult_throwsVerificationException() {
-    ContentAccessor payload = mock(ContentAccessor.class);
-    CredentialVerificationResult participantResult = new CredentialVerificationResult(
-        NOW, "active", "did:web:example.com", NOW,
-        "did:web:example.com", List.of(), List.of(), "Participant", "gaia-x-2511");
-
-    when(credentialStrategy.verifyCredential(any(), anyBoolean(), anyString(),
-        anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
-        .thenReturn(participantResult);
-
-    assertThrowsExactly(VerificationException.class,
-        () -> verificationServiceImpl.verifyOfferingCredential(payload));
-  }
-
-  @Test
   void verifyCredential_strategyReturnsUnresolvedRole_throwsClientException() {
     ContentAccessor payload = mock(ContentAccessor.class);
     CredentialVerificationResult unknownRoleResult = new CredentialVerificationResult(
@@ -84,18 +54,4 @@ class VerificationServiceImplTest {
         () -> verificationServiceImpl.verifyCredential(payload));
   }
 
-  @Test
-  void verifyResourceCredential_strategyReturnsNonResourceResult_throwsVerificationException() {
-    ContentAccessor payload = mock(ContentAccessor.class);
-    CredentialVerificationResult participantResult = new CredentialVerificationResult(
-        NOW, "active", "did:web:example.com", NOW,
-        "did:web:example.com", List.of(), List.of(), "Participant", "gaia-x-2511");
-
-    when(credentialStrategy.verifyCredential(any(), anyBoolean(), anyString(),
-        anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
-        .thenReturn(participantResult);
-
-    assertThrowsExactly(VerificationException.class,
-        () -> verificationServiceImpl.verifyResourceCredential(payload));
-  }
 }

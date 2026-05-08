@@ -8,12 +8,10 @@ import java.util.List;
  * Per-role configuration entry from a bundle's {@code framework.yaml}.
  *
  * <p>{@code additionalRoots} enables SHACL sibling-class grouping: explicit URIs that
- * resolve to the role even though they are not OWL subclasses of its primary root.
- * The mechanism is general; reach for it only when an external ontology genuinely
- * declares siblings without subsumption. The current gx-2511 use (DigitalServiceOffering
- * routed to ServiceOffering) is known semantic debt: the catalogue would otherwise have
- * no landing site for DSO credentials. Routing DSO through ServiceOffering makes the
- * catalogue silently assert an ontology-level equivalence the spec does not declare.
+ * resolve to this role even though they are not OWL subclasses of the role's primary root.
+ * Use when an external ontology genuinely declares siblings without subsumption — for example,
+ * {@code gx:DigitalServiceOffering} in gx-2511 lacks {@code rdfs:subClassOf gx:ServiceOffering}
+ * in the ontology, so this field is the correct mapping mechanism for that case.
  * {@code types} is defined for forward-compatibility with JSON Schema validation engines
  * and is intentionally unused in the SHACL resolver until other trust frameworks with different validations are integrated.
  */

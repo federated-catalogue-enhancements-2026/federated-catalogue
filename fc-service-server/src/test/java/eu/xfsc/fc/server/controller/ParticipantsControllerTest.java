@@ -232,7 +232,7 @@ public class ParticipantsControllerTest {
     deleteParticipantFromAssetStore(part);
 
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(json);
-    CredentialVerificationResult verResult = verificationService.verifyParticipantCredential(contentAccessor);
+    CredentialVerificationResult verResult = verificationService.verifyCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(contentAccessor, verResult);
     assetStorePublisher.storeCredential(assetMetadata, verResult);
 
@@ -507,7 +507,7 @@ public class ParticipantsControllerTest {
     setupKeycloak(HttpStatus.SC_OK, part);
 
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(json);
-    CredentialVerificationResult verResult = verificationService.verifyParticipantCredential(contentAccessor);
+    CredentialVerificationResult verResult = verificationService.verifyCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(contentAccessor, verResult);
     assetStorePublisher.storeCredential(assetMetadata, verResult);
 
@@ -605,7 +605,7 @@ public class ParticipantsControllerTest {
     String json = getMockFileDataAsString(UNIQUE_PARTICIPANT_FILE);
     ParticipantMetaData part = new ParticipantMetaData("did:example:unique-issuer", "did:example:holder", "did:example:holder#key", json);
     ContentAccessorDirect contentAccessor = new ContentAccessorDirect(json);
-    CredentialVerificationResult verResult = verificationService.verifyParticipantCredential(contentAccessor);
+    CredentialVerificationResult verResult = verificationService.verifyCredential(contentAccessor);
     AssetMetadata assetMetadata = new AssetMetadata(contentAccessor, verResult);
     assetStorePublisher.storeCredential(assetMetadata, verResult);
 
