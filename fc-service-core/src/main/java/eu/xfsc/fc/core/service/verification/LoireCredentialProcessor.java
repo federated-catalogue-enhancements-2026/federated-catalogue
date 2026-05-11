@@ -7,6 +7,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.SignedJWT;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.Validator;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 
 import java.util.Optional;
 import java.util.Set;
@@ -42,6 +43,7 @@ public class LoireCredentialProcessor implements CredentialFormatProcessor {
 
   private final LoireJwtParser loireJwtParser;
   private final LoirePolicyEnforcer loirePolicyEnforcer;
+  private final JwtSignatureVerifier jwtSignatureVerifier;
 
   @Override
   public CredentialFormat getFormat() {
@@ -71,21 +73,16 @@ public class LoireCredentialProcessor implements CredentialFormatProcessor {
     return Optional.of(CredentialFormat.UNKNOWN);
   }
 
-  /**
-   * Loire credentials are always compact JWTs.
-   */
   @Override
-  public boolean producesJwt(String body) {
-    return true;
+  public ProcessedEnvelope process(String body, ContentAccessor payload, boolean verifySigs) {
+    // Loire credentials are always compact JWTs.
+    Validator jwtValidator = verifySigs ? jwtSignatureVerifier.verify(body) : null;
+    loirePolicyEnforcer.enforceIfApplicable(body, jwtValidator);
+    return new ProcessedEnvelope(loireJwtParser.unwrap(payload), true, jwtValidator);
   }
 
   @Override
-  public ContentAccessor unwrap(ContentAccessor payload) {
+  public ContentAccessor unwrapNested(ContentAccessor payload) {
     return loireJwtParser.unwrap(payload);
-  }
-
-  @Override
-  public void enforcePolicies(String compactJwt, Validator jwtValidator) {
-    loirePolicyEnforcer.enforceIfApplicable(compactJwt, jwtValidator);
   }
 }

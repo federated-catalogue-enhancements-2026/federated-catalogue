@@ -3,7 +3,6 @@ package eu.xfsc.fc.core.service.verification;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.pojo.Validator;
 
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -39,31 +38,33 @@ public interface CredentialFormatProcessor {
   Optional<CredentialFormat> match(DetectionContext ctx);
 
   /**
-   * Returns {@code true} when, for the given raw body, this format means the credential is
-   * a compact JWT that needs signature verification. May depend on the body (some formats
-   * accept both JSON-LD and JWT representations).
-   */
-  boolean producesJwt(String body);
-
-  /**
-   * Converts the incoming payload (JSON-LD or compact JWT) into JSON-LD ready for the
-   * generic VP/VC pipeline. Implementations must handle whichever input shapes their
-   * format accepts.
-   */
-  ContentAccessor unwrap(ContentAccessor payload);
-
-  /**
-   * Applies any format-specific policies (e.g. DID-method restriction, trust-anchor chain
-   * validation). Called after JWT signature verification, only when the credential was
-   * routed to this processor. Default is no-op.
+   * Processes the outer envelope for this format: verify the JWT signature (when applicable
+   * and requested), apply any format-specific policies, and unwrap the payload to JSON-LD.
+   * The strategy calls this exactly once per credential, after format detection.
    *
-   * @param compactJwt   the original compact JWT body
-   * @param jwtValidator validator produced by JWT signature verification, or {@code null}
-   *                     when signature verification was skipped
+   * @param body        the original raw body (compact JWT or JSON-LD)
+   * @param payload     the {@link ContentAccessor} for the same body
+   * @param verifySigs  whether the caller requested signature verification at all
+   * @return the unwrapped JSON-LD payload, the resulting JWT validator (or {@code null}),
+   *         and whether this envelope was a compact JWT
    */
-  default void enforcePolicies(String compactJwt, Validator jwtValidator) {
-    // no-op by default
-  }
+  ProcessedEnvelope process(String body, ContentAccessor payload, boolean verifySigs);
+
+  /**
+   * Converts a payload that appears <em>nested inside another VP or EVP wrapper</em> into
+   * JSON-LD. Implementations <strong>must not</strong> verify signatures or apply
+   * format-specific policies: the outer envelope's {@link #process} call already cleared
+   * those, and the nested credential's signature (when present) is verified separately by
+   * the inner-VC verification path. Pure unwrap — JWT → JSON-LD if applicable, otherwise
+   * pass-through.
+   *
+   * <p>Called when extracting:
+   * <ul>
+   *   <li>a compact JWT VC inside a VP's {@code verifiableCredential} array</li>
+   *   <li>an {@code EnvelopedVerifiableCredential} entry inside a VP or EVP</li>
+   * </ul>
+   */
+  ContentAccessor unwrapNested(ContentAccessor payload);
 
   /**
    * Returns {@code true} if the given JSON-LD {@code @context} node contains {@code value}.

@@ -239,17 +239,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     + "typ header or vc/vp wrapper claims");
         }
       CredentialFormatProcessor processor = processorsByFormat.get(format);
-      boolean isJwt = processor != null && processor.producesJwt(body);
-
-        Validator jwtValidator = null;
-        if (isJwt && verifySigs) {
-            jwtValidator = jwtSignatureVerifier.verify(body);
-        }
-
+      boolean isJwt = false;
+      Validator jwtValidator = null;
       if (processor != null) {
-        processor.enforcePolicies(body, jwtValidator);
-        payload = processor.unwrap(payload);
-        }
+        ProcessedEnvelope envelope = processor.process(body, payload, verifySigs);
+        payload = envelope.unwrappedPayload();
+        isJwt = envelope.wasJwt();
+        jwtValidator = envelope.jwtValidator();
+      }
       // UNKNOWN: payload already normalized at method start; non-JWT UNKNOWN is routed to
       // JenaAllTriplesExtractor in verifyCredential() before parseContent(), JWT UNKNOWN
       // was rejected above.
@@ -591,8 +588,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
           // Inner is always a compact JWT — fall back to VC 2.0 unwrap when format is UNKNOWN
           // so legacy/unrecognised JWTs still get a chance to be parsed as VC.
           ContentAccessor unwrapped = innerProcessor != null
-              ? innerProcessor.unwrap(jwtContent)
-              : processorsByFormat.get(CredentialFormat.VC2_DANUBETECH).unwrap(jwtContent);
+              ? innerProcessor.unwrapNested(jwtContent)
+              : processorsByFormat.get(CredentialFormat.VC2_DANUBETECH).unwrapNested(jwtContent);
             VerifiableCredential vc = VerifiableCredential.fromJson(unwrapped.getContentAsString());
             vc.setDocumentLoader(docLoader);
             return vc;

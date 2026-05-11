@@ -13,6 +13,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 
 import java.util.List;
 import java.util.Map;
@@ -32,8 +33,12 @@ class CredentialFormatDetectorTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final CredentialFormatDetector detector = new CredentialFormatDetector(OBJECT_MAPPER, List.of(
-        new LoireCredentialProcessor(mock(LoireJwtParser.class), mock(LoirePolicyEnforcer.class)),
-        new Vc2DanubeTechCredentialProcessor(mock(JwtContentPreprocessor.class))
+        new LoireCredentialProcessor(
+            mock(LoireJwtParser.class), mock(LoirePolicyEnforcer.class),
+            mock(JwtSignatureVerifier.class)),
+        new Vc2DanubeTechCredentialProcessor(
+            mock(JwtContentPreprocessor.class),
+            mock(JwtSignatureVerifier.class))
     ));
     private static JWSSigner signer;
 

@@ -6,6 +6,8 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_C
 
 import com.fasterxml.jackson.databind.JsonNode;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+import eu.xfsc.fc.core.pojo.Validator;
+import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
 
 import java.util.Optional;
 
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Component;
 public class Vc2DanubeTechCredentialProcessor implements CredentialFormatProcessor {
 
   private final JwtContentPreprocessor jwtPreprocessor;
+  private final JwtSignatureVerifier jwtSignatureVerifier;
 
   @Override
   public CredentialFormat getFormat() {
@@ -64,19 +67,18 @@ public class Vc2DanubeTechCredentialProcessor implements CredentialFormatProcess
   }
 
   /**
-   * VC 2.0 may arrive as either JSON-LD or a compact JWT — only the JWT form needs signature verification.
+   * VC 2.0 may arrive as either JSON-LD or a compact JWT — only the JWT form needs signature
+   * verification. No format-specific policies apply.
    */
   @Override
-  public boolean producesJwt(String body) {
-    return body.startsWith(JWT_PREFIX);
+  public ProcessedEnvelope process(String body, ContentAccessor payload, boolean verifySigs) {
+    boolean isJwt = body.startsWith(JWT_PREFIX);
+    Validator jwtValidator = (isJwt && verifySigs) ? jwtSignatureVerifier.verify(body) : null;
+    return new ProcessedEnvelope(jwtPreprocessor.unwrap(payload), isJwt, jwtValidator);
   }
 
-  /**
-   * Unwraps a JWT-wrapped VC 2.0 payload to JSON-LD; non-JWT payloads pass through unchanged.
-   * Works for both outer payloads (allowed JSON-LD or JWT) and inner JWT VCs (always JWT).
-   */
   @Override
-  public ContentAccessor unwrap(ContentAccessor payload) {
+  public ContentAccessor unwrapNested(ContentAccessor payload) {
     return jwtPreprocessor.unwrap(payload);
   }
 }
