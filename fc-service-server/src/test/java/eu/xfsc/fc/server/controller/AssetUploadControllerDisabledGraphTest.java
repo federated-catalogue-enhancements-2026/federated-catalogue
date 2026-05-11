@@ -102,12 +102,14 @@ public class AssetUploadControllerDisabledGraphTest {
 
         try {
             // Act: Attempt to enrich with RDF metadata (should fail because graph store is disabled)
-            String rdfPayload = "{"
-                + "  \"@context\": {\"ex\": \"http://example.org/\"},"
-                + "  \"@id\": \"" + assetId + "\","
-                + "  \"ex:title\": \"Enriched Document\","
-                + "  \"ex:creator\": \"Test User\""
-                + "}";
+            String rdfPayload = """
+                {
+                  "@context": {"ex": "http://example.org/"},
+                  "@id": "%s",
+                  "ex:title": "Enriched Document",
+                  "ex:creator": "Test User"
+                }
+                """.formatted(assetId);
             byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
             MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
 

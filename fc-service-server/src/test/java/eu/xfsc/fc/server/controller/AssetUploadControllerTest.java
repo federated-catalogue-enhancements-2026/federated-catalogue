@@ -79,7 +79,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadPlainTextMultipartReturnsCreated() throws Exception {
+    public void uploadMultipart_plainText_returnsCreated() throws Exception {
         byte[] content = "Hello, this is a plain text template.".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "template.txt", "text/plain", content);
 
@@ -106,7 +106,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadPdfMultipartReturnsCreated() throws Exception {
+    public void uploadMultipart_pdf_returnsCreated() throws Exception {
         byte[] content = new byte[]{0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A}; // %PDF-1.4\n
         MockMultipartFile file = new MockMultipartFile("file", "sample.pdf", "application/pdf", content);
 
@@ -128,7 +128,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadPlainJsonNoContextReturnsCreated() throws Exception {
+    public void uploadJson_plainJsonNoContext_returnsCreated() throws Exception {
         byte[] content = "{\"name\": \"contract\", \"version\": 1}".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "contract.json", "application/json", content);
 
@@ -150,7 +150,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadOctetStreamReturnsCreated() throws Exception {
+    public void uploadOctetStream_validContent_returnsCreated() throws Exception {
         byte[] content = "raw binary content for testing".getBytes(StandardCharsets.UTF_8);
 
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/assets")
@@ -172,7 +172,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadDuplicateAssetReturnsConflict() throws Exception {
+    public void uploadMultipart_duplicateAsset_returnsConflict() throws Exception {
         byte[] content = "duplicate-test-content".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "dup.txt", "text/plain", content);
 
@@ -209,7 +209,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    public void uploadMultipartWithoutAuthReturnsUnauthorized() throws Exception {
+    public void uploadMultipart_withoutAuth_returnsUnauthorized() throws Exception {
         byte[] content = "unauthorized test".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "test.txt", "text/plain", content);
 
@@ -223,7 +223,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void uploadMultipartWithAssetAdminRoleReturnsCreated() throws Exception {
+    public void uploadMultipart_withAssetAdminRole_returnsCreated() throws Exception {
         byte[] content = "asset-admin upload test".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "admin.txt", "text/plain", content);
 
@@ -241,7 +241,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichNonRdfAssetWithJsonLdReturnsOkWithEnrichmentResponse() throws Exception {
+    public void enrichNonRdfAsset_withJsonLd_returnsOkWithEnrichmentResponse() throws Exception {
         // 1. Create initial non-RDF asset
         byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
@@ -287,7 +287,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichNonRdfAssetWithTurtleReturnsOkWithEnrichmentResponse() throws Exception {
+    public void enrichNonRdfAsset_withTurtle_returnsOkWithEnrichmentResponse() throws Exception {
         // 1. Create initial non-RDF asset
         byte[] plainContent = "binary data".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "data.bin", "application/octet-stream", plainContent);
@@ -330,7 +330,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichNonRdfAssetViaMultipartWithTurtleReturnsOkWithEnrichmentResponse() throws Exception {
+    public void enrichNonRdfAsset_viaMultipartWithTurtle_returnsOkWithEnrichmentResponse() throws Exception {
         // 1. Create initial non-RDF asset
         byte[] plainContent = "document content".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
@@ -372,7 +372,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichNonRdfAssetWithDifferentSubjectCreatesNewRdfAsset() throws Exception {
+    public void enrichNonRdfAsset_withDifferentSubject_createsNewRdfAsset() throws Exception {
         // 1. Create initial non-RDF asset
         byte[] plainContent = "document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
@@ -415,7 +415,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichNonRdfAssetWithInvalidRdfReturnsBadRequest() throws Exception {
+    public void enrichNonRdfAsset_withInvalidRdf_returnsBadRequest() throws Exception {
         // 1. Create initial non-RDF asset
         byte[] plainContent = "document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
@@ -447,7 +447,7 @@ public class AssetUploadControllerTest {
     @Test
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
-    public void enrichHumanReadableAssetReturnsUnprocessableEntity() throws Exception {
+    public void enrich_humanReadableAsset_returnsUnprocessableEntity() throws Exception {
         // 1. Create a non-RDF (machine-readable) asset
         byte[] mrContent = "machine-readable document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile mrFile = new MockMultipartFile("file", "doc.txt", "text/plain", mrContent);
@@ -556,7 +556,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    public void enrichNonRdfAssetWithoutAuthReturnsUnauthorized() throws Exception {
+    public void enrichNonRdfAsset_withoutAuth_returnsUnauthorized() throws Exception {
         byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
 
@@ -576,7 +576,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    public void createHumanReadableAssetWithoutAuthReturnsUnauthorized() throws Exception {
+    public void createHumanReadableAsset_withoutAuth_returnsUnauthorized() throws Exception {
         String assetId = "urn:uuid:12345678-1234-1234-1234-123456789012";
         String encodedId = java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8);
         byte[] hrContent = "<html><body>Human Readable</body></html>".getBytes(StandardCharsets.UTF_8);
@@ -590,7 +590,7 @@ public class AssetUploadControllerTest {
     }
 
     @Test
-    public void updateHumanReadableAssetWithoutAuthReturnsUnauthorized() throws Exception {
+    public void updateHumanReadableAsset_withoutAuth_returnsUnauthorized() throws Exception {
         String assetId = "urn:uuid:12345678-1234-1234-1234-123456789012";
         String encodedId = java.net.URLEncoder.encode(assetId, StandardCharsets.UTF_8);
         byte[] hrContent = "<html><body>Updated Human Readable</body></html>".getBytes(StandardCharsets.UTF_8);
