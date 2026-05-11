@@ -17,6 +17,7 @@ import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireCredentialProcessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.LoirePolicyEnforcer;
+import eu.xfsc.fc.core.service.verification.NonCredentialRdfStrategy;
 import eu.xfsc.fc.core.service.verification.Vc2DanubeTechCredentialProcessor;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
@@ -58,6 +59,7 @@ import org.springframework.context.annotation.Import;
     LoireCredentialProcessor.class,
     LoireJwtParser.class,
     LoirePolicyEnforcer.class,
+    NonCredentialRdfStrategy.class,
     ObjectMapper.class,
     ProtectedNamespaceFilter.class,
     ProtectedNamespaceProperties.class,

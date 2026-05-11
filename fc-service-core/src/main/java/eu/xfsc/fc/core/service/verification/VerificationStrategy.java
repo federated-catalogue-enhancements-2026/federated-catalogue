@@ -6,14 +6,19 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 
 
 /**
- * Strategy interface for credential verification.
- * Implementations encapsulate format-specific parsing, semantic validation,
- * schema validation, signature verification, and claim extraction logic.
+ * Strategy interface for verifying ingested payloads. Implementations encapsulate the
+ * end-to-end pipeline for a payload class — parsing, validation, claim extraction, and
+ * result assembly.
  *
- * <p>Current implementations:
+ * <p>Implementations:
  * <ul>
- *   <li>{@link CredentialVerificationStrategy} - JSON-LD W3C VC/VP with signatures</li>
+ *   <li>{@link CredentialVerificationStrategy} — W3C VC/VP (JSON-LD or JWT, incl. Loire
+ *       and W3C VC 2.0 Enveloped wrappers) with full semantic/schema/signature checks.</li>
+ *   <li>{@link NonCredentialRdfStrategy} — non-credential RDF payloads ingested as raw
+ *       triples (no VC pipeline).</li>
  * </ul>
+ *
+ * <p>{@link VerificationServiceImpl} picks the implementation per payload.
  */
 public interface VerificationStrategy {
 

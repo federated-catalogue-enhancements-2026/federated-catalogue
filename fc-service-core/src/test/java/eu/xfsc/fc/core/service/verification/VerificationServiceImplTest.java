@@ -29,7 +29,13 @@ class VerificationServiceImplTest {
   private VerificationServiceImpl verificationServiceImpl;
 
   @Mock
-  private VerificationStrategy credentialStrategy;
+  private CredentialVerificationStrategy credentialStrategy;
+
+  @Mock
+  private NonCredentialRdfStrategy nonCredentialStrategy;
+
+  @Mock
+  private CredentialFormatDetector formatDetector;
 
   @Mock
   private SchemaValidationService schemaValidationService;
@@ -40,6 +46,8 @@ class VerificationServiceImplTest {
   @Test
   void verifyCredential_strategyReturnsUnresolvedRole_throwsClientException() {
     ContentAccessor payload = mock(ContentAccessor.class);
+    // JWT-prefixed body routes straight to credentialStrategy — no format-detector peek needed.
+    when(payload.getContentAsString()).thenReturn("eyJhbGciOiJFUzI1NiJ9.payload.sig");
     CredentialVerificationResult unknownRoleResult = new CredentialVerificationResult(
         NOW, "active", "did:web:example.com", NOW,
         "did:web:example.com", List.of(), List.of(), null, null);

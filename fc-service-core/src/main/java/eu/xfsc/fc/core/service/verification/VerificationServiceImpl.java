@@ -15,15 +15,25 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import lombok.extern.slf4j.Slf4j;
 
+import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PREFIX;
+
 
 /**
  * Implementation of the {@link VerificationService} interface.
- * Thin delegate over a single {@link VerificationStrategy} implementation
- * ({@link CredentialVerificationStrategy} for W3C VC/VP credentials in JSON-LD form).
  *
- * <p>Credential-format dispatch (Loire-JWT vs. danubetech VC2) is handled inside the
- * verifier via {@link CredentialFormatDetector}; it is not a sibling-strategy axis at
- * this level. Structural validation of stored assets against stored schemas is the
+ * <p>Dispatches each incoming payload to one of two {@link VerificationStrategy}
+ * implementations based on a quick format peek:
+ * <ul>
+ *   <li>{@link CredentialVerificationStrategy} — for any recognised credential format
+ *       (Loire JWT, danubetech VC 2.0 JSON-LD or JWT, W3C VC 2.0 Enveloped wrappers) and
+ *       for ambiguous JWTs (which it rejects with a clear error).</li>
+ *   <li>{@link NonCredentialRdfStrategy} — for non-credential JSON-LD or other RDF
+ *       payloads the catalogue ingests as raw triples.</li>
+ * </ul>
+ *
+ * <p>Per-credential-family dispatch (Loire vs. VC 2.0 etc.) happens inside the credential
+ * strategy via {@link CredentialFormatDetector} and the {@link CredentialFormatProcessor}
+ * chain. Structural validation of stored assets against stored schemas is the
  * responsibility of {@code AssetValidationService}, not this service.
  */
 @Slf4j
@@ -40,7 +50,13 @@ public class VerificationServiceImpl implements VerificationService {
   private boolean verifyVCSignature;
 
   @Autowired
-  private VerificationStrategy credentialStrategy;
+  private CredentialVerificationStrategy credentialStrategy;
+
+  @Autowired
+  private NonCredentialRdfStrategy nonCredentialStrategy;
+
+  @Autowired
+  private CredentialFormatDetector formatDetector;
 
   @Autowired
   private SchemaValidationService schemaValidationService;
@@ -53,8 +69,18 @@ public class VerificationServiceImpl implements VerificationService {
     this.verifySchema = verifySchema;
   }
 
+  /**
+   * Picks the strategy for this payload. JWT bodies always go to the credential strategy
+   * (it handles both recognised and ambiguous JWTs); JSON-LD/RDF bodies are detected once
+   * and routed to the non-credential strategy when no credential format matches.
+   */
   private VerificationStrategy resolveStrategy(ContentAccessor payload) {
-    return credentialStrategy;
+    String body = payload.getContentAsString().strip();
+    if (body.startsWith(JWT_PREFIX)) {
+      return credentialStrategy;
+    }
+    return formatDetector.detect(payload) == CredentialFormat.UNKNOWN
+        ? nonCredentialStrategy : credentialStrategy;
   }
 
   /**
