@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
  * The preprocessor first attempts to parse as a VC 2.0 JWT, then as a VP 2.0 JWT.
  * Non-JWT content is returned unchanged.
  *
- * <p>Signature verification is out of scope here — see Issue #12.
  */
 @Slf4j
 @Component
