@@ -21,8 +21,6 @@ import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
-import eu.xfsc.fc.core.dao.trustframework.TrustFramework;
-import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.exception.VerificationException;
@@ -32,6 +30,7 @@ import eu.xfsc.fc.core.pojo.RdfClaim;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.pojo.FilteredClaims;
 import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
+import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.Validator;
 import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
@@ -107,7 +106,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
   @Value("${federated-catalogue.verification.require-vp:false}")
     private boolean requireVP;
-    private final TrustFrameworkRepository trustFrameworkRepository;
     private final SchemaModuleConfigService schemaModuleConfigService;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
     private final JwtContentPreprocessor jwtPreprocessor;
@@ -124,8 +122,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
   private final LoireMatcher loireMatcher;
     private final ClaimExtractionService claimExtractionService;
 
-    @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
-    private String trustAnchorAddr;
     @Value("${federated-catalogue.verification.http-timeout:5000}")
     private int httpTimeout;
     @Value("${federated-catalogue.verification.validator-expire:1D}")
@@ -202,7 +198,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
-    if (verifySemantics && isLoireFrameworkEnabled() && !typedCredentials.hasClasses()) {
+    if (verifySemantics && loireMatcher.isEnabled() && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
@@ -267,7 +263,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             jwtValidator = jwtSignatureVerifier.verify(body);
         }
 
-      if (format == CredentialFormat.GAIAX_V2_LOIRE && isLoireFrameworkEnabled()) {
+      if (format == CredentialFormat.GAIAX_V2_LOIRE && loireMatcher.isEnabled()) {
             enforceLoirePolicies(body, jwtValidator);
         }
 
@@ -283,17 +279,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);
     }
-
-  /**
-   * Checks if the trust framework governing Loire credentials is enabled.
-   * The framework family is derived from the bundle registry at runtime via {@link LoireMatcher}.
-   */
-  private boolean isLoireFrameworkEnabled() {
-    return loireMatcher.frameworkFamily()
-        .flatMap(trustFrameworkRepository::findById)
-        .map(TrustFramework::isEnabled)
-        .orElse(false);
-  }
 
     /**
      * Validates that an explicit VC/VP content-type header matches the actual body format.
@@ -359,7 +344,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     private void validateSchema(List<RdfClaim> claims) {
-        eu.xfsc.fc.core.pojo.SchemaValidationResult result =
+      SchemaValidationResult result =
             schemaValidationService.validateClaimsAgainstCompositeSchema(claims);
         if (result == null || !result.isConforming()) {
             throw new VerificationException(
@@ -979,7 +964,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     /**
      * Fetches the certificate chain from the given x5u URL, validates certificate expiry,
-     * and checks the URI against the Gaia-X Trust Anchor Registry (when gaiax.enabled=true).
+     * and checks the URI against the active Loire trust anchor registry when the Loire framework
+     * is enabled. The registry URL is read from the active framework bundle's properties.
      *
      * <p>Note: does not perform PKIX path validation (RFC 5280) or revocation checking.
      * ICAM 24.07 does not explicitly require these — it requires x5c/x5u presence (MUST)
@@ -987,8 +973,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      */
     @SuppressWarnings("unchecked")
     private Instant hasPEMTrustAnchorAndIsNotExpired(String uri) throws VerificationException {
-      log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, isLoireFrameworkEnabled(): {}", uri,
-          isLoireFrameworkEnabled());
+      log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, loireMatcher.isEnabled(): {}", uri,
+          loireMatcher.isEnabled());
         String pem = rest.getForObject(uri, String.class);
         InputStream certStream = new ByteArrayInputStream(Objects.requireNonNull(pem).getBytes(StandardCharsets.UTF_8));
         List<X509Certificate> certs;
@@ -1014,17 +1000,19 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             }
         }
 
-        // Only call Gaia-X Trust Anchor Registry when Gaia-X trust framework is enabled
-      if (isLoireFrameworkEnabled()) {
-            if (trustAnchorAddr == null || trustAnchorAddr.isBlank()) {
-                log.warn("hasPEMTrustAnchorAndIsNotExpired; Gaia-X trust framework enabled but trust-anchor-url not configured");
-                throw new VerificationException("Signatures error; Gaia-X trust framework enabled but trust-anchor-url not configured");
-            }
+      // Only call Loire trust anchor registry when the Loire framework is enabled
+      if (loireMatcher.isEnabled()) {
+        String trustAnchorUrl = loireMatcher.trustAnchorUrl().orElseThrow(() -> {
+          log.warn("hasPEMTrustAnchorAndIsNotExpired; Loire framework enabled but bundle declares no trust_anchor_url");
+          return new VerificationException(
+              "Signatures error; Loire framework enabled but bundle declares no trust_anchor_url");
+        });
             try {
-                ResponseEntity<Map> resp = rest.postForEntity(trustAnchorAddr, Map.of("uri", uri), Map.class);
+              ResponseEntity<Map> resp = rest.postForEntity(trustAnchorUrl, Map.of("uri", uri), Map.class);
                 if (!resp.getStatusCode().is2xxSuccessful()) {
                     log.info("hasPEMTrustAnchorAndIsNotExpired; Trust anchor is not set in the registry. URI: {}", uri);
-                    throw new VerificationException("Signatures error; trust anchor is not registered in the Gaia-X registry. URI: " + uri);
+                  throw new VerificationException(
+                      "Signatures error; trust anchor is not registered in the Loire registry. URI: " + uri);
                 }
             } catch (VerificationException ex) {
                 throw ex;
@@ -1033,7 +1021,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
             }
         } else {
-            log.debug("hasPEMTrustAnchorAndIsNotExpired; skipping Gaia-X trust anchor registry validation (gaiax.enabled=false)");
+        log.debug(
+            "hasPEMTrustAnchorAndIsNotExpired; skipping Loire trust anchor registry validation (framework disabled)");
         }
         Instant exp = relevant == null ? null : relevant.getNotAfter().toInstant();
         log.debug("hasPEMTrustAnchorAndIsNotExpired.exit; returning: {}", exp);

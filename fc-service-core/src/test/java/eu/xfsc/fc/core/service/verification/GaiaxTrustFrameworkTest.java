@@ -49,10 +49,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @SpringBootTest(properties = {
     "federated-catalogue.verification.signature-verifier=uni-res",
-    "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
-    // Start with Gaia-X disabled - tests will toggle as needed
-    "federated-catalogue.verification.trust-framework.gaiax.enabled=false",
-    "federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url=https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"
+    "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0"
+    // Framework defaults: DB seed has gaia-x enabled=false; tests toggle via setFrameworkEnabled().
+    // Trust anchor URL is sourced from the bundle's framework.yaml properties map.
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
@@ -106,7 +105,7 @@ public class GaiaxTrustFrameworkTest {
     @AfterEach
     public void tearDown() throws IOException {
         // Reset to default (matches @SpringBootTest property)
-        setGaiaxEnabled(false);
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
         clearValidatorCache();
         schemaStore.clear();
     }
@@ -121,20 +120,26 @@ public class GaiaxTrustFrameworkTest {
     }
 
     /**
-     * Toggle Gaia-X trust framework enabled state via the database.
+     * Family identifier of the trust framework these tests exercise.
+     * Matches the {@code family} field in {@code trustframeworks/gaia-x-2511/framework.yaml}.
      */
-    private void setGaiaxEnabled(boolean enabled) {
+    private static final String GAIA_X_FAMILY = "gaia-x";
+
+  /**
+   * Toggles a trust framework's enabled state in the DB by family ID.
+   */
+  private void setFrameworkEnabled(String family, boolean enabled) {
         jdbcTemplate.update(
-            "UPDATE trust_frameworks SET enabled = ? WHERE id = 'gaia-x'", enabled);
-    }
+            "UPDATE trust_frameworks SET enabled = ? WHERE id = ?", enabled, family);
+  }
 
     // ==================== Disabled Behavior Tests ====================
 
     @Test
     @DisplayName("Loire JWT without x5u URL should be ACCEPTED when Gaia-X is disabled")
     void testLoireJwtWithoutX5u_AcceptedWhenDisabled() {
-        setGaiaxEnabled(false);
-        ContentAccessor content = loireJwtWithoutTrustChain();
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
+      ContentAccessor content = loireJwtWithoutTrustChain();
 
         try {
             CredentialVerificationResult result = verificationService.verifyCredential(
@@ -156,9 +161,9 @@ public class GaiaxTrustFrameworkTest {
     @Test
     @DisplayName("Non-Gaia-X credential claims should be extractable")
     void testClaimsExtractable_WhenDisabled() {
-        setGaiaxEnabled(false);
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
 
-        String path = "VerificationService/syntax/participantCredential2.jsonld";
+      String path = "VerificationService/syntax/participantCredential2.jsonld";
 
         CredentialVerificationResult result = verificationService.verifyCredential(
             getAccessor(path), VERIFY_SEMANTICS, VERIFY_SCHEMA, SKIP_VP_SIGNATURES, SKIP_VC_SIGNATURES);
@@ -174,8 +179,8 @@ public class GaiaxTrustFrameworkTest {
     @Test
     @DisplayName("Loire credential without x5u URL should be REJECTED when Gaia-X is enabled")
     void testCredentialWithoutX5u_RejectedWhenEnabled() {
-        setGaiaxEnabled(true);
-        ContentAccessor content = loireJwtWithoutTrustChain();
+      setFrameworkEnabled(GAIA_X_FAMILY, true);
+      ContentAccessor content = loireJwtWithoutTrustChain();
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
             verificationService.verifyCredential(content,
@@ -188,9 +193,9 @@ public class GaiaxTrustFrameworkTest {
     @Test
     @DisplayName("Gaia-X compliant credential should still work when enabled")
     void testGaiaxCredentialWorks_WhenEnabled() {
-        setGaiaxEnabled(true);
+      setFrameworkEnabled(GAIA_X_FAMILY, true);
 
-        String path = "VerificationService/syntax/participantCredential2.jsonld";
+      String path = "VerificationService/syntax/participantCredential2.jsonld";
 
         // Without signature verification, this should work
         CredentialVerificationResult result = verificationService.verifyCredential(
@@ -209,9 +214,9 @@ public class GaiaxTrustFrameworkTest {
 
         // --- Test with Gaia-X ENABLED: should REJECT (missing trust chain) ---
         clearValidatorCache();
-        setGaiaxEnabled(true);
+      setFrameworkEnabled(GAIA_X_FAMILY, true);
 
-        Exception enabledEx = assertThrowsExactly(VerificationException.class, () ->
+      Exception enabledEx = assertThrowsExactly(VerificationException.class, () ->
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES),
             "Should throw when Gaia-X is enabled");
@@ -220,9 +225,9 @@ public class GaiaxTrustFrameworkTest {
 
         // --- Test with Gaia-X DISABLED: should NOT get trust chain error ---
         clearValidatorCache();
-        setGaiaxEnabled(false);
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
 
-        try {
+      try {
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (ClientException e) {
@@ -241,9 +246,9 @@ public class GaiaxTrustFrameworkTest {
 
         // --- First: DISABLE Gaia-X, verify no trust chain error ---
         clearValidatorCache();
-        setGaiaxEnabled(false);
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
 
-        try {
+      try {
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES);
         } catch (ClientException e) {
@@ -258,9 +263,9 @@ public class GaiaxTrustFrameworkTest {
 
         // --- Then: ENABLE Gaia-X, verify trust chain error occurs ---
         clearValidatorCache();
-        setGaiaxEnabled(true);
+      setFrameworkEnabled(GAIA_X_FAMILY, true);
 
-        Exception ex = assertThrowsExactly(VerificationException.class, () ->
+      Exception ex = assertThrowsExactly(VerificationException.class, () ->
             verificationService.verifyCredential(content,
                 SKIP_SEMANTICS, SKIP_SCHEMA, SKIP_VP_SIGNATURES, VERIFY_VC_SIGNATURES),
             "Should throw when Gaia-X is enabled");
@@ -273,8 +278,8 @@ public class GaiaxTrustFrameworkTest {
     @Test
     @DisplayName("Loire JWT without trust chain should still be accepted when Gaia-X is disabled")
     void testLoireJwtWithoutTrustChain_AcceptedWhenDisabled() {
-        setGaiaxEnabled(false);
-        ContentAccessor content = loireJwtWithoutTrustChain();
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
+      ContentAccessor content = loireJwtWithoutTrustChain();
 
         try {
             verificationService.verifyCredential(content,
@@ -291,8 +296,8 @@ public class GaiaxTrustFrameworkTest {
     @Test
     @DisplayName("Non-JWT credential with signature verification should be rejected")
     void testLdCredentialWithSigVerification_Rejected() {
-        setGaiaxEnabled(false);
-        String path = "VerificationService/sign/hasNoSignature1.json";
+      setFrameworkEnabled(GAIA_X_FAMILY, false);
+      String path = "VerificationService/sign/hasNoSignature1.json";
 
         Exception ex = assertThrowsExactly(VerificationException.class, () ->
             verificationService.verifyCredential(getAccessor(path),

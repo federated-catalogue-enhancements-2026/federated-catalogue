@@ -50,4 +50,7 @@ roles:
     additional_roots: [ ]
     types: [ ]
 
-properties: { }
+properties:
+  # URL of the Gaia-X Trust Anchor Registry used during Loire x5u trust-chain validation.
+  # Consumed by LoireMatcher.trustAnchorUrl().
+  trust_anchor_url: "https://registry.lab.gaia-x.eu/v1/api/trustAnchor/chain/file"

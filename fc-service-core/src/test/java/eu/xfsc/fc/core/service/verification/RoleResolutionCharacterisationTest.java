@@ -47,7 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest(properties = {
     "federated-catalogue.verification.signature-verifier=uni-res",
     "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
-    "federated-catalogue.verification.trust-framework.gaiax.enabled=false",
     // Disable signature verification for role-resolution tests.
     // Tests that require signature verification pass the flag explicitly via the verifyCredential overload.
     "federated-catalogue.verification.vc-signature=false",
