@@ -7,6 +7,7 @@ import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockJwtAuth
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
+import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.util.HashUtils;
@@ -66,14 +67,6 @@ public class AssetUploadControllerTest {
     @BeforeAll
     public void setup() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    }
-
-    private void deleteAssetQuietly(String hash) {
-        try {
-            assetStorePublisher.deleteAsset(hash);
-        } catch (NotFoundException e) {
-            // expected
-        }
     }
 
     @Test
@@ -242,39 +235,23 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_withJsonLd_returnsOkWithEnrichmentResponse() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "plain text document".getBytes(StandardCharsets.UTF_8));
         String assetId = createdAsset.getId();
 
         try {
-            // 2. Enrich with RDF metadata
-            String rdfPayload = "{"
-                + "  \"@context\": {\"ex\": \"http://example.org/\"},"
-                + "  \"@id\": \"" + assetId + "\","
-                + "  \"ex:title\": \"Enriched Document\","
-                + "  \"ex:creator\": \"Test User\""
-                + "}";
-            byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
-            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
+            String rdfPayload = """
+                {
+                  "@context": {"ex": "http://example.org/"},
+                  "@id": "%s",
+                  "ex:title": "Enriched Document",
+                  "ex:creator": "Test User"
+                }
+                """.formatted(assetId);
 
-            MvcResult enrichResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
+            AssetEnrichmentResponse response = enrichAssetMultipart("metadata.jsonld", "application/ld+json",
+                rdfPayload.getBytes(StandardCharsets.UTF_8));
 
-            AssetEnrichmentResponse response = objectMapper.readValue(enrichResult.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
             assertNotNull(response);
             assertEquals(assetId, response.getAssetId());
             assertEquals(2, response.getTriplesAdded()); // @id, @type for the object
@@ -288,36 +265,20 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_withTurtle_returnsOkWithEnrichmentResponse() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "binary data".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "data.bin", "application/octet-stream", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("data.bin", "application/octet-stream",
+            "binary data".getBytes(StandardCharsets.UTF_8));
         String assetId = createdAsset.getId();
 
         try {
-            // 2. Enrich with Turtle RDF
-            String turtlePayload = "@prefix ex: <http://example.org/> .\n"
-                + "<" + assetId + "> ex:hasVersion \"1.0\" .\n"
-                + "<" + assetId + "> ex:hasStatus \"active\" .";
-            byte[] rdfContent = turtlePayload.getBytes(StandardCharsets.UTF_8);
-            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.ttl", "text/turtle", rdfContent);
+            String turtlePayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:hasVersion "1.0" .
+                <%s> ex:hasStatus "active" .
+                """.formatted(assetId, assetId);
 
-            MvcResult enrichResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
+            AssetEnrichmentResponse response = enrichAssetMultipart("metadata.ttl", "text/turtle",
+                turtlePayload.getBytes(StandardCharsets.UTF_8));
 
-            AssetEnrichmentResponse response = objectMapper.readValue(enrichResult.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
             assertNotNull(response);
             assertEquals(assetId, response.getAssetId());
             assertEquals(2, response.getTriplesAdded()); // two explicit triples
@@ -331,35 +292,19 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_viaMultipartWithTurtle_returnsOkWithEnrichmentResponse() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "document content".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "document content".getBytes(StandardCharsets.UTF_8));
         String assetId = createdAsset.getId();
 
         try {
-            // 2. Enrich via multipart with Turtle RDF
-            String turtlePayload = "@prefix ex: <http://example.org/> .\n"
-                + "<" + assetId + "> ex:description \"Enriched via multipart\" .";
-            byte[] rdfContent = turtlePayload.getBytes(StandardCharsets.UTF_8);
-            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.ttl", "text/turtle", rdfContent);
+            String turtlePayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:description "Enriched via multipart" .
+                """.formatted(assetId);
 
-            MvcResult enrichResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
+            AssetEnrichmentResponse response = enrichAssetMultipart("metadata.ttl", "text/turtle",
+                turtlePayload.getBytes(StandardCharsets.UTF_8));
 
-            AssetEnrichmentResponse response = objectMapper.readValue(enrichResult.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
             assertNotNull(response);
             assertEquals(assetId, response.getAssetId());
             assertTrue(response.getTriplesAdded() > 0);
@@ -373,38 +318,20 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_withDifferentSubject_createsNewRdfAsset() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "document".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "document".getBytes(StandardCharsets.UTF_8));
 
         try {
-            // 2. Upload RDF with different subject — creates a new RDF asset, not enrichment
-            String rdfPayload = "{"
-                + "  \"@context\": {\"ex\": \"http://example.org/\"},"
-                + "  \"@id\": \"http://different.org/asset/123\","
-                + "  \"ex:title\": \"Different Asset\""
-                + "}";
-            byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
-            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
-
-            MvcResult newAssetResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-            // Verify new asset was created (different from original)
-            Asset newAsset = objectMapper.readValue(newAssetResult.getResponse().getContentAsString(), Asset.class);
+            // RDF with different subject — creates a new RDF asset, not enrichment
+            String rdfPayload = """
+                {
+                  "@context": {"ex": "http://example.org/"},
+                  "@id": "http://different.org/asset/123",
+                  "ex:title": "Different Asset"
+                }
+                """;
+            Asset newAsset = createNonRdfAssetMultipart("metadata.jsonld", "application/ld+json",
+                rdfPayload.getBytes(StandardCharsets.UTF_8));
             assertNotEquals(createdAsset.getId(), newAsset.getId());
             deleteAssetQuietly(newAsset.getAssetHash());
         } finally {
@@ -416,18 +343,8 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_withInvalidRdf_returnsBadRequest() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "document".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "document".getBytes(StandardCharsets.UTF_8));
 
         try {
             // 2. Try to enrich with malformed RDF
@@ -448,21 +365,11 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrich_humanReadableAsset_returnsUnprocessableEntity() throws Exception {
-        // 1. Create a non-RDF (machine-readable) asset
-        byte[] mrContent = "machine-readable document".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile mrFile = new MockMultipartFile("file", "doc.txt", "text/plain", mrContent);
-
-        MvcResult mrResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(mrFile)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset mrAsset = objectMapper.readValue(mrResult.getResponse().getContentAsString(), Asset.class);
+        Asset mrAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "machine-readable document".getBytes(StandardCharsets.UTF_8));
         String mrId = mrAsset.getId();
 
-        // 2. Upload a human-readable asset linked to the MR asset
+        // Upload a human-readable asset linked to the MR asset
         byte[] hrContent = "<html><body>Human Readable</body></html>".getBytes(StandardCharsets.UTF_8);
         MockMultipartFile hrFile = new MockMultipartFile("file", "doc.html", "text/html", hrContent);
         String encodedMrId = java.net.URLEncoder.encode(mrId, StandardCharsets.UTF_8);
@@ -478,17 +385,27 @@ public class AssetUploadControllerTest {
         String hrId = hrAsset.getId();
 
         try {
-            // 3. Attempt to enrich the HR asset with RDF — must return 422
-            String rdfPayload = "@prefix ex: <http://example.org/> .\n"
-                + "<" + hrId + "> ex:title \"HR Document\" .";
+            // Attempt to enrich the HR asset with RDF — must return 422 with an explanatory message
+            String rdfPayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:title "HR Document" .
+                """.formatted(hrId);
             byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
             MockMultipartFile rdfFile = new MockMultipartFile("file", "meta.ttl", "text/turtle", rdfContent);
 
-            mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+            MvcResult result = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
                     .file(rdfFile)
                     .with(csrf())
                     .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableEntity())
+                .andReturn();
+
+            Error error = objectMapper.readValue(result.getResponse().getContentAsString(), Error.class);
+            assertEquals("verification_error", error.getCode());
+            assertTrue(error.getMessage().toLowerCase().contains("human-readable"),
+                "422 response should explain why enrichment is rejected; got: " + error.getMessage());
+            assertTrue(error.getMessage().toLowerCase().contains("cannot be enriched"),
+                "422 response should explain why enrichment is rejected; got: " + error.getMessage());
         } finally {
             deleteAssetQuietly(hrAsset.getAssetHash());
             deleteAssetQuietly(mrAsset.getAssetHash());
@@ -499,54 +416,28 @@ public class AssetUploadControllerTest {
     @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
         @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void enrichNonRdfAsset_reEnriched_priorTriplesReplaced() throws Exception {
-        // 1. Create initial non-RDF asset
-        byte[] plainContent = "document content".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "document content".getBytes(StandardCharsets.UTF_8));
         String assetId = createdAsset.getId();
 
         try {
-            // 2. First enrichment: 1 triple
-            String firstPayload = "@prefix ex: <http://example.org/> .\n"
-                + "<" + assetId + "> ex:version \"1.0\" .";
-            MockMultipartFile rdfFile1 = new MockMultipartFile("file", "v1.ttl", "text/turtle",
+            String firstPayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:version "1.0" .
+                """.formatted(assetId);
+            AssetEnrichmentResponse first = enrichAssetMultipart("v1.ttl", "text/turtle",
                 firstPayload.getBytes(StandardCharsets.UTF_8));
-
-            MvcResult firstEnrich = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile1)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
-
-            AssetEnrichmentResponse first = objectMapper.readValue(firstEnrich.getResponse().getContentAsString(),
-                AssetEnrichmentResponse.class);
             assertEquals(1, first.getTriplesAdded());
 
-            // 3. Second enrichment: 2 triples — prior triples must be replaced
-            String secondPayload = "@prefix ex: <http://example.org/> .\n"
-                + "<" + assetId + "> ex:version \"2.0\" .\n"
-                + "<" + assetId + "> ex:status \"active\" .";
-            MockMultipartFile rdfFile2 = new MockMultipartFile("file", "v2.ttl", "text/turtle",
+            // Second enrichment: 2 triples — prior triples must be replaced
+            String secondPayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:version "2.0" .
+                <%s> ex:status "active" .
+                """.formatted(assetId, assetId);
+            AssetEnrichmentResponse second = enrichAssetMultipart("v2.ttl", "text/turtle",
                 secondPayload.getBytes(StandardCharsets.UTF_8));
 
-            MvcResult secondEnrich = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile2)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
-
-            AssetEnrichmentResponse second = objectMapper.readValue(secondEnrich.getResponse().getContentAsString(),
-                AssetEnrichmentResponse.class);
             assertEquals(assetId, second.getAssetId());
             assertEquals(2, second.getTriplesAdded());
             assertEquals(0, second.getTriplesRejected());
@@ -608,39 +499,21 @@ public class AssetUploadControllerTest {
         claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
             @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
     public void deleteNonRdfAsset_withEnrichment_deletesEnrichmentTriples() throws Exception {
-        // Arrange: Create and enrich a non-RDF asset
-        byte[] plainContent = "plain text document".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile("file", "doc.txt", "text/plain", plainContent);
-
-        MvcResult createResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                .file(file)
-                .with(csrf())
-                .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        Asset createdAsset = objectMapper.readValue(createResult.getResponse().getContentAsString(), Asset.class);
+        Asset createdAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "plain text document".getBytes(StandardCharsets.UTF_8));
         String assetId = createdAsset.getId();
         String assetHash = createdAsset.getAssetHash();
 
         try {
-            // Enrich with RDF metadata
-            String rdfPayload = "{"
-                + "  \"@context\": {\"ex\": \"http://example.org/\"},"
-                + "  \"@id\": \"" + assetId + "\","
-                + "  \"ex:title\": \"Enriched Document\""
-                + "}";
-            byte[] rdfContent = rdfPayload.getBytes(StandardCharsets.UTF_8);
-            MockMultipartFile rdfFile = new MockMultipartFile("file", "metadata.jsonld", "application/ld+json", rdfContent);
-
-            MvcResult enrichResult = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
-                    .file(rdfFile)
-                    .with(csrf())
-                    .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
-
-            AssetEnrichmentResponse enrichResponse = objectMapper.readValue(enrichResult.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
+            String rdfPayload = """
+                {
+                  "@context": {"ex": "http://example.org/"},
+                  "@id": "%s",
+                  "ex:title": "Enriched Document"
+                }
+                """.formatted(assetId);
+            AssetEnrichmentResponse enrichResponse = enrichAssetMultipart("metadata.jsonld", "application/ld+json",
+                rdfPayload.getBytes(StandardCharsets.UTF_8));
             assertEquals(assetId, enrichResponse.getAssetId());
             assertTrue(enrichResponse.getTriplesAdded() > 0);
 
@@ -660,4 +533,33 @@ public class AssetUploadControllerTest {
         }
     }
 
+    private void deleteAssetQuietly(String hash) {
+        try {
+            assetStorePublisher.deleteAsset(hash);
+        } catch (NotFoundException e) {
+            // expected
+        }
+    }
+
+    private Asset createNonRdfAssetMultipart(String filename, String contentType, byte[] content) throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", filename, contentType, content);
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                        .file(file)
+                        .with(csrf())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readValue(result.getResponse().getContentAsString(), Asset.class);
+    }
+
+    private AssetEnrichmentResponse enrichAssetMultipart(String filename, String contentType, byte[] rdfContent) throws Exception {
+        MockMultipartFile rdfFile = new MockMultipartFile("file", filename, contentType, rdfContent);
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                        .file(rdfFile)
+                        .with(csrf())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readValue(result.getResponse().getContentAsString(), AssetEnrichmentResponse.class);
+    }
 }
