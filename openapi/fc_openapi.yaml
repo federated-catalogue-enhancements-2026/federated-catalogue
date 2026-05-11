@@ -1517,6 +1517,9 @@ paths:
         matches an existing non-RDF asset, the asset is enriched with metadata
         (HTTP 200, returns AssetEnrichmentResponse); otherwise the RDF is
         stored as a new or updated credential asset (HTTP 201, returns Asset).
+        Human-readable assets (attachments uploaded via
+        `/assets/{asset_id}/human-readable`) cannot be enriched with metadata —
+        attempting to enrich one returns HTTP 422.
       operationId: addAsset
       security:
         - jwt: []
@@ -1598,7 +1601,14 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
-          $ref: '#/components/responses/ClientError'
+          description: >-
+            Unprocessable entity. Returned when the upload describes a subject IRI
+            that resolves to a human-readable attachment, which cannot be enriched
+            with metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           $ref: '#/components/responses/ServerError'
   /assets/validate:
