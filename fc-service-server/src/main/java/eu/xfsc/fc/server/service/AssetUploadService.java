@@ -4,10 +4,15 @@ import static eu.xfsc.fc.core.util.HashUtils.calculateSha256AsHex;
 import static eu.xfsc.fc.server.util.SessionUtils.checkParticipantAccess;
 import static eu.xfsc.fc.server.util.SessionUtils.getSessionParticipantId;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -16,9 +21,12 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -66,6 +74,7 @@ public class AssetUploadService {
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
     private final GraphStore graphStore;
     private final ObjectMapper objectMapper;
+    private final ObjectProvider<DocumentBuilderFactory> secureDocumentBuilderFactoryProvider;
 
     public UploadResult processUpload(byte[] content, String contentType, String originalFilename) {
         return processUpload(content, contentType, originalFilename, null);
@@ -262,7 +271,7 @@ public class AssetUploadService {
 
         for (Lang lang : fallbackSequence) {
             try {
-                assertNoDoctype(rdfPayload, lang);
+                assertSecureRdfXml(rdfPayload, lang);
                 Model model = ModelFactory.createDefaultModel();
                 RDFParser.fromString(rdfPayload, lang).parse(model);
                 return model;
@@ -290,12 +299,15 @@ public class AssetUploadService {
         return sequence.toArray(new Lang[0]);
     }
 
-    /**
-     * XXE prevention: rejects RDF/XML with DOCTYPE declarations.
-     */
-    private static void assertNoDoctype(String rdfPayload, Lang lang) {
-        if (lang == Lang.RDFXML && rdfPayload.contains("<!DOCTYPE")) {
-            throw new RiotException("RDF/XML input must not contain DOCTYPE declarations");
+    private void assertSecureRdfXml(String rdfPayload, Lang lang) {
+        if (lang != Lang.RDFXML) {
+            return;
+        }
+        try {
+            DocumentBuilderFactory dbf = secureDocumentBuilderFactoryProvider.getObject();
+            dbf.newDocumentBuilder().parse(new InputSource(new StringReader(rdfPayload)));
+        } catch (SAXException | ParserConfigurationException | IOException ex) {
+            throw new RiotException("RDF/XML failed XXE-hardened pre-validation: " + ex.getMessage(), ex);
         }
     }
 
