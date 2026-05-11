@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.verification;
 
 import java.util.stream.Collectors;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,7 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PRE
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class VerificationServiceImpl implements VerificationService {
 
   @Value("${federated-catalogue.verification.semantics:true}")
@@ -48,17 +50,10 @@ public class VerificationServiceImpl implements VerificationService {
   @Value("${federated-catalogue.verification.vc-signature:true}")
   private boolean verifyVCSignature;
 
-  @Autowired
-  private CredentialVerificationStrategy credentialStrategy;
-
-  @Autowired
-  private NonCredentialIngestionStrategy nonCredentialStrategy;
-
-  @Autowired
-  private CredentialFormatDetector formatDetector;
-
-  @Autowired
-  private TrustFrameworkRegistry trustFrameworkRegistry;
+  private final CredentialVerificationStrategy credentialStrategy;
+  private final NonCredentialIngestionStrategy nonCredentialStrategy;
+  private final CredentialFormatDetector formatDetector;
+  private final TrustFrameworkRegistry trustFrameworkRegistry;
 
   /** Package-private for testing: allows overriding the schema verification toggle. */
   void setVerifySchema(boolean verifySchema) {
