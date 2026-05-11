@@ -71,7 +71,9 @@ public class GaiaxTrustFrameworkTest {
 
     private static final String DID_WEB_ISSUER = "did:web:example.com";
     private static final String VALIDATOR_KID = DID_WEB_ISSUER + "#key-1";
-    /** JWK without x5c/x5u — enforceLoireTrustChain rejects when Gaia-X enabled. */
+  /**
+   * JWK without x5c/x5u — LoirePolicyEnforcer rejects when Gaia-X enabled.
+   */
     private static final String JWK_NO_TRUST_CHAIN = "{\"kty\":\"EC\",\"crv\":\"P-256\"}";
 
     @SpringBootApplication

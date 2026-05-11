@@ -18,7 +18,6 @@ import com.apicatalog.jsonld.loader.SchemeRouter;
 import com.danubetech.verifiablecredentials.VerifiableCredential;
 import com.danubetech.verifiablecredentials.VerifiablePresentation;
 import com.danubetech.verifiablecredentials.jsonld.VerifiableCredentialKeywords;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.exception.ClientException;
@@ -43,25 +42,14 @@ import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import foundation.identity.jsonld.JsonLDObject;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.stream.StreamManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -70,7 +58,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 
 
@@ -119,29 +106,14 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final CredentialFormatDetector formatDetector;
     private final LoireJwtParser loireJwtParser;
-  private final LoireMatcher loireMatcher;
+  private final LoirePolicyEnforcer loirePolicyEnforcer;
     private final ClaimExtractionService claimExtractionService;
 
-    @Value("${federated-catalogue.verification.http-timeout:5000}")
-    private int httpTimeout;
     @Value("${federated-catalogue.verification.validator-expire:1D}")
     private Duration validatorExpiration;
 
-    private RestTemplate rest;
     private volatile boolean loadersInitialised;
     private volatile StreamManager streamManager;
-
-    private RestTemplate restTemplate() {
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-        factory.setConnectTimeout(httpTimeout);
-        factory.setConnectionRequestTimeout(httpTimeout);
-        return new RestTemplate(factory);
-    }
-
-    @PostConstruct
-    private void initialize() {
-        rest = restTemplate();
-    }
 
     /**
      * Pipeline state carried between verification phases.
@@ -198,7 +170,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
-    if (verifySemantics && loireMatcher.isEnabled() && !typedCredentials.hasClasses()) {
+    if (verifySemantics && loirePolicyEnforcer.isEnabled() && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
@@ -263,8 +235,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             jwtValidator = jwtSignatureVerifier.verify(body);
         }
 
-      if (format == CredentialFormat.GAIAX_V2_LOIRE && loireMatcher.isEnabled()) {
-            enforceLoirePolicies(body, jwtValidator);
+      if (format == CredentialFormat.GAIAX_V2_LOIRE) {
+        loirePolicyEnforcer.enforceIfApplicable(body, jwtValidator);
         }
 
         // Version dispatch — unwrap to JSON-LD
@@ -962,178 +934,4 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         return jwt;
     }
 
-    /**
-     * Fetches the certificate chain from the given x5u URL, validates certificate expiry,
-     * and checks the URI against the active Loire trust anchor registry when the Loire framework
-     * is enabled. The registry URL is read from the active framework bundle's properties.
-     *
-     * <p>Note: does not perform PKIX path validation (RFC 5280) or revocation checking.
-     * ICAM 24.07 does not explicitly require these — it requires x5c/x5u presence (MUST)
-     * and x5u trust anchor resolution (SHOULD).
-     */
-    @SuppressWarnings("unchecked")
-    private Instant hasPEMTrustAnchorAndIsNotExpired(String uri) throws VerificationException {
-      log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, loireMatcher.isEnabled(): {}", uri,
-          loireMatcher.isEnabled());
-        String pem = rest.getForObject(uri, String.class);
-        InputStream certStream = new ByteArrayInputStream(Objects.requireNonNull(pem).getBytes(StandardCharsets.UTF_8));
-        List<X509Certificate> certs;
-        try {
-            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-            certs = (List<X509Certificate>) certFactory.generateCertificates(certStream);
-        } catch (CertificateException ex) {
-            log.warn("hasPEMTrustAnchorAndIsNotExpired; certificate error: {}", ex.getMessage());
-            throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
-        }
-
-        //Then extract relevant cert
-        X509Certificate relevant = null;
-        for (X509Certificate cert : certs) {
-            try {
-                cert.checkValidity();
-                if (relevant == null || relevant.getNotAfter().before(cert.getNotAfter())) { // .after(cert.getNotAfter())) {
-                    relevant = cert;
-                }
-            } catch (Exception ex) {
-                log.warn("hasPEMTrustAnchorAndIsNotExpired; check validity error: {}", ex.getMessage());
-                throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
-            }
-        }
-
-      // Only call Loire trust anchor registry when the Loire framework is enabled
-      if (loireMatcher.isEnabled()) {
-        String trustAnchorUrl = loireMatcher.trustAnchorUrl().orElseThrow(() -> {
-          log.warn("hasPEMTrustAnchorAndIsNotExpired; Loire framework enabled but bundle declares no trust_anchor_url");
-          return new VerificationException(
-              "Signatures error; Loire framework enabled but bundle declares no trust_anchor_url");
-        });
-            try {
-              ResponseEntity<Map> resp = rest.postForEntity(trustAnchorUrl, Map.of("uri", uri), Map.class);
-                if (!resp.getStatusCode().is2xxSuccessful()) {
-                    log.info("hasPEMTrustAnchorAndIsNotExpired; Trust anchor is not set in the registry. URI: {}", uri);
-                  throw new VerificationException(
-                      "Signatures error; trust anchor is not registered in the Loire registry. URI: " + uri);
-                }
-            } catch (VerificationException ex) {
-                throw ex;
-            } catch (Exception ex) {
-                log.warn("hasPEMTrustAnchorAndIsNotExpired; trust anchor error: {}", ex.getMessage());
-                throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
-            }
-        } else {
-        log.debug(
-            "hasPEMTrustAnchorAndIsNotExpired; skipping Loire trust anchor registry validation (framework disabled)");
-        }
-        Instant exp = relevant == null ? null : relevant.getNotAfter().toInstant();
-        log.debug("hasPEMTrustAnchorAndIsNotExpired.exit; returning: {}", exp);
-        return exp;
-    }
-
-    /**
-     * Enforces mandatory trust chain validation for Loire credentials when Gaia-X trust
-     * framework is enabled (ICAM 24.07). Only {@code x5u} (Trust Anchor Registry URL) is
-     * supported. {@code x5c} (inline chain) is rejected — full x5c chain building and Trust
-     * Anchor Registry lookup are not implemented.
-     *
-     * @param jwtValidator the validator from JWT signature verification
-     * @throws VerificationException if x5c/x5u is missing, or if x5c is present (not supported),
-     *     or if the x5u trust anchor is expired or unreachable
-     */
-    private void enforceLoirePolicies(String body, Validator jwtValidator) {
-        enforceDidWebRestriction(body);
-        if (jwtValidator != null) {
-            enforceLoireTrustChain(jwtValidator);
-        }
-    }
-
-    private void enforceLoireTrustChain(Validator jwtValidator) {
-        String publicKeyJson = jwtValidator.getPublicKey();
-        if (publicKeyJson == null) {
-            throw new VerificationException(
-                "Loire trust chain: publicKeyJwk is required but not available");
-        }
-        try {
-            JsonNode jwkNode = objectMapper.readTree(publicKeyJson);
-            boolean hasX5c = jwkNode.has("x5c") && !jwkNode.get("x5c").isEmpty();
-            boolean hasX5u = jwkNode.has("x5u") && !jwkNode.get("x5u").asText().isBlank();
-            if (!hasX5c && !hasX5u) {
-                throw new VerificationException(
-                    "Loire trust chain: publicKeyJwk must contain x5c or x5u certificate chain "
-                        + "(ICAM 24.07 mandatory trust anchor). kid: " + jwtValidator.getDidURI());
-            }
-            if (hasX5c) {
-                rejectX5cChain(jwkNode.get("x5c"), jwtValidator.getDidURI());
-            }
-            String x5uUrl = jwkNode.get("x5u").asText();
-            hasPEMTrustAnchorAndIsNotExpired(x5uUrl);
-
-            log.debug("enforceLoireTrustChain; trust chain validated for kid: {}",
-                jwtValidator.getDidURI());
-        } catch (VerificationException | ClientException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new VerificationException(
-                "Loire trust chain validation failed: " + ex.getMessage(), ex);
-        }
-    }
-
-    /**
-     * Rejects inline {@code x5c} certificate chains for all credential formats.
-     *
-     * <p><b>Implementation limitation, not a framework rule.</b> ICAM 24.07 permits {@code x5c},
-     * but full trust chain verification (chain building, Trust Anchor Registry lookup,
-     * and revocation checking) is not yet implemented here. Accepting {@code x5c} with
-     * expiry-only checks would silently mask broken trust chains — credentials with
-     * unverified issuers would appear valid. Until full chain validation is implemented,
-     * callers must use {@code x5u} (Trust Anchor Registry URL) instead, which goes through
-     * the existing validation path ({@link #hasPEMTrustAnchorAndIsNotExpired}).
-     */
-    private void rejectX5cChain(JsonNode _x5cArray, String kid) {
-        throw new ClientException(
-            "x5c certificate chain validation is not supported. "
-                + "Use x5u (Trust Anchor Registry URL) instead. kid: " + kid);
-    }
-
-    /**
-     * Enforces the Loire DID method restriction: only {@code did:web} is accepted
-     * when Gaia-X trust framework is enabled (ICAM 24.07).
-     *
-     * @param compactJwt the original compact JWT body
-     * @throws VerificationException if the issuer uses a non-did:web DID method
-     */
-    private void enforceDidWebRestriction(String compactJwt) {
-        try {
-            JWTClaimsSet claims = SignedJWT.parse(compactJwt).getJWTClaimsSet();
-            String iss = claims.getIssuer();
-            String issuerClaim = claims.getStringClaim("issuer");
-            // Validate both when present — prevents spoofing via injected issuer claim
-            if (iss != null) {
-                validateDidWeb(iss);
-            }
-            if (issuerClaim != null && !issuerClaim.equals(iss)) {
-                validateDidWeb(issuerClaim);
-            }
-            if (iss == null && issuerClaim == null) {
-                throw new VerificationException(
-                    "Loire DID method restriction: no issuer found in JWT iss or payload issuer "
-                        + "(ICAM 24.07 requires did:web)");
-            }
-        } catch (ParseException ex) {
-            throw new VerificationException(
-                "Loire DID method restriction: JWT claims parse error: " + ex.getMessage(), ex);
-        }
-    }
-
-    private void validateDidWeb(String did) {
-        if (did.startsWith("did:key")) {
-            throw new VerificationException(
-                "Loire DID method restriction: did:key is not accepted "
-                    + "(ICAM 24.07 requires did:web with JWK + x5c/x5u). Issuer: " + did);
-        }
-        if (!did.startsWith("did:web:")) {
-            throw new VerificationException(
-                "Loire DID method restriction: only did:web is accepted "
-                    + "(ICAM 24.07). Found: " + did);
-        }
-    }
 }

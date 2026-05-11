@@ -16,6 +16,7 @@ import eu.xfsc.fc.core.service.verification.DanubeTechFormatMatcher;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
 import eu.xfsc.fc.core.service.verification.LoireMatcher;
+import eu.xfsc.fc.core.service.verification.LoirePolicyEnforcer;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
@@ -56,6 +57,7 @@ import org.springframework.context.annotation.Import;
     JwtSignatureVerifier.class,
     LoireJwtParser.class,
     LoireMatcher.class,
+    LoirePolicyEnforcer.class,
     ObjectMapper.class,
     ProtectedNamespaceFilter.class,
     ProtectedNamespaceProperties.class,
