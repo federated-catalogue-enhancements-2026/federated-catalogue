@@ -12,6 +12,7 @@ import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
 import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
+import eu.xfsc.fc.core.service.verification.EnvelopedCredentialResolver;
 import eu.xfsc.fc.core.service.verification.JwtContentPreprocessor;
 import eu.xfsc.fc.core.service.verification.LoireCredentialProcessor;
 import eu.xfsc.fc.core.service.verification.LoireJwtParser;
@@ -48,6 +49,7 @@ import org.springframework.context.annotation.Import;
     DidResolverConfig.class,
     DocumentLoaderConfig.class,
     DocumentLoaderProperties.class,
+    EnvelopedCredentialResolver.class,
     FileStoreConfig.class,
     HttpDocumentResolver.class,
     JenaAllTriplesExtractor.class,
