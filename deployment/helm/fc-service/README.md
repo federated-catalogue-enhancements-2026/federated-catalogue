@@ -133,7 +133,13 @@ TLS certificates are issued automatically by Let's Encrypt via HTTP-01 challenge
 
 The chart can host a development-grade `did:web` endpoint alongside the catalogue. **Disabled by default** (`did.enabled: false`). Enable it when you need a public DID document and certificate chain reachable from the catalogue's verification flow — e.g. signing test credentials against your own DID.
 
-> Development scope only. The certificate is Let's Encrypt (DV), not eIDAS-qualified, and Gaia-X trust-anchor registration is out of scope. Do not use for production.
+> **Development scope only — because of the certificate, not the DID server itself.** The chart serves
+> a TLS chain issued by Let's Encrypt, a domain-validation (DV) CA. Gaia-X production (GXDCH) only
+> accepts certificates issued by an eIDAS-qualified Trust Service Provider or an EV-SSL CA from the
+> Mozilla CA store, because those bind the cert to a validated legal entity — DV certs do not.
+> Production also requires registering the chain as a trust anchor with the GXDCH Registry, which is
+> out of scope here. The same DID server workload can be reused in production by swapping the manually
+> managed TLS secret for an eIDAS/EV chain and completing trust-anchor registration.
 
 ### Resources created when enabled
 
