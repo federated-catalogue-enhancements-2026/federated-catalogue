@@ -110,11 +110,11 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
   }
 
   @Override
-  public CredentialVerificationResult verifyCredential(ContentAccessor payload,
-                                                       boolean verifySemantics, boolean verifySchema,
-                                                       boolean verifyVPSignatures, boolean verifyVCSignatures)
+  public CredentialVerificationResult ingest(ContentAccessor payload,
+                                             boolean verifySemantics, boolean verifySchema,
+                                             boolean verifyVPSignatures, boolean verifyVCSignatures)
       throws VerificationException {
-    log.debug("verifyCredential.enter; verifySemantics: {}, verifySchema: {},"
+    log.debug("ingest.enter; verifySemantics: {}, verifySchema: {},"
             + " verifyVPSignatures: {}, verifyVCSignatures: {}",
         verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     long stamp = System.currentTimeMillis();
@@ -123,7 +123,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
 
     JsonLDObject ld = parseContent(ctx.payload());
     ld.setDocumentLoader(this.documentLoader);
-    log.debug("verifyCredential; content parsed, time taken: {}", System.currentTimeMillis() - stamp);
+    log.debug("ingest; content parsed, time taken: {}", System.currentTimeMillis() - stamp);
 
     TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
@@ -151,7 +151,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
       result.setWarnings(List.of(filtered.warning()));
     }
 
-    log.debug("verifyCredential.exit; returning: {}; time taken: {}",
+    log.debug("ingest.exit; returning: {}; time taken: {}",
         result, System.currentTimeMillis() - stamp);
     return result;
   }
@@ -179,7 +179,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
     }
 
     // Reject ambiguous JWTs — UNKNOWN non-JWT payloads are routed to the non-credential RDF
-    // path in verifyCredential() before parseContent().
+    // path in ingest() before parseContent().
     if (format == CredentialFormat.UNKNOWN && body.startsWith(JWT_PREFIX)) {
       throw new ClientException(
           "Unrecognizable JWT credential format — JWT does not have recognized "
@@ -257,7 +257,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
         envelopedCredentialResolver.resolveInnerEnvelopedCredentials(payload);
     List<RdfClaim> claims = claimExtractionService.extractCredentialClaims(claimPayload);
     FilteredClaims filtered = protectedNamespaceFilter.filterClaims(claims, "claims extraction");
-    log.debug("verifyCredential; claims extracted: {}, time taken: {}",
+    log.debug("ingest; claims extracted: {}, time taken: {}",
         filtered.claims() == null ? "null" : filtered.claims().size(),
         System.currentTimeMillis() - stamp);
     return filtered;

@@ -73,6 +73,9 @@ public class VerificationServiceTest {
   private VerificationServiceImpl verificationService;
 
   @Autowired
+  private SchemaValidationService schemaValidationService;
+
+  @Autowired
   private ClaimExtractionService claimExtractionService;
 
     @Autowired
@@ -568,7 +571,7 @@ public class VerificationServiceTest {
 
   @Test
   void verifyValidationResultInvalid() {
-    SchemaValidationResult validationResult = verificationService.verifyCredentialAgainstSchema(
+    SchemaValidationResult validationResult = schemaValidationService.validateCredentialAgainstSchema(
             getAccessor("Validation-Tests/legalPerson_one_VC_Invalid.jsonld"), getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
 
     if (!validationResult.isConforming()) {
@@ -578,7 +581,7 @@ public class VerificationServiceTest {
 
   @Test
   void verifyValidationResultValid() {
-    SchemaValidationResult validationResult = verificationService.verifyCredentialAgainstSchema(
+    SchemaValidationResult validationResult = schemaValidationService.validateCredentialAgainstSchema(
             getAccessor("Validation-Tests/legalPerson_one_VC_Valid.jsonld"), getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
     assertTrue(validationResult.isConforming());
 
@@ -587,7 +590,7 @@ public class VerificationServiceTest {
   @Test
   void verifyInvalidCredentialValidation_Result_Against_CompositeSchema() {
     schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
-    SchemaValidationResult result = verificationService.verifyCredentialAgainstCompositeSchema(
+    SchemaValidationResult result = schemaValidationService.validateCredentialAgainstCompositeSchema(
     		getAccessor("Validation-Tests/legalPerson_one_VC_Invalid.jsonld"));
     assertFalse(result.isConforming(), "Validation should have failed.");
     assertTrue(result.getValidationReport().contains("Property needs to have at least 1 value"));
@@ -596,7 +599,7 @@ public class VerificationServiceTest {
   @Test
   void verifyValidCredentialValidation_Result_Against_CompositeSchema() {
     schemaStore.addSchema(getAccessor("Schema-Tests/mergedShapesGraph.ttl"));
-    SchemaValidationResult validationResult = verificationService.verifyCredentialAgainstCompositeSchema(
+    SchemaValidationResult validationResult = schemaValidationService.validateCredentialAgainstCompositeSchema(
             getAccessor("Validation-Tests/legalPerson_one_VC_Valid.jsonld"));
     assertTrue(validationResult.isConforming());
   }

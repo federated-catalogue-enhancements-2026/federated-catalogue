@@ -38,9 +38,9 @@ public class NonCredentialIngestionStrategy implements RdfIngestionStrategy {
   private final ProtectedNamespaceFilter protectedNamespaceFilter;
 
   @Override
-  public CredentialVerificationResult verifyCredential(ContentAccessor payload,
-                                                       boolean verifySemantics, boolean verifySchema,
-                                                       boolean verifyVPSignatures, boolean verifyVCSignatures)
+  public CredentialVerificationResult ingest(ContentAccessor payload,
+                                             boolean verifySemantics, boolean verifySchema,
+                                             boolean verifyVPSignatures, boolean verifyVCSignatures)
       throws VerificationException {
     try {
       List<RdfClaim> claims = claimExtractionService.extractAllTriples(payload);
@@ -54,7 +54,7 @@ public class NonCredentialIngestionStrategy implements RdfIngestionStrategy {
       if (filtered.hasWarning()) {
         result.setWarnings(List.of(filtered.warning()));
       }
-      log.debug("verifyCredential.exit; non-credential RDF, claims: {}",
+      log.debug("ingest.exit; non-credential RDF, claims: {}",
           filtered.claims() == null ? "null" : filtered.claims().size());
       return result;
     } catch (ClientException ex) {

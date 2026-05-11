@@ -38,9 +38,9 @@ public interface RdfIngestionStrategy {
    * @return the verification result
    * @throws VerificationException if verification fails
    */
-  CredentialVerificationResult verifyCredential(ContentAccessor payload,
-                                                boolean verifySemantics, boolean verifySchema,
-                                                boolean verifyVPSignatures,
-      boolean verifyVCSignatures) throws VerificationException;
+  CredentialVerificationResult ingest(ContentAccessor payload,
+                                      boolean verifySemantics, boolean verifySchema,
+                                      boolean verifyVPSignatures,
+                                      boolean verifyVCSignatures) throws VerificationException;
 
 }

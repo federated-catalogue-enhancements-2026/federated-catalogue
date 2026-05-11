@@ -10,7 +10,6 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.NonCredentialVerificationResult;
-import eu.xfsc.fc.core.pojo.SchemaValidationResult;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -59,9 +58,6 @@ public class VerificationServiceImpl implements VerificationService {
   private CredentialFormatDetector formatDetector;
 
   @Autowired
-  private SchemaValidationService schemaValidationService;
-
-  @Autowired
   private TrustFrameworkRegistry trustFrameworkRegistry;
 
   /** Package-private for testing: allows overriding the schema verification toggle. */
@@ -97,7 +93,7 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    CredentialVerificationResult result = resolveStrategy(payload).verifyCredential(payload,
+    CredentialVerificationResult result = resolveStrategy(payload).ingest(payload,
         verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
     if (!(result instanceof NonCredentialVerificationResult) && result.getRole() == null) {
       String bundleInfo = getActiveTrustFrameworkBundleInfos();
@@ -106,26 +102,6 @@ public class VerificationServiceImpl implements VerificationService {
               + " Active bundles: [" + bundleInfo + "]");
     }
     return result;
-  }
-
-  /* Credential validation against SHACL Schemas — delegated to SchemaValidationService */
-
-  /**
-   * @deprecated Use {@link SchemaValidationService#validateCredentialAgainstCompositeSchema} directly.
-   */
-  @Deprecated
-  @Override
-  public SchemaValidationResult verifyCredentialAgainstCompositeSchema(ContentAccessor payload) {
-    return schemaValidationService.validateCredentialAgainstCompositeSchema(payload);
-  }
-
-  /**
-   * @deprecated Use {@link SchemaValidationService#validateCredentialAgainstSchema} directly.
-   */
-  @Deprecated
-  @Override
-  public SchemaValidationResult verifyCredentialAgainstSchema(ContentAccessor payload, ContentAccessor schema) {
-    return schemaValidationService.validateCredentialAgainstSchema(payload, schema);
   }
 
   private String getActiveTrustFrameworkBundleInfos() {

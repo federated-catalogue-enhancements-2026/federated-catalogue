@@ -38,9 +38,6 @@ class VerificationServiceImplTest {
   private CredentialFormatDetector formatDetector;
 
   @Mock
-  private SchemaValidationService schemaValidationService;
-
-  @Mock
   private TrustFrameworkRegistry trustFrameworkRegistry;
 
   @Test
@@ -52,7 +49,7 @@ class VerificationServiceImplTest {
         NOW, "active", "did:web:example.com", NOW,
         "did:web:example.com", List.of(), List.of(), null, null);
 
-    when(credentialStrategy.verifyCredential(any(),
+    when(credentialStrategy.ingest(any(),
         anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(unknownRoleResult);
 
