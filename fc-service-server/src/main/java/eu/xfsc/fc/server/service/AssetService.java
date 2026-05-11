@@ -263,11 +263,7 @@ public class AssetService implements AssetsApiDelegate {
 
   private String resolveRequestContentType() {
     String contentType = httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE);
-    if (contentType == null) {
-      return MediaType.APPLICATION_JSON_VALUE;
-    }
-    int sep = contentType.indexOf(';');
-    return sep >= 0 ? contentType.substring(0, sep).trim() : contentType;
+    return contentType != null ? contentType : MediaType.APPLICATION_JSON_VALUE;
   }
 
   /**

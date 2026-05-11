@@ -16,6 +16,8 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,22 +82,41 @@ public class AssetUploadService {
             throw new ClientException("Upload content must not be empty");
         }
 
-        if (!rdfDetector.isRdf(contentType, content)) {
-            return new UploadResult.AssetCreated(handleNonRdfAsset(content, contentType, originalFilename, existingId));
+        String normalizedContentType = normalizeContentType(contentType);
+
+        if (!rdfDetector.isRdf(normalizedContentType, content)) {
+            return new UploadResult.AssetCreated(
+                handleNonRdfAsset(content, normalizedContentType, originalFilename, existingId));
         }
 
         // Try enrichment path: check if RDF describes an existing non-RDF asset
-        String subjectId = extractSubjectIdFromRdf(content, contentType);
+        String subjectId = extractSubjectIdFromRdf(content, normalizedContentType);
         if (subjectId != null) {
             var existing = assetStorePublisher.findEnrichableAsset(subjectId);
             if (existing.isPresent()) {
                 log.debug("processUpload; detected enrichment case for non-RDF asset {}", subjectId);
-                return new UploadResult.AssetEnriched(enrichAsset(existing.get(), content, contentType));
+                return new UploadResult.AssetEnriched(enrichAsset(existing.get(), content, normalizedContentType));
             }
         }
 
         // Not an enrichment case; process as new RDF asset
-        return new UploadResult.AssetCreated(handleCredential(content, contentType));
+        return new UploadResult.AssetCreated(handleCredential(content, normalizedContentType));
+    }
+
+    /**
+     * Strip MIME parameters (e.g. {@code ;charset=UTF-8}) so downstream comparisons match the bare
+     * type/subtype. Invalid media types fall back to the raw value to preserve existing error paths.
+     */
+    private static String normalizeContentType(String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+        try {
+            MediaType mediaType = MediaType.parseMediaType(contentType);
+            return mediaType.getType() + "/" + mediaType.getSubtype();
+        } catch (InvalidMediaTypeException ex) {
+            return contentType;
+        }
     }
 
     private AssetMetadata handleCredential(byte[] content, String contentType) {
