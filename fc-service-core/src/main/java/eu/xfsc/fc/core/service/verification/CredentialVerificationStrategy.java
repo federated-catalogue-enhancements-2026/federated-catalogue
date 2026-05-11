@@ -35,6 +35,7 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.trustframework.ResolvedRole;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 import eu.xfsc.fc.core.service.verification.cache.CachingLocator;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.signature.JwtSignatureVerifier;
@@ -75,7 +76,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     /**
      * Resolves the {@code type} or {@code @type} value from a JSON-LD map.
-     * ICAM 24.07: "{@code @type} is aliased to {@code type}. Consequently, we MAY also use this alias."
+     * Per JSON-LD, {@code @type} is aliased to {@code type}.
      */
     private static Object resolveType(Map<?, ?> map) {
         Object val = map.get("type");
@@ -84,7 +85,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     /**
      * Resolves the {@code id} or {@code @id} value from a JSON-LD map.
-     * ICAM 24.07: "{@code @id} is aliased to {@code id}. Consequently, we MAY also use this alias."
+     * Per JSON-LD, {@code @id} is aliased to {@code id}.
      */
     private static Object resolveId(Map<?, ?> map) {
         Object val = map.get("id");
@@ -95,6 +96,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private boolean requireVP;
     private final SchemaModuleConfigService schemaModuleConfigService;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
+  private final TrustFrameworkService trustFrameworkService;
     private final JwtContentPreprocessor jwtPreprocessor;
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
     private final SchemaStore schemaStore;
@@ -170,9 +172,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
-    if (verifySemantics && loirePolicyEnforcer.isEnabled() && !typedCredentials.hasClasses()) {
-            throw new VerificationException("Semantic Error: no proper CredentialSubject found");
-        }
+    if (verifySemantics && trustFrameworkService.hasAnyEnabled() && !typedCredentials.hasClasses()) {
+      throw new VerificationException("Semantic Error: no proper CredentialSubject found");
+    }
 
     ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
     FilteredClaims filtered = extractAndValidateClaims(ctx.payload());
@@ -545,7 +547,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Attempts to unwrap an EnvelopedVerifiableCredential (Loire data: URI) to a VC.
+     * Attempts to unwrap a W3C VC 2.0 EnvelopedVerifiableCredential (whose {@code id} is a
+     * {@code data:} URI carrying a JWT VC) into a VerifiableCredential.
      */
     private VerifiableCredential tryUnwrapEnvelopedVc(Map<String, Object> entryMap,
         DocumentLoader docLoader) {
@@ -650,9 +653,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
 
     /**
-     * Rejects non-JWT credentials that request signature verification.
-     * Linked Data proof verification (JsonWebSignature2020) was removed — Loire uses
-     * GXDCH Compliance Service notarization via JWT/Enveloped Credential format.
+     * Rejects non-JWT credentials that request signature verification. Linked Data proof
+     * verification (JsonWebSignature2020) is not supported; callers must use JWT or the
+     * W3C VC 2.0 Enveloped Credential format.
      */
     private List<Validator> checkCryptography(TypedCredentials tcs, boolean verifyVP, boolean verifyVC) {
         throw new VerificationException(
@@ -661,8 +664,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Returns true if the JWT claims represent a Verifiable Presentation.
-     * Detects ICAM v24.07 (top-level {@code type} claim) and older format ({@code vp} claim).
+     * Returns true if the JWT claims represent a Verifiable Presentation. Detects both the
+     * VC-JOSE-COSE / VCDM 2.0 layout (top-level {@code type} claim) and the legacy
+     * VC-JWT layout ({@code vp} wrapper claim).
      */
     private boolean isVpJwtClaims(JWTClaimsSet claims) {
         Object typeObj = claims.getClaim("type");
@@ -676,7 +680,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Checks that VP JWT {@code iss} matches the VP {@code holder} field (ICAM v24.07, ADR-3).
+     * Checks that the VP JWT {@code iss} matches the VP {@code holder} (ADR-3 holder binding).
      * Called only when verifySemantics=true and the outer JWT was successfully verified.
      *
      * @param claims already-parsed JWT claims (avoids re-parsing the JWT body)
@@ -686,7 +690,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             return;
         }
         try {
-            // ICAM v24.07 (Loire): holder is a top-level claim; older format: nested in vp claim
+          // VC-JOSE-COSE / VCDM 2.0: holder is a top-level claim; legacy VC-JWT: nested in vp claim
             String holder = claims.getStringClaim("holder");
             if (holder == null) {
                 @SuppressWarnings("unchecked")
@@ -696,8 +700,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 }
             }
             String iss = claims.getIssuer();
-            // Loire VPs: holder is optional per VCDM 2.0; when absent, the VP issuer (iss)
-            // is implicitly the holder. Also check top-level "issuer" claim as Loire fallback.
+          // holder is optional per VCDM 2.0; when absent, the VP issuer (iss) is implicitly
+          // the holder. Also tolerate a top-level "issuer" claim alongside iss.
             if (holder == null) {
                 String issuerClaim = claims.getStringClaim("issuer");
                 if (issuerClaim != null && iss != null && !iss.equals(issuerClaim)) {
@@ -724,9 +728,9 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
     /**
-     * Verifies inner VC credentials in a VP JWT.
-     * Handles EnvelopedVerifiableCredential (ICAM v24.07) and plain compact JWT strings.
-     * Inline JSON-LD VCs are rejected — LD proof verification was removed.
+     * Verifies inner VC credentials in a VP JWT. Handles W3C VC 2.0 EnvelopedVerifiableCredential
+     * entries and plain compact JWT strings. Inline JSON-LD VCs are rejected — LD proof
+     * verification is not supported.
      */
     private List<Validator> verifyInnerVcCredentials(JsonLDObject ld) {
         Object vcArrayObj = ld.getJsonObject().get(VERIFIABLE_CREDENTIAL_KEY);
@@ -750,7 +754,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 validators.add(jwtSignatureVerifier.verify(jwtStr));
             } else if (entry instanceof Map<?, ?> vcMap) {
                 if (isEnvelopedVerifiableCredential(resolveType(vcMap), vcMap.get(RDF_CONTEXT_KEY))) {
-                    // ICAM v24.07 EnvelopedVerifiableCredential: extract JWT from data: URL
+                  // W3C VC 2.0 EnvelopedVerifiableCredential: extract JWT from the data: URL
                     Object idObj = resolveId(vcMap);
                     if (!(idObj instanceof String idStr)) {
                         throw new ClientException(
@@ -758,7 +762,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                     }
                     validators.add(jwtSignatureVerifier.verifyFromDataUrl(idStr));
                 } else {
-                    // Inline JSON-LD VC — LD proof verification was removed (Loire uses JWT)
+                  // Inline JSON-LD VC — LD proof verification is not supported, JWT only
                     throw new VerificationException(
                         "Signatures error; Linked Data proof verification is not supported."
                             + " Use JWT or Enveloped Credential format.");

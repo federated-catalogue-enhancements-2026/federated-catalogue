@@ -83,14 +83,6 @@ public class LoirePolicyEnforcer {
     }
   }
 
-  /**
-   * Returns true when {@link LoireMatcher#isEnabled()} — used by the strategy to gate
-   * Loire-specific semantic checks (e.g. "credential MUST have a recognized class").
-   */
-  public boolean isEnabled() {
-    return loireMatcher.isEnabled();
-  }
-
   private void enforceTrustChain(Validator jwtValidator) {
     String publicKeyJson = jwtValidator.getPublicKey();
     if (publicKeyJson == null) {
