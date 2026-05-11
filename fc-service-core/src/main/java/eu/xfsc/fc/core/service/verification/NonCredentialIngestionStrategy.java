@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NonCredentialRdfStrategy implements VerificationStrategy {
+public class NonCredentialIngestionStrategy implements RdfIngestionStrategy {
 
   private final ClaimExtractionService claimExtractionService;
   private final ProtectedNamespaceFilter protectedNamespaceFilter;

@@ -65,7 +65,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CredentialVerificationStrategy implements VerificationStrategy {
+public class CredentialVerificationStrategy implements RdfIngestionStrategy {
 
   @Value("${federated-catalogue.verification.require-vp:false}")
   private boolean requireVP;

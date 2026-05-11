@@ -21,13 +21,13 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PRE
 /**
  * Implementation of the {@link VerificationService} interface.
  *
- * <p>Dispatches each incoming payload to one of two {@link VerificationStrategy}
+ * <p>Dispatches each incoming payload to one of two {@link RdfIngestionStrategy}
  * implementations based on a quick format peek:
  * <ul>
  *   <li>{@link CredentialVerificationStrategy} — for any recognised credential format
  *       (Loire JWT, danubetech VC 2.0 JSON-LD or JWT, W3C VC 2.0 Enveloped wrappers) and
  *       for ambiguous JWTs (which it rejects with a clear error).</li>
- *   <li>{@link NonCredentialRdfStrategy} — for non-credential JSON-LD or other RDF
+ *   <li>{@link NonCredentialIngestionStrategy} — for non-credential JSON-LD or other RDF
  *       payloads the catalogue ingests as raw triples.</li>
  * </ul>
  *
@@ -53,7 +53,7 @@ public class VerificationServiceImpl implements VerificationService {
   private CredentialVerificationStrategy credentialStrategy;
 
   @Autowired
-  private NonCredentialRdfStrategy nonCredentialStrategy;
+  private NonCredentialIngestionStrategy nonCredentialStrategy;
 
   @Autowired
   private CredentialFormatDetector formatDetector;
@@ -74,7 +74,7 @@ public class VerificationServiceImpl implements VerificationService {
    * (it handles both recognised and ambiguous JWTs); JSON-LD/RDF bodies are detected once
    * and routed to the non-credential strategy when no credential format matches.
    */
-  private VerificationStrategy resolveStrategy(ContentAccessor payload) {
+  private RdfIngestionStrategy resolveStrategy(ContentAccessor payload) {
     String body = payload.getContentAsString().strip();
     if (body.startsWith(JWT_PREFIX)) {
       return credentialStrategy;

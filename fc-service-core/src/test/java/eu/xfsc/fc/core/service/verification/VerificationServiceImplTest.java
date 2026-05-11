@@ -32,7 +32,7 @@ class VerificationServiceImplTest {
   private CredentialVerificationStrategy credentialStrategy;
 
   @Mock
-  private NonCredentialRdfStrategy nonCredentialStrategy;
+  private NonCredentialIngestionStrategy nonCredentialStrategy;
 
   @Mock
   private CredentialFormatDetector formatDetector;
