@@ -1,7 +1,6 @@
 package eu.xfsc.fc.core.dao.assets;
 
 import eu.xfsc.fc.core.pojo.AssetType;
-import eu.xfsc.fc.core.pojo.ContentKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

@@ -1,4 +1,4 @@
-package eu.xfsc.fc.core.pojo;
+package eu.xfsc.fc.core.dao.assets;
 
 /**
  * Distinguishes whether an asset has RDF content or not.

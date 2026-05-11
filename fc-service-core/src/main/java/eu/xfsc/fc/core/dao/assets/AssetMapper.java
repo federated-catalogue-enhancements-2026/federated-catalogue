@@ -5,7 +5,6 @@ import java.util.List;
 
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
-import eu.xfsc.fc.core.pojo.ContentKind;
 import eu.xfsc.fc.core.service.assetstore.AssetRecord;
 
 public final class AssetMapper {
