@@ -7,6 +7,8 @@ import com.nimbusds.jwt.SignedJWT;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.VerificationException;
 import eu.xfsc.fc.core.pojo.Validator;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 import jakarta.annotation.PostConstruct;
 
 import java.io.ByteArrayInputStream;
@@ -20,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +51,21 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class LoirePolicyEnforcer {
 
-  private final LoireMatcher loireMatcher;
+  /**
+   * Profile ID declared in {@code trustframeworks/gaia-x-2511/framework.yaml}.
+   * Used to look up the governing trust framework family in the registry.
+   */
+  private static final String PROFILE_ID = "gaia-x-2511";
+
+  /**
+   * Property key inside the bundle's {@code properties} map carrying the trust anchor
+   * registry URL. Read from the framework bundle at runtime so the value lives with the
+   * rest of the bundle's configuration rather than in application-level properties.
+   */
+  private static final String PROPERTY_TRUST_ANCHOR_URL = "trust_anchor_url";
+
+  private final TrustFrameworkRegistry trustFrameworkRegistry;
+  private final TrustFrameworkService trustFrameworkService;
   private final ObjectMapper objectMapper;
 
   @Value("${federated-catalogue.verification.http-timeout:5000}")
@@ -74,13 +91,42 @@ public class LoirePolicyEnforcer {
    *                     signature verification was skipped
    */
   public void enforceIfApplicable(String compactJwt, Validator jwtValidator) {
-    if (!loireMatcher.isEnabled()) {
+    if (!isEnabled()) {
       return;
     }
     enforceDidWebRestriction(compactJwt);
     if (jwtValidator != null) {
       enforceTrustChain(jwtValidator);
     }
+  }
+
+  /**
+   * Returns the trust framework family that governs Loire credentials (e.g. {@code "gaia-x"}),
+   * derived from the bundle registry at runtime. Empty if the bundle is not loaded.
+   */
+  private Optional<String> frameworkFamily() {
+    return trustFrameworkRegistry.getBundle(PROFILE_ID)
+        .map(b -> b.config().family());
+  }
+
+  /**
+   * Returns the trust anchor registry URL declared in the bundle's properties map.
+   * Empty if the bundle is not loaded or the property is absent or blank.
+   */
+  private Optional<String> trustAnchorUrl() {
+    return trustFrameworkRegistry.getBundle(PROFILE_ID)
+        .map(b -> b.config().properties().get(PROPERTY_TRUST_ANCHOR_URL))
+        .filter(s -> !s.isBlank());
+  }
+
+  /**
+   * Returns true when the framework governing Loire credentials is both registered (its
+   * bundle is loaded) and enabled in persistence.
+   */
+  private boolean isEnabled() {
+    return frameworkFamily()
+        .map(trustFrameworkService::isEnabled)
+        .orElse(false);
   }
 
   private void enforceTrustChain(Validator jwtValidator) {
@@ -162,7 +208,7 @@ public class LoirePolicyEnforcer {
       }
     }
 
-    String trustAnchorUrl = loireMatcher.trustAnchorUrl().orElseThrow(() -> {
+    String trustAnchorUrl = trustAnchorUrl().orElseThrow(() -> {
       log.warn("validateTrustAnchorChain; Loire framework enabled but bundle declares no trust_anchor_url");
       return new VerificationException(
           "Signatures error; Loire framework enabled but bundle declares no trust_anchor_url");

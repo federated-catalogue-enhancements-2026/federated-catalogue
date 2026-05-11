@@ -43,6 +43,7 @@ import eu.xfsc.fc.core.util.ClaimValidator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import foundation.identity.jsonld.JsonLDObject;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.riot.RiotException;
@@ -56,6 +57,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +99,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final SchemaModuleConfigService schemaModuleConfigService;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
   private final TrustFrameworkService trustFrameworkService;
-    private final JwtContentPreprocessor jwtPreprocessor;
     private final ProtectedNamespaceFilter protectedNamespaceFilter;
     private final SchemaStore schemaStore;
     private final SchemaValidationService schemaValidationService;
@@ -107,8 +108,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final Vc2Processor vc2Processor;
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final CredentialFormatDetector formatDetector;
-    private final LoireJwtParser loireJwtParser;
-  private final LoirePolicyEnforcer loirePolicyEnforcer;
+  private final List<CredentialFormatProcessor> formatProcessors;
     private final ClaimExtractionService claimExtractionService;
 
     @Value("${federated-catalogue.verification.validator-expire:1D}")
@@ -116,6 +116,16 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     private volatile boolean loadersInitialised;
     private volatile StreamManager streamManager;
+
+  private Map<CredentialFormat, CredentialFormatProcessor> processorsByFormat;
+
+  @PostConstruct
+  private void indexProcessors() {
+    processorsByFormat = new EnumMap<>(CredentialFormat.class);
+    for (CredentialFormatProcessor p : formatProcessors) {
+      processorsByFormat.put(p.getFormat(), p);
+    }
+  }
 
     /**
      * Pipeline state carried between verification phases.
@@ -229,27 +239,21 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
                 "Unrecognizable JWT credential format — JWT does not have recognized "
                     + "typ header or vc/vp wrapper claims");
         }
-        boolean isJwt = format == CredentialFormat.GAIAX_V2_LOIRE
-            || (format == CredentialFormat.VC2_DANUBETECH && body.startsWith(JWT_PREFIX));
+      CredentialFormatProcessor processor = processorsByFormat.get(format);
+      boolean isJwt = processor != null && processor.producesJwt(body);
 
         Validator jwtValidator = null;
         if (isJwt && verifySigs) {
             jwtValidator = jwtSignatureVerifier.verify(body);
         }
 
-      if (format == CredentialFormat.GAIAX_V2_LOIRE) {
-        loirePolicyEnforcer.enforceIfApplicable(body, jwtValidator);
+      if (processor != null) {
+        processor.enforcePolicies(body, jwtValidator);
+        payload = processor.unwrap(payload);
         }
-
-        // Version dispatch — unwrap to JSON-LD
-        payload = switch (format) {
-            case GAIAX_V2_LOIRE -> loireJwtParser.unwrap(payload);
-            case VC2_DANUBETECH -> vc2Processor.preProcess(payload);
-            // UNKNOWN non-JWT: non-credential RDF — payload already normalized at method start;
-            // no unwrapping needed. verifyCredential() routes UNKNOWN to JenaAllTriplesExtractor
-            // before parseContent().
-            default -> payload;
-        };
+      // UNKNOWN: payload already normalized at method start; non-JWT UNKNOWN is routed to
+      // JenaAllTriplesExtractor in verifyCredential() before parseContent(), JWT UNKNOWN
+      // was rejected above.
 
         return new VerificationContext(body, format, isJwt, payload, jwtValidator);
     }
@@ -584,12 +588,12 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         try {
             ContentAccessor jwtContent = new ContentAccessorDirect(jwtStr);
             CredentialFormat innerFormat = formatDetector.detect(jwtContent);
-            ContentAccessor unwrapped;
-            if (innerFormat == CredentialFormat.GAIAX_V2_LOIRE) {
-                unwrapped = loireJwtParser.unwrap(jwtContent);
-            } else {
-                unwrapped = jwtPreprocessor.unwrap(jwtContent);
-            }
+          CredentialFormatProcessor innerProcessor = processorsByFormat.get(innerFormat);
+          // Inner is always a compact JWT — fall back to VC 2.0 unwrap when format is UNKNOWN
+          // so legacy/unrecognised JWTs still get a chance to be parsed as VC.
+          ContentAccessor unwrapped = innerProcessor != null
+              ? innerProcessor.unwrap(jwtContent)
+              : processorsByFormat.get(CredentialFormat.VC2_DANUBETECH).unwrap(jwtContent);
             VerifiableCredential vc = VerifiableCredential.fromJson(unwrapped.getContentAsString());
             vc.setDocumentLoader(docLoader);
             return vc;

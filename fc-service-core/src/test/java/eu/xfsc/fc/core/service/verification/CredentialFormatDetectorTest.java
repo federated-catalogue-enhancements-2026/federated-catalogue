@@ -17,9 +17,6 @@ import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import java.util.List;
 import java.util.Map;
 
-import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
-import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
-
 import net.minidev.json.JSONObject;
 
 import static org.mockito.Mockito.mock;
@@ -35,8 +32,8 @@ class CredentialFormatDetectorTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final CredentialFormatDetector detector = new CredentialFormatDetector(OBJECT_MAPPER, List.of(
-        new LoireMatcher(new TrustFrameworkRegistry(List.of()), mock(TrustFrameworkService.class)),
-              new DanubeTechFormatMatcher()
+        new LoireCredentialProcessor(mock(LoireJwtParser.class), mock(LoirePolicyEnforcer.class)),
+        new Vc2DanubeTechCredentialProcessor(mock(Vc2Processor.class))
     ));
     private static JWSSigner signer;
 
