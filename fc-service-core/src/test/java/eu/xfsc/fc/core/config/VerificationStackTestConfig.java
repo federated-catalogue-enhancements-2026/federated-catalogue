@@ -21,7 +21,6 @@ import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaValidationServiceImpl;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
-import eu.xfsc.fc.core.service.verification.Vc2Processor;
 import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.service.verification.claims.JenaAllTriplesExtractor;
@@ -72,7 +71,6 @@ import org.springframework.context.annotation.Import;
     TrustFrameworkService.class,
     ValidatorCacheJpaDao.class,
     Vc2DanubeTechCredentialProcessor.class,
-    Vc2Processor.class,
     VerificationServiceImpl.class
 })
 public class VerificationStackTestConfig {

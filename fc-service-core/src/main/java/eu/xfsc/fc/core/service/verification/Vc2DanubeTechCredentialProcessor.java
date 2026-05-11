@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class Vc2DanubeTechCredentialProcessor implements CredentialFormatProcessor {
 
-  private final Vc2Processor vc2Processor;
+  private final JwtContentPreprocessor jwtPreprocessor;
 
   @Override
   public CredentialFormat getFormat() {
@@ -77,6 +77,6 @@ public class Vc2DanubeTechCredentialProcessor implements CredentialFormatProcess
    */
   @Override
   public ContentAccessor unwrap(ContentAccessor payload) {
-    return vc2Processor.preProcess(payload);
+    return jwtPreprocessor.unwrap(payload);
   }
 }

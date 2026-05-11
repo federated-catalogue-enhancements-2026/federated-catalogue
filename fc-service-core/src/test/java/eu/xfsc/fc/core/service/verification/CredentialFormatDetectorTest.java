@@ -33,7 +33,7 @@ class CredentialFormatDetectorTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final CredentialFormatDetector detector = new CredentialFormatDetector(OBJECT_MAPPER, List.of(
         new LoireCredentialProcessor(mock(LoireJwtParser.class), mock(LoirePolicyEnforcer.class)),
-        new Vc2DanubeTechCredentialProcessor(mock(Vc2Processor.class))
+        new Vc2DanubeTechCredentialProcessor(mock(JwtContentPreprocessor.class))
     ));
     private static JWSSigner signer;
 

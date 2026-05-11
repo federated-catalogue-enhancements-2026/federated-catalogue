@@ -105,7 +105,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     @Qualifier("contextCacheFileStore")
     private final FileStore fileStore;
     private final DocumentLoader documentLoader;
-    private final Vc2Processor vc2Processor;
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final CredentialFormatDetector formatDetector;
   private final List<CredentialFormatProcessor> formatProcessors;
@@ -476,11 +475,12 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (checkAbsence(credential, "issuer")) {
             sb.append(" - VerifiableCredential[").append(idx).append("] must contain 'issuer' property").append(sep);
         }
-        sb.append(getVersionProcessor(credential).validateDates(credential, idx));
+      requireVc2Context(credential);
+      sb.append(Vc2DateValidation.validate(credential, idx));
         return sb.toString();
     }
 
-    private VersionedCredentialProcessor getVersionProcessor(VerifiableCredential credential) {
+  private static void requireVc2Context(VerifiableCredential credential) {
         Object ctx = credential.getJsonObject().get(RDF_CONTEXT_KEY);
         boolean isVc2 = (ctx instanceof java.util.List<?>)
                 ? ((java.util.List<?>) ctx).contains(VC_20_CONTEXT)
@@ -488,7 +488,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         if (!isVc2) {
             throw new ClientException("Credential does not contain recognized VC 2.0 context");
         }
-        return vc2Processor;
     }
 
     private boolean checkAbsence(JsonLDObject container, String... keys) {
