@@ -12,6 +12,7 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.RDF_CON
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VERIFIABLE_CREDENTIAL_KEY;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VP_TYPE;
+import static eu.xfsc.fc.core.pojo.TrustFrameworkConstants.GAIA_X_FRAMEWORK_ID;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
@@ -107,9 +108,6 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
   @Value("${federated-catalogue.verification.require-vp:false}")
     private boolean requireVP;
-    @Value("${federated-catalogue.verification.trust-framework.gaiax.enabled:false}")
-    private boolean gaiaxTrustFrameworkEnabledEnv;
-
     private final TrustFrameworkRepository trustFrameworkRepository;
     private final SchemaModuleConfigService schemaModuleConfigService;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
@@ -287,14 +285,13 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
   /**
-   * Checks if the Gaia-X trust framework is enabled.
-   * Precedence: DB record (when present) overrides env var.
-   * When DB record is missing, falls back to the env var / property value.
+   * Checks if the Gaia-X trust framework is enabled via its DB record.
+   * The enabled state is seeded from the environment on startup by {@code TrustFrameworkAdminService}.
    */
   private boolean isGaiaxTrustFrameworkEnabled() {
-    return trustFrameworkRepository.findById("gaia-x")
+    return trustFrameworkRepository.findById(GAIA_X_FRAMEWORK_ID)
         .map(TrustFramework::isEnabled)
-        .orElse(gaiaxTrustFrameworkEnabledEnv);
+        .orElse(false);
   }
 
     /**

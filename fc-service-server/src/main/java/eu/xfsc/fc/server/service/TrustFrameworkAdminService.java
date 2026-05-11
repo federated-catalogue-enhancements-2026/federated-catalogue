@@ -17,6 +17,7 @@ import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkMapper;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
+import eu.xfsc.fc.core.pojo.TrustFrameworkConstants;
 import eu.xfsc.fc.server.config.AdminDashboardConfig;
 import eu.xfsc.fc.server.generated.controller.TrustFrameworkAdminApiDelegate;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
   @PostConstruct
   private void seedGaiaxEnabledFromEnv() {
     if (Boolean.TRUE.equals(gaiaxEnabledEnvVar)) {
-      trustFrameworkRepository.findById("gaia-x").ifPresent(entity -> {
+      trustFrameworkRepository.findById(TrustFrameworkConstants.GAIA_X_FRAMEWORK_ID).ifPresent(entity -> {
         entity.setEnabled(true);
         trustFrameworkRepository.save(entity);
       });
