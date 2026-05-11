@@ -17,7 +17,7 @@ import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkMapper;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
 import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
-import eu.xfsc.fc.core.pojo.TrustFrameworkConstants;
+import eu.xfsc.fc.core.service.verification.LoireMatcher;
 import eu.xfsc.fc.server.config.AdminDashboardConfig;
 import eu.xfsc.fc.server.generated.controller.TrustFrameworkAdminApiDelegate;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +35,7 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
 
   private final TrustFrameworkRepository trustFrameworkRepository;
   private final AdminDashboardConfig adminDashboardConfig;
+  private final LoireMatcher loireMatcher;
 
   @Value("${federated-catalogue.verification.trust-framework.gaiax.enabled:#{null}}")
   private Boolean gaiaxEnabledEnvVar;
@@ -48,11 +49,13 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
   @PostConstruct
   private void seedGaiaxEnabledFromEnv() {
     if (Boolean.TRUE.equals(gaiaxEnabledEnvVar)) {
-      trustFrameworkRepository.findById(TrustFrameworkConstants.GAIA_X_FRAMEWORK_ID).ifPresent(entity -> {
-        entity.setEnabled(true);
-        trustFrameworkRepository.save(entity);
-      });
-      log.info("seedGaiaxEnabledFromEnv; enabled gaia-x trust framework from environment variable");
+      loireMatcher.frameworkFamily().ifPresent(family ->
+          trustFrameworkRepository.findById(family).ifPresent(entity -> {
+            entity.setEnabled(true);
+            trustFrameworkRepository.save(entity);
+            log.info("seedGaiaxEnabledFromEnv; enabled trust framework '{}' from environment variable", family);
+          })
+      );
     }
   }
 

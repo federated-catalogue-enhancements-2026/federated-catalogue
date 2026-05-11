@@ -12,7 +12,6 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.RDF_CON
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VERIFIABLE_CREDENTIAL_KEY;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VP_TYPE;
-import static eu.xfsc.fc.core.pojo.TrustFrameworkConstants.GAIA_X_FRAMEWORK_ID;
 
 import com.apicatalog.jsonld.loader.DocumentLoader;
 import com.apicatalog.jsonld.loader.SchemeRouter;
@@ -122,6 +121,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     private final JwtSignatureVerifier jwtSignatureVerifier;
     private final CredentialFormatDetector formatDetector;
     private final LoireJwtParser loireJwtParser;
+  private final LoireMatcher loireMatcher;
     private final ClaimExtractionService claimExtractionService;
 
     @Value("${federated-catalogue.verification.trust-framework.gaiax.trust-anchor-url:}")
@@ -202,7 +202,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
 
     TypedCredentials typedCredentials = parseCredentials(ld, requireVP, verifySemantics, ctx.format());
 
-        if (verifySemantics && isGaiaxTrustFrameworkEnabled() && !typedCredentials.hasClasses()) {
+    if (verifySemantics && isLoireFrameworkEnabled() && !typedCredentials.hasClasses()) {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
@@ -267,7 +267,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             jwtValidator = jwtSignatureVerifier.verify(body);
         }
 
-        if (format == CredentialFormat.GAIAX_V2_LOIRE && isGaiaxTrustFrameworkEnabled()) {
+      if (format == CredentialFormat.GAIAX_V2_LOIRE && isLoireFrameworkEnabled()) {
             enforceLoirePolicies(body, jwtValidator);
         }
 
@@ -285,11 +285,12 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
     }
 
   /**
-   * Checks if the Gaia-X trust framework is enabled via its DB record.
-   * The enabled state is seeded from the environment on startup by {@code TrustFrameworkAdminService}.
+   * Checks if the trust framework governing Loire credentials is enabled.
+   * The framework family is derived from the bundle registry at runtime via {@link LoireMatcher}.
    */
-  private boolean isGaiaxTrustFrameworkEnabled() {
-    return trustFrameworkRepository.findById(GAIA_X_FRAMEWORK_ID)
+  private boolean isLoireFrameworkEnabled() {
+    return loireMatcher.frameworkFamily()
+        .flatMap(trustFrameworkRepository::findById)
         .map(TrustFramework::isEnabled)
         .orElse(false);
   }
@@ -986,7 +987,8 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      */
     @SuppressWarnings("unchecked")
     private Instant hasPEMTrustAnchorAndIsNotExpired(String uri) throws VerificationException {
-        log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, isGaiaxTrustFrameworkEnabled(): {}", uri, isGaiaxTrustFrameworkEnabled());
+      log.debug("hasPEMTrustAnchorAndIsNotExpired.enter; got uri: {}, isLoireFrameworkEnabled(): {}", uri,
+          isLoireFrameworkEnabled());
         String pem = rest.getForObject(uri, String.class);
         InputStream certStream = new ByteArrayInputStream(Objects.requireNonNull(pem).getBytes(StandardCharsets.UTF_8));
         List<X509Certificate> certs;
@@ -1013,7 +1015,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         }
 
         // Only call Gaia-X Trust Anchor Registry when Gaia-X trust framework is enabled
-        if (isGaiaxTrustFrameworkEnabled()) {
+      if (isLoireFrameworkEnabled()) {
             if (trustAnchorAddr == null || trustAnchorAddr.isBlank()) {
                 log.warn("hasPEMTrustAnchorAndIsNotExpired; Gaia-X trust framework enabled but trust-anchor-url not configured");
                 throw new VerificationException("Signatures error; Gaia-X trust framework enabled but trust-anchor-url not configured");
