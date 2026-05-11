@@ -7,8 +7,11 @@ import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockJwtAuth
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.xfsc.fc.api.generated.model.Asset;
 import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
+import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.core.exception.NotFoundException;
+import eu.xfsc.fc.core.pojo.AssetMetadata;
+import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -31,6 +34,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_DELETE_WITH_PREFIX;
@@ -443,6 +447,39 @@ public class AssetUploadControllerTest {
             assertEquals(0, second.getTriplesRejected());
         } finally {
             deleteAssetQuietly(createdAsset.getAssetHash());
+        }
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void enrichNonRdfAsset_byNonOwner_returnsForbidden() throws Exception {
+        // Seed an asset owned by a different participant (bypassing the controller so we can set the issuer).
+        String otherParticipant = "http://example.org/other-issuer";
+        byte[] content = "other participant's document".getBytes(StandardCharsets.UTF_8);
+        String subjectId = "urn:uuid:11111111-1111-1111-1111-111111111111";
+        AssetMetadata seed = new AssetMetadata(HashUtils.calculateSha256AsHex(content), subjectId,
+            AssetStatus.ACTIVE, otherParticipant, null, Instant.now(), Instant.now(),
+            new ContentAccessorBinary(content));
+        seed.setContentType("text/plain");
+        seed.setFileSize((long) content.length);
+        AssetMetadata stored = assetStorePublisher.storeUnverified(seed, "other.txt");
+
+        try {
+            String rdfPayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:title "Attempted cross-participant enrichment" .
+                """.formatted(stored.getId());
+            MockMultipartFile rdfFile = new MockMultipartFile("file", "meta.ttl", "text/turtle",
+                rdfPayload.getBytes(StandardCharsets.UTF_8));
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/assets")
+                    .file(rdfFile)
+                    .with(csrf())
+                    .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+        } finally {
+            deleteAssetQuietly(stored.getAssetHash());
         }
     }
 

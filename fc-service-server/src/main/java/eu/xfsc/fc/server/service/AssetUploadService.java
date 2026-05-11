@@ -182,6 +182,9 @@ public class AssetUploadService {
         String subjectId = record.getId();
         log.debug("enrichAsset.enter; assetId={}, contentType={}", subjectId, contentType);
 
+        // Only the asset's issuer (or a catalogue admin) may enrich its metadata.
+        checkParticipantAccess(record.getIssuer());
+
         // Fail-fast: no point parsing the payload if the graph backend can't accept it.
         if (graphStore.getBackendType() == GraphBackendType.NONE) {
             throw new GraphStoreDisabledException(
