@@ -131,7 +131,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
       throw new VerificationException("Semantic Error: no proper CredentialSubject found");
     }
 
-    ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
+    ResolvedRole resolvedRole = resolvePrimaryRole(typedCredentials, verifySemantics);
     FilteredClaims filtered = extractAndValidateClaims(ctx.payload());
 
     if (verifySchema) {
@@ -146,7 +146,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
         verifySemantics, verifyVCSignatures, verifyVPSignatures);
 
     CredentialVerificationResult result =
-        assembleResult(baseClass, typedCredentials, filtered.claims(), validators);
+        assembleResult(resolvedRole, typedCredentials, filtered.claims(), validators);
     if (filtered.hasWarning()) {
       result.setWarnings(List.of(filtered.warning()));
     }
@@ -228,22 +228,22 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
     }
   }
 
-  /**
-   * Phase 2: Resolve the dominant role from typed credentials and validate type constraints.
-   */
-  private ResolvedRole resolvePrimaryRole(TypedCredentials typedCredentials, boolean verifySemantics) {
-    Collection<ResolvedRole> roles = typedCredentials.getBaseClasses();
-    if (roles.isEmpty()) {
-      return ResolvedRole.UNKNOWN;
-    }
-    if (roles.size() > 1 && verifySemantics) {
-      long distinctRoles = roles.stream().map(ResolvedRole::role).distinct().count();
-      if (distinctRoles > 1) {
-        throw new VerificationException("Semantic error: credential has several types: " + roles);
+    /**
+     * Phase 2: Resolve the dominant role from typed credentials and validate type constraints.
+     */
+    private ResolvedRole resolvePrimaryRole(TypedCredentials typedCredentials, boolean verifySemantics) {
+      Collection<ResolvedRole> roles = typedCredentials.getResolvedRoles();
+      if (roles.isEmpty()) {
+        return ResolvedRole.UNKNOWN;
       }
+      if (roles.size() > 1 && verifySemantics) {
+        long distinctRoles = roles.stream().map(ResolvedRole::role).distinct().count();
+        if (distinctRoles > 1) {
+          throw new VerificationException("Semantic error: credential has several types: " + roles);
+        }
+      }
+      return roles.iterator().next();
     }
-    return roles.iterator().next();
-  }
 
   /**
    * Phase 3: Extract claims and filter protected namespaces.

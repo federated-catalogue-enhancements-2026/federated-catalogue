@@ -50,9 +50,10 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
         continue;
       }
       String id = family.trim();
-      if (trustFrameworkService.setEnabled(id, true)) {
+      try {
+        trustFrameworkService.setEnabled(id, true);
         log.info("seedEnabledFrameworksFromConfig; enabled trust framework '{}' from config", id);
-      } else {
+      } catch (NotFoundException e) {
         log.warn("seedEnabledFrameworksFromConfig; trust framework '{}' not registered — override ignored", id);
       }
     }
@@ -68,9 +69,7 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
 
   @Override
   public ResponseEntity<Void> setTrustFrameworkEnabled(String id, Boolean enabled) {
-    if (!trustFrameworkService.setEnabled(id, enabled)) {
-      throw new NotFoundException("Trust framework not found: " + id);
-    }
+    trustFrameworkService.setEnabled(id, enabled);
     return ResponseEntity.ok().build();
   }
 
@@ -78,7 +77,8 @@ public class TrustFrameworkAdminService implements TrustFrameworkAdminApiDelegat
   public ResponseEntity<Void> updateTrustFrameworkConfig(String id,
       TrustFrameworkConfigUpdate config) {
     int timeoutSeconds = config.getTimeoutSeconds() != null ? config.getTimeoutSeconds() : DEFAULT_TIMEOUT_SECONDS;
-    if (!trustFrameworkService.updateConfig(id, config.getServiceUrl(), config.getApiVersion(), timeoutSeconds)) {
+    if (trustFrameworkService.updateConfig(id, config.getServiceUrl(), config.getApiVersion(), timeoutSeconds)
+        .isEmpty()) {
       throw new NotFoundException("Trust framework not found: " + id);
     }
     return ResponseEntity.ok().build();

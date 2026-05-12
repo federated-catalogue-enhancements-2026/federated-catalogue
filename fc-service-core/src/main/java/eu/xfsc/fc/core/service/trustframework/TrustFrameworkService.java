@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.trustframework;
 import eu.xfsc.fc.core.dao.trustframework.TrustFramework;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkMapper;
 import eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository;
+import eu.xfsc.fc.core.exception.NotFoundException;
 import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
 
 import java.util.List;
@@ -44,15 +45,14 @@ public class TrustFrameworkService {
 
   /**
    * Sets the enabled flag for the trust framework identified by the given family ID.
-   * Returns true when a record was updated, false when no record exists for the family.
+   * Throws when no record exists for the family.
    */
   @Transactional
-  public boolean setEnabled(String family, boolean enabled) {
-    return trustFrameworkRepository.findById(family).map(entity -> {
-      entity.setEnabled(enabled);
-      trustFrameworkRepository.save(entity);
-      return true;
-    }).orElse(false);
+  public void setEnabled(String family, boolean enabled) {
+    TrustFramework entity = trustFrameworkRepository.findById(family)
+        .orElseThrow(() -> new NotFoundException("Trust framework not found: " + family));
+    entity.setEnabled(enabled);
+    trustFrameworkRepository.save(entity);
   }
 
   /**
@@ -75,17 +75,17 @@ public class TrustFrameworkService {
 
   /**
    * Replaces the service URL, API version, and timeout for the trust framework identified
-   * by the given family ID. Returns true when a record was updated, false when no record
-   * exists for the family.
+   * by the given family ID. Returns the updated config, or empty when no record exists.
    */
   @Transactional
-  public boolean updateConfig(String family, String serviceUrl, String apiVersion, int timeoutSeconds) {
+  public Optional<TrustFrameworkConfig> updateConfig(String family, String serviceUrl, String apiVersion,
+                                                     int timeoutSeconds) {
     return trustFrameworkRepository.findById(family).map(entity -> {
       entity.setServiceUrl(serviceUrl);
       entity.setApiVersion(apiVersion);
       entity.setTimeoutSeconds(timeoutSeconds);
       trustFrameworkRepository.save(entity);
-      return true;
-    }).orElse(false);
+      return TrustFrameworkMapper.toConfig(entity);
+    });
   }
 }
