@@ -121,11 +121,10 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
   private ComplianceCheckOutcome parseComplianceJwt(String jwt) {
     try {
       JsonNode payload = readJwtPayload(jwt);
-      String signerDid = payload.path("iss").asText(null);
       Instant validUntil = payload.has("exp")
           ? Instant.ofEpochSecond(payload.get("exp").asLong())
           : null;
-      return new IssuedAttestation(signerDid, validUntil, jwt);
+      return new IssuedAttestation(jwt, validUntil);
     } catch (Exception e) {
       log.warn("Failed to parse compliance credential JWT", e);
       return new UnverifiableAttestation(

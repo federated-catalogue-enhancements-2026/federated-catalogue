@@ -42,8 +42,6 @@ class GxdchComplianceClientTest {
       "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0"
       + ".eyJpc3MiOiJkaWQ6d2ViOmNvbXBsaWFuY2UuZXhhbXBsZSIsImV4cCI6MTc2NzIyMzk5OX0.";
 
-  private static final String EXPECTED_SIGNER_DID = "did:web:compliance.example";
-
   private MockWebServer server;
   private GxdchComplianceClient client;
   private TrustFrameworkProfileConfig config;
@@ -90,7 +88,6 @@ class GxdchComplianceClientTest {
     assertInstanceOf(IssuedAttestation.class, outcome);
     assertTrue(outcome.compliant());
     var attestation = (IssuedAttestation) outcome;
-    assertEquals(EXPECTED_SIGNER_DID, attestation.attestationSignerDid());
     assertEquals(CANNED_CC_JWT, attestation.attestationCredential());
 
     RecordedRequest req = server.takeRequest();

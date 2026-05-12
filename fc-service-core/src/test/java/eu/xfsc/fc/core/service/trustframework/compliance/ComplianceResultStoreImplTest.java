@@ -48,11 +48,7 @@ class ComplianceResultStoreImplTest {
 
   @Test
   void store_issuedAttestation_delegatesWithConformsTrueAndTrustFrameworkType() {
-    var outcome = new IssuedAttestation(
-        "did:web:issuer.example",
-        Instant.parse("2025-12-31T00:00:00Z"),
-        "{\"vc\":\"jwt\"}"
-    );
+    var outcome = new IssuedAttestation("{\"vc\":\"jwt\"}", Instant.parse("2025-12-31T00:00:00Z"));
     when(validationResultStore.store(any())).thenReturn(42L);
 
     Long id = subject.store("asset:1", "gaia-x-2511", "gaia-x", outcome);
@@ -67,7 +63,7 @@ class ComplianceResultStoreImplTest {
     assertTrue(record.conforms());
     assertNotNull(record.validatedAt());
     assertNotNull(record.report());
-    assertTrue(record.report().contains("did:web:issuer.example"));
+    assertTrue(record.report().contains("attestationCredential"));
   }
 
   @Test

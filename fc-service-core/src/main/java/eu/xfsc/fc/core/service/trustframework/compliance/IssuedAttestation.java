@@ -6,14 +6,13 @@ import java.time.Instant;
  * Outcome indicating that the trust framework issued a verifiable attestation credential
  * for the asset under check.
  *
- * @param attestationSignerDid  DID of the entity that signed the attestation
- * @param credentialValidUntil  expiry timestamp of the issued credential
- * @param attestationCredential raw attestation credential string, or {@code null} if not retained
+ * @param attestationCredential raw attestation credential string (JWT), or {@code null} if not
+ *                              retained; the JWT's {@code iss} claim identifies the issuing service
+ * @param credentialValidUntil  expiry timestamp of the issued credential; {@code null} if the
+ *                              credential carries no {@code exp} claim
  */
 public record IssuedAttestation(
-    String attestationSignerDid,
-    Instant credentialValidUntil,
-    String attestationCredential
+    String attestationCredential, Instant credentialValidUntil
 ) implements ComplianceCheckOutcome {
 
   @Override

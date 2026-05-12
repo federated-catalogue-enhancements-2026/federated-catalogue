@@ -97,7 +97,7 @@ class ComplianceCheckOrchestratorTest {
 
   @Test
   void check_familyEnabled_delegatesToClientAndReturnsOutcome() {
-    var expected = new IssuedAttestation("did:web:compliance.example", null, "some-jwt");
+    var expected = new IssuedAttestation("some-jwt", null);
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
     when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
     when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
