@@ -1,7 +1,6 @@
 package eu.xfsc.fc.core.service.trustframework;
 
 import eu.xfsc.fc.core.pojo.ContentAccessor;
-import eu.xfsc.fc.core.service.trustframework.compliance.KindOfTrustedList;
 import eu.xfsc.fc.core.service.trustframework.compliance.TrustFrameworkProfileConfig;
 
 import java.io.StringReader;
@@ -132,10 +131,8 @@ public class TrustFrameworkRegistry {
    * Derives a {@link TrustFrameworkProfileConfig} from the bundle registered under the given
    * profile ID. Returns empty when no bundle is registered for that ID.
    *
-   * <p>Fields that are not present in the bundle configuration fall back to safe defaults:
-   * {@code apiVersion} defaults to {@code "1.0"}, {@code timeoutSeconds} to {@code 30},
-   * {@code trustedListKind} to {@link KindOfTrustedList#OTHER}, and
-   * {@code trustedListEndpoint} to {@code null}.
+   * <p>Fields absent from the bundle configuration fall back to safe defaults:
+   * {@code apiVersion} defaults to {@code "1.0"}, {@code timeoutSeconds} to {@code 30}.
    *
    * @param profileId the ID of the profile to look up
    * @return an Optional containing the derived config, or empty if no bundle is registered
@@ -150,30 +147,15 @@ public class TrustFrameworkRegistry {
       String apiVersion = rawApiVersion != null ? rawApiVersion : "1.0";
       String rawTimeout = props.get("timeout_seconds");
       int timeoutSeconds = rawTimeout != null ? Integer.parseInt(rawTimeout) : 30;
-      KindOfTrustedList trustedListKind = parseKindOfTrustedList(props.get("trusted_list_kind"));
-      String trustedListEndpoint = props.get("trusted_list_endpoint");
       return new TrustFrameworkProfileConfig(
           cfg.id(),
           cfg.family(),
           clientType,
           serviceUrl,
           apiVersion,
-          timeoutSeconds,
-          trustedListKind,
-          trustedListEndpoint
+          timeoutSeconds
       );
     });
-  }
-
-  private static KindOfTrustedList parseKindOfTrustedList(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return KindOfTrustedList.OTHER;
-    }
-    try {
-      return KindOfTrustedList.valueOf(raw.toUpperCase().replace('-', '_'));
-    } catch (IllegalArgumentException e) {
-      return KindOfTrustedList.OTHER;
-    }
   }
 
   /**

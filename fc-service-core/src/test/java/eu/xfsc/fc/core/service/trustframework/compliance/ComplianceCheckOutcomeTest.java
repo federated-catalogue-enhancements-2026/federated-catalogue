@@ -50,6 +50,7 @@ class ComplianceCheckOutcomeTest {
   void unverifiableAttestation_isNotCompliant_withCategory() {
     // Arrange
     var outcome = new UnverifiableAttestation(
+        FailureCategory.UNVERIFIABLE_ATTESTATION,
         "{\"raw\": \"jwt-here\"}",
         "Signature verification failed"
     );
