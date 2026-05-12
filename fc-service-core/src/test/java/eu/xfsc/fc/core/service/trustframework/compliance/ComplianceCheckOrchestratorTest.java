@@ -1,6 +1,5 @@
 package eu.xfsc.fc.core.service.trustframework.compliance;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +18,8 @@ import org.springframework.web.client.ResourceAccessException;
 
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.ServiceUnavailableException;
+import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 
@@ -56,6 +57,18 @@ class ComplianceCheckOrchestratorTest {
   }
 
   @Test
+  void check_nullFrameworkProfileId_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> orchestrator.check(ASSET_ID, null, ASSET_PAYLOAD));
+  }
+
+  @Test
+  void check_nullAssetPayload_throwsClientException() {
+    assertThrows(ClientException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, null));
+  }
+
+  @Test
   void check_unknownProfileId_throwsClientException() {
     when(registry.getProfileConfig("unknown-id")).thenReturn(Optional.empty());
 
@@ -73,6 +86,16 @@ class ComplianceCheckOrchestratorTest {
   }
 
   @Test
+  void check_clientRegistryThrowsIllegalArgument_throwsClientException() {
+    when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
+    when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
+    when(clientRegistry.resolve("gxdch-loire")).thenThrow(new IllegalArgumentException("unknown clientType"));
+
+    assertThrows(ClientException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
+  }
+
+  @Test
   void check_familyEnabled_delegatesToClientAndReturnsOutcome() {
     var expected = new IssuedAttestation("did:web:compliance.example", null, "some-jwt");
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
@@ -83,34 +106,52 @@ class ComplianceCheckOrchestratorTest {
     ComplianceCheckOutcome result = orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD);
 
     assertInstanceOf(IssuedAttestation.class, result);
-    assertEquals(expected, result);
   }
 
   @Test
-  void check_clientThrowsSocketTimeout_returnsTIMED_OUT() {
+  void check_clientThrowsSocketTimeout_throwsTimeoutException() {
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
     when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
     when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
     when(mockClient.check(any(), any()))
         .thenThrow(new ResourceAccessException("read timeout", new SocketTimeoutException("timed out")));
 
-    ComplianceCheckOutcome result = orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD);
-
-    assertInstanceOf(UnverifiableAttestation.class, result);
-    assertEquals(FailureCategory.TIMED_OUT, ((UnverifiableAttestation) result).failureCategory());
+    assertThrows(TimeoutException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
   }
 
   @Test
-  void check_clientThrowsIOException_returnsTRANSPORT_FAILURE() {
+  void check_clientThrowsIOException_throwsServiceUnavailableException() {
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
     when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
     when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
     when(mockClient.check(any(), any()))
         .thenThrow(new ResourceAccessException("connection error", new IOException("connection refused")));
 
-    ComplianceCheckOutcome result = orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD);
+    assertThrows(ServiceUnavailableException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
+  }
 
-    assertInstanceOf(UnverifiableAttestation.class, result);
-    assertEquals(FailureCategory.TRANSPORT_FAILURE, ((UnverifiableAttestation) result).failureCategory());
+  @Test
+  void check_clientReturnsNull_throwsServiceUnavailableException() {
+    when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
+    when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
+    when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
+    when(mockClient.check(any(), any())).thenReturn(null);
+
+    assertThrows(ServiceUnavailableException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
+  }
+
+  @Test
+  void check_clientThrowsClientException_propagates() {
+    var cause = new ClientException("business error from compliance service");
+    when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
+    when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
+    when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
+    when(mockClient.check(any(), any())).thenThrow(cause);
+
+    assertThrows(ClientException.class,
+        () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
   }
 }

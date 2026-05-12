@@ -31,22 +31,6 @@ class ComplianceCheckOutcomeTest {
   }
 
   @Test
-  void trustListMembership_isCompliant() {
-    // Arrange
-    var outcome = new TrustListMembership(
-        "https://trust-list.example/list.json",
-        "did:web:trust-list.example",
-        Instant.parse("2025-06-01T00:00:00Z"),
-        "did:web:member.example"
-    );
-
-    // Act + Assert
-    assertTrue(outcome.compliant());
-    assertEquals("https://trust-list.example/list.json", outcome.trustListUri());
-    assertEquals("did:web:member.example", outcome.memberEntry());
-  }
-
-  @Test
   void unverifiableAttestation_isNotCompliant_withCategory() {
     // Arrange
     var outcome = new UnverifiableAttestation(
@@ -75,7 +59,6 @@ class ComplianceCheckOutcomeTest {
     // Act
     String label = switch (outcome) {
       case IssuedAttestation ia -> "issued";
-      case TrustListMembership tlm -> "trust-list";
       case UnverifiableAttestation ua -> "unverifiable";
     };
 

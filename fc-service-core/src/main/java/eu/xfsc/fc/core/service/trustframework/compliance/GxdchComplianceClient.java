@@ -57,7 +57,8 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
    * {@link UnverifiableAttestation} rather than returning null-field attestation fields.
    * On HTTP 400, the asset is non-compliant and an {@link UnverifiableAttestation} is returned.
    * HTTP 5xx and I/O exceptions bubble to the caller (orchestrator maps them to
-   * {@link FailureCategory#TRANSPORT_FAILURE} / {@link FailureCategory#TIMED_OUT}).
+   * {@link eu.xfsc.fc.core.exception.ServiceUnavailableException} /
+   * {@link eu.xfsc.fc.core.exception.TimeoutException}).
    *
    * @param credential the VP JWT to submit
    * @param config     profile configuration providing the Loire service URL and timeout

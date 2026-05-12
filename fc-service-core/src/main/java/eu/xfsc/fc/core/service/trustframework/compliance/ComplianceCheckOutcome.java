@@ -8,7 +8,7 @@ package eu.xfsc.fc.core.service.trustframework.compliance;
  * Callers should use an exhaustive switch expression to dispatch on the concrete type.
  */
 public sealed interface ComplianceCheckOutcome
-    permits IssuedAttestation, TrustListMembership, UnverifiableAttestation {
+    permits IssuedAttestation, UnverifiableAttestation {
 
   /**
    * Returns {@code true} when the check produced a positive compliance result.

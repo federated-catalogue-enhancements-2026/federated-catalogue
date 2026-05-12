@@ -2,33 +2,44 @@ package eu.xfsc.fc.core.service.trustframework.compliance;
 
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
+import eu.xfsc.fc.core.exception.ServiceUnavailableException;
+import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 
 import java.net.SocketTimeoutException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Orchestrates a single compliance check: resolves the profile, verifies the family is enabled,
  * dispatches to the appropriate {@link TrustFrameworkClient}, and maps transport failures to
- * {@link UnverifiableAttestation} outcomes.
+ * HTTP-appropriate exceptions.
  *
  * <p>Unknown profile IDs throw {@link ClientException}. Disabled families throw
- * {@link ConflictException}. Network timeouts map to {@link FailureCategory#TIMED_OUT};
- * other I/O failures map to {@link FailureCategory#TRANSPORT_FAILURE}.
+ * {@link ConflictException}. Network timeouts throw {@link TimeoutException} (→ 504);
+ * other I/O failures throw {@link ServiceUnavailableException} (→ 503).
+ * {@link UnverifiableAttestation} is a first-class outcome produced by the client when the
+ * service returned a credential that could not be locally verified — it is not an error.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ComplianceCheckOrchestrator {
+
+  // MDC keys written for the duration of each compliance check so that all log lines
+  // from this thread — including nested calls into RestTemplate and client implementations —
+  // automatically carry asset and profile context without explicit parameter threading.
+  // With a structured/JSON log appender (e.g. Logstash encoder) these become first-class
+  // fields in every log event. To add more context: MDC.put(key, value) + MDC.remove(key)
+  // in a finally block; no log-pattern change needed for structured output.
+  private static final String MDC_ASSET_ID = "assetId";
+  private static final String MDC_PROFILE_ID = "frameworkProfileId";
 
   private final TrustFrameworkRegistry registry;
   private final TrustFrameworkService tfService;
@@ -38,13 +49,34 @@ public class ComplianceCheckOrchestrator {
    * Runs a compliance check for the given asset against the named trust-framework profile.
    *
    * @param assetId            identifier of the asset being checked
-   * @param frameworkProfileId profile to use for the check
-   * @param assetPayload       raw credential payload forwarded to the compliance service
+   * @param frameworkProfileId profile to use for the check; must not be {@code null}
+   * @param assetPayload       raw credential payload forwarded to the compliance service; must not be {@code null}
    * @return the compliance outcome; never {@code null}
-   * @throws ClientException   when {@code frameworkProfileId} is not registered
-   * @throws ConflictException when the profile's family is disabled
+   * @throws ClientException              when inputs are null, the profile is not registered,
+   *                                      or the resolved client type is unknown
+   * @throws ConflictException            when the profile's family is disabled
+   * @throws TimeoutException             when the compliance service did not respond in time
+   * @throws ServiceUnavailableException  when the compliance service could not be reached
    */
   public ComplianceCheckOutcome check(String assetId, String frameworkProfileId, String assetPayload) {
+    if (frameworkProfileId == null) {
+      throw new ClientException("frameworkProfileId must not be null");
+    }
+    if (assetPayload == null) {
+      throw new ClientException("assetPayload must not be null");
+    }
+
+    MDC.put(MDC_ASSET_ID, assetId);
+    MDC.put(MDC_PROFILE_ID, frameworkProfileId);
+    try {
+      return doCheck(frameworkProfileId, assetPayload);
+    } finally {
+      MDC.remove(MDC_ASSET_ID);
+      MDC.remove(MDC_PROFILE_ID);
+    }
+  }
+
+  private ComplianceCheckOutcome doCheck(String frameworkProfileId, String assetPayload) {
     TrustFrameworkProfileConfig config = registry.getProfileConfig(frameworkProfileId)
         .orElseThrow(() -> new ClientException("Unknown trust-framework profile: " + frameworkProfileId));
 
@@ -52,29 +84,32 @@ public class ComplianceCheckOrchestrator {
       throw new ConflictException("Trust-framework family is disabled: " + config.familyId());
     }
 
-    TrustFrameworkClient client = clientRegistry.resolve(config.clientType());
-    var credential = new ContentAccessorDirect(assetPayload);
-
-    CompletableFuture<ComplianceCheckOutcome> future = CompletableFuture.supplyAsync(
-        () -> client.check(credential, config));
+    TrustFrameworkClient client;
     try {
-      return future.get(config.timeoutSeconds(), TimeUnit.SECONDS);
-    } catch (java.util.concurrent.TimeoutException e) {
-      future.cancel(true);
-      return new UnverifiableAttestation(FailureCategory.TIMED_OUT, assetPayload, "Request timed out");
-    } catch (ExecutionException e) {
-      return mapExecutionException(e.getCause(), assetPayload);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return new UnverifiableAttestation(FailureCategory.TRANSPORT_FAILURE, assetPayload, e.getMessage());
+      client = clientRegistry.resolve(config.clientType());
+    } catch (IllegalArgumentException e) {
+      throw new ClientException("Unknown clientType: " + config.clientType(), e);
     }
-  }
 
-  private ComplianceCheckOutcome mapExecutionException(Throwable cause, String assetPayload) {
-    if (cause instanceof ResourceAccessException rae && rae.getCause() instanceof SocketTimeoutException) {
-      return new UnverifiableAttestation(FailureCategory.TIMED_OUT, assetPayload, cause.getMessage());
+    var credential = new ContentAccessorDirect(assetPayload);
+    ComplianceCheckOutcome result;
+    try {
+      result = client.check(credential, config);
+    } catch (ClientException e) {
+      throw e;
+    } catch (ResourceAccessException e) {
+      if (e.getCause() instanceof SocketTimeoutException) {
+        throw new TimeoutException("Compliance service timed out: " + e.getMessage());
+      }
+      log.error("Compliance service unreachable", e);
+      throw new ServiceUnavailableException("Compliance service unreachable: " + e.getMessage(), e);
+    } catch (RuntimeException e) {
+      log.error("Unexpected exception from compliance client", e);
+      throw new ServiceUnavailableException("Compliance client error: " + e.getMessage(), e);
     }
-    log.error("Compliance check transport failure", cause);
-    return new UnverifiableAttestation(FailureCategory.TRANSPORT_FAILURE, assetPayload, cause.getMessage());
+    if (result == null) {
+      throw new ServiceUnavailableException("Compliance client returned null for profile: " + frameworkProfileId);
+    }
+    return result;
   }
 }
