@@ -202,7 +202,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
             throw new VerificationException("Semantic Error: no proper CredentialSubject found");
         }
 
-    ResolvedRole baseClass = resolvePrimaryRole(typedCredentials, verifySemantics);
+    ResolvedRole resolvedRole = resolvePrimaryRole(typedCredentials, verifySemantics);
     FilteredClaims filtered = extractAndValidateClaims(ctx.payload());
 
         if (verifySchema) {
@@ -215,7 +215,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
         List<Validator> validators = collectValidators(ctx, ld, typedCredentials,
                 verifySemantics, verifyVCSignatures, verifyVPSignatures);
 
-        CredentialVerificationResult result = assembleResult(baseClass, typedCredentials, filtered.claims(), validators);
+    CredentialVerificationResult result = assembleResult(resolvedRole, typedCredentials, filtered.claims(), validators);
         if (filtered.hasWarning()) {
             result.setWarnings(List.of(filtered.warning()));
         }
@@ -313,7 +313,7 @@ public class CredentialVerificationStrategy implements VerificationStrategy {
      * Phase 2: Resolve the dominant role from typed credentials and validate type constraints.
      */
     private ResolvedRole resolvePrimaryRole(TypedCredentials typedCredentials, boolean verifySemantics) {
-      Collection<ResolvedRole> roles = typedCredentials.getBaseClasses();
+      Collection<ResolvedRole> roles = typedCredentials.getResolvedRoles();
       if (roles.isEmpty()) {
         return ResolvedRole.UNKNOWN;
       }

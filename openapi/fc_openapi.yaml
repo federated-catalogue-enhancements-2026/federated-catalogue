@@ -189,11 +189,11 @@ components:
           example: gaia-x-2511
         name:
           type: string
-          description: Display name of the credential holder. Populated for the Participant role only.
+          description: Display name of the credential holder, or the issuer DID if no holder is present.
         publicKey:
           type: string
           description: >-
-            DID URI of the first validator. Populated for the Participant role only.
+            DID URI of the first validator that signed the credential. Absent when no validators are present.
         claims:
           type: object
           additionalProperties: true
