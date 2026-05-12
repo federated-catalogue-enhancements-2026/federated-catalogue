@@ -213,6 +213,11 @@ public class AssetUploadService {
         graphStore.addClaims(filteredClaims.claims(), subjectId);
         log.debug("enrichAsset; added {} new triples", filteredClaims.claims().size());
 
+        // deleteClaims wipes every triple under this subject — including SF-03 link triples for an
+        // MR asset that's linked to a human-readable attachment. Restore them.
+        assetStorePublisher.findLink(subjectId).ifPresent(link ->
+            assetStorePublisher.writeAssetLinkTriples(subjectId, link.linkedIri()));
+
         // Persist the unfiltered RDF so a full graph rebuild can replay enrichment from source.
         assetStorePublisher.saveEnrichedContent(record, rawPayloadText);
         log.debug("enrichAsset; persisted enrichment content, asset updated");

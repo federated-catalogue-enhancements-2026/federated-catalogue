@@ -10,9 +10,13 @@ import eu.xfsc.fc.api.generated.model.AssetEnrichmentResponse;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.api.generated.model.Error;
 import eu.xfsc.fc.core.exception.NotFoundException;
+import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessorBinary;
+import eu.xfsc.fc.core.pojo.GraphQuery;
+import eu.xfsc.fc.core.pojo.PaginatedResults;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
+import eu.xfsc.fc.core.service.graphdb.GraphStore;
 import eu.xfsc.fc.core.util.HashUtils;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
@@ -35,6 +39,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Map;
 
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_CREATE_WITH_PREFIX;
 import static eu.xfsc.fc.server.util.TestCommonConstants.ASSET_DELETE_WITH_PREFIX;
@@ -67,6 +72,8 @@ public class AssetUploadControllerTest {
     private ObjectMapper objectMapper;
     @Autowired
     private AssetStore assetStorePublisher;
+    @Autowired
+    private GraphStore graphStore;
 
     @BeforeAll
     public void setup() {
@@ -448,6 +455,72 @@ public class AssetUploadControllerTest {
         } finally {
             deleteAssetQuietly(createdAsset.getAssetHash());
         }
+    }
+
+    @Test
+    @WithMockJwtAuth(authorities = {ASSET_CREATE_WITH_PREFIX}, claims = @OpenIdClaims(otherClaims = @Claims(stringClaims = {
+        @StringClaim(name = "participant_id", value = TEST_ISSUER)})))
+    public void enrichNonRdfAsset_withHumanReadableLinked_preservesLinkTriples() throws Exception {
+        // Human-readable link triples are stored under the MR asset's credentialSubject.
+        // Enrichment does deleteClaims(mrIri) + addClaims(...), which could otherwise remove those link triples.
+        // Verify they survive the enrichment cycle.
+        final String fcmetaHasHumanReadable =
+            "https://projects.eclipse.org/projects/technology.xfsc/federated-catalogue/meta#hasHumanReadable";
+        final String credSubjectUri = "https://www.w3.org/2018/credentials#credentialSubject";
+
+        Asset mrAsset = createNonRdfAssetMultipart("doc.txt", "text/plain",
+            "machine-readable document".getBytes(StandardCharsets.UTF_8));
+        String mrId = mrAsset.getId();
+
+        byte[] hrContent = "<html><body>HR attachment</body></html>".getBytes(StandardCharsets.UTF_8);
+        MockMultipartFile hrFile = new MockMultipartFile("file", "doc.html", "text/html", hrContent);
+        String encodedMrId = java.net.URLEncoder.encode(mrId, StandardCharsets.UTF_8);
+
+        MvcResult hrResult = mockMvc.perform(MockMvcRequestBuilders
+                .multipart("/assets/" + encodedMrId + "/human-readable")
+                .file(hrFile)
+                .with(csrf())
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+        Asset hrAsset = objectMapper.readValue(hrResult.getResponse().getContentAsString(), Asset.class);
+
+        String linkTripleQuery = """
+            SELECT ?s ?p ?o WHERE {
+              <<(?s ?p ?o)>> <%s> <%s> .
+              FILTER(?s = <%s> && ?p = <%s>)
+            }
+            """.formatted(credSubjectUri, mrId, mrId, fcmetaHasHumanReadable);
+
+        try {
+            String hrIriBefore = queryHasHumanReadableObject(linkTripleQuery);
+            assertEquals(hrAsset.getId(), hrIriBefore,
+                "Precondition: hasHumanReadable triple must point at the linked HR IRI before enrichment");
+
+            String rdfPayload = """
+                @prefix ex: <http://example.org/> .
+                <%s> ex:title "Enriched MR with HR link" .
+                """.formatted(mrId);
+            AssetEnrichmentResponse enrichResponse = enrichAssetMultipart("meta.ttl", "text/turtle",
+                rdfPayload.getBytes(StandardCharsets.UTF_8));
+            assertEquals(mrId, enrichResponse.getAssetId());
+
+            String hrIriAfter = queryHasHumanReadableObject(linkTripleQuery);
+            assertEquals(hrAsset.getId(), hrIriAfter,
+                "hasHumanReadable triple must still point at the same HR IRI after enrichment");
+        } finally {
+            deleteAssetQuietly(hrAsset.getAssetHash());
+            deleteAssetQuietly(mrAsset.getAssetHash());
+        }
+    }
+
+    private String queryHasHumanReadableObject(String linkTripleQuery) {
+        PaginatedResults<Map<String, Object>> results = graphStore.queryData(
+            new GraphQuery(linkTripleQuery, Map.of(), QueryLanguage.SPARQL, GraphQuery.QUERY_TIMEOUT, false));
+        return results.getResults().stream()
+            .map(row -> String.valueOf(row.get("o")))
+            .findFirst()
+            .orElse(null);
     }
 
     @Test
