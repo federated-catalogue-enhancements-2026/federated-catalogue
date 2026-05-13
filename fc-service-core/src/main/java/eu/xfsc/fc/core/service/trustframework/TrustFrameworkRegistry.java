@@ -21,6 +21,29 @@ import org.apache.jena.riot.Lang;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * In-memory registry of trust framework bundles and their declared roles. Provides efficient
+ * resolution of role URIs to the bundle and role name that declares them, including support for
+ * subclass hierarchies in SHACL ontologies.
+ * It is built at application startup from the static bundle definitions without any dynamic state.
+ * It does not track enabled/disabled state or mediate access;
+ * it is purely a data structure for role resolution and bundle lookup.
+ *
+ * <p>
+ * This is separate from the persistence layer {@link eu.xfsc.fc.core.dao.trustframework.TrustFrameworkRepository}
+ * (which tracks enabled/disabled state) and the service layer {@link TrustFrameworkService}
+ * (which mediates access to the registry and applies enabled/disabled logic).
+ *
+ * <p>Bundles with unsupported validation types are registered but not active — their roles are not
+ * indexed for resolution, and they are excluded from the active bundles list. This allows the
+ * registry to be pre-populated with all known bundles at startup, even if the validation engine
+ * is not yet wired to handle some of them. Deferred bundles will become active once their
+ * validation type is supported.
+ *
+ * <p>The registry is immutable after construction; any changes require creating a new instance.
+ * This simplifies thread safety and allows the registry to be safely shared across the application
+ * without synchronization.
+ */
 @Slf4j
 public class TrustFrameworkRegistry {
 
