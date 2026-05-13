@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * Spring-managed registry that maps client-type keys to {@link TrustFrameworkClient}
@@ -13,14 +13,21 @@ import org.springframework.stereotype.Component;
  * them by their {@link TrustFrameworkClient#clientType()} key.
  */
 @Slf4j
-@Component
+@Service
 public class TrustFrameworkClientRegistryImpl implements TrustFrameworkClientRegistry {
 
   private final Map<String, TrustFrameworkClient> clients;
 
   public TrustFrameworkClientRegistryImpl(List<TrustFrameworkClient> clientBeans) {
     this.clients = clientBeans.stream()
-        .collect(Collectors.toMap(TrustFrameworkClient::clientType, c -> c));
+        .collect(Collectors.toMap(
+            TrustFrameworkClient::clientType,
+            c -> c,
+            (a, b) -> {
+              throw new IllegalStateException(
+                  "Duplicate TrustFrameworkClient for type: " + a.clientType());
+            }
+        ));
     log.info("Registered {} trust-framework clients: {}", clients.size(), clients.keySet());
   }
 
