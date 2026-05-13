@@ -8,13 +8,10 @@ import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 
-import java.net.SocketTimeoutException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Orchestrates a single compliance check: resolves the profile, verifies the family is enabled,
@@ -22,8 +19,8 @@ import org.springframework.web.client.ResourceAccessException;
  * HTTP-appropriate exceptions.
  *
  * <p>Unknown profile IDs throw {@link ClientException}. Disabled families throw
- * {@link ConflictException}. Network timeouts throw {@link TimeoutException} (→ 504);
- * other I/O failures throw {@link ServiceUnavailableException} (→ 503).
+ * {@link ConflictException}. Network timeouts bubble as {@link TimeoutException} (→ 504);
+ * other I/O failures bubble as {@link ServiceUnavailableException} (→ 503).
  * {@link UnverifiableAttestation} is a first-class outcome produced by the client when the
  * service returned a credential that could not be locally verified — it is not an error.
  */
@@ -95,14 +92,8 @@ public class ComplianceCheckOrchestrator {
     ComplianceCheckOutcome result;
     try {
       result = client.check(credential, config);
-    } catch (ClientException e) {
+    } catch (ClientException | TimeoutException | ServiceUnavailableException e) {
       throw e;
-    } catch (ResourceAccessException e) {
-      if (e.getCause() instanceof SocketTimeoutException) {
-        throw new TimeoutException("Compliance service timed out: " + e.getMessage());
-      }
-      log.error("Compliance service unreachable", e);
-      throw new ServiceUnavailableException("Compliance service unreachable: " + e.getMessage(), e);
     } catch (RuntimeException e) {
       log.error("Unexpected exception from compliance client", e);
       throw new ServiceUnavailableException("Compliance client error: " + e.getMessage(), e);

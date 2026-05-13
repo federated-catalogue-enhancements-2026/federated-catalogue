@@ -2,7 +2,11 @@ package eu.xfsc.fc.core.service.trustframework.compliance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.xfsc.fc.core.exception.ServiceUnavailableException;
+import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
+
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -95,6 +101,15 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
           e.getResponseBodyAsString(),
           e.getStatusText()
       );
+    } catch (ResourceAccessException e) {
+      if (e.getCause() instanceof SocketTimeoutException) {
+        throw new TimeoutException("Compliance service timed out: " + e.getMessage());
+      }
+      log.error("Compliance service unreachable", e);
+      throw new ServiceUnavailableException("Compliance service unreachable: " + e.getMessage(), e);
+    } catch (HttpServerErrorException e) {
+      log.error("Compliance service returned server error", e);
+      throw new ServiceUnavailableException("Compliance service error: " + e.getStatusCode(), e);
     }
   }
 

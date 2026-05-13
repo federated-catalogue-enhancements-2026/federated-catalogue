@@ -14,9 +14,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
-
+import eu.xfsc.fc.core.exception.ServiceUnavailableException;
+import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -136,7 +135,7 @@ class GxdchComplianceClientTest {
   }
 
   @Test
-  void check_slowUpstream_throwsResourceAccessException() {
+  void check_slowUpstream_throwsTimeoutException() {
 
     server.enqueue(new MockResponse()
         .setBodyDelay(3, TimeUnit.SECONDS)
@@ -149,11 +148,11 @@ class GxdchComplianceClientTest {
     );
     var credential = new ContentAccessorDirect(TEST_VP_JWT);
 
-    assertThrows(ResourceAccessException.class, () -> client.check(credential, shortTimeoutConfig));
+    assertThrows(TimeoutException.class, () -> client.check(credential, shortTimeoutConfig));
   }
 
   @Test
-  void check_5xxResponse_throwsHttpServerErrorException() {
+  void check_5xxResponse_throwsServiceUnavailableException() {
 
     server.enqueue(new MockResponse()
         .setResponseCode(500)
@@ -161,7 +160,7 @@ class GxdchComplianceClientTest {
 
     var credential = new ContentAccessorDirect(TEST_VP_JWT);
 
-    assertThrows(HttpServerErrorException.class, () -> client.check(credential, config));
+    assertThrows(ServiceUnavailableException.class, () -> client.check(credential, config));
   }
 
   @Test

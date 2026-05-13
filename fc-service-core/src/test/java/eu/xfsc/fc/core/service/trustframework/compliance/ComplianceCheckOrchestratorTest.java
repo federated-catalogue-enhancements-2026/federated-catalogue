@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.ResourceAccessException;
 
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
@@ -109,24 +106,22 @@ class ComplianceCheckOrchestratorTest {
   }
 
   @Test
-  void check_clientThrowsSocketTimeout_throwsTimeoutException() {
+  void check_clientThrowsTimeoutException_propagates() {
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
     when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
     when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
-    when(mockClient.check(any(), any()))
-        .thenThrow(new ResourceAccessException("read timeout", new SocketTimeoutException("timed out")));
+    when(mockClient.check(any(), any())).thenThrow(new TimeoutException("timed out"));
 
     assertThrows(TimeoutException.class,
         () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
   }
 
   @Test
-  void check_clientThrowsIOException_throwsServiceUnavailableException() {
+  void check_clientThrowsServiceUnavailableException_propagates() {
     when(registry.getProfileConfig(PROFILE_ID)).thenReturn(Optional.of(MOCK_CONFIG));
     when(tfService.isEnabled(FAMILY_ID)).thenReturn(true);
     when(clientRegistry.resolve("gxdch-loire")).thenReturn(mockClient);
-    when(mockClient.check(any(), any()))
-        .thenThrow(new ResourceAccessException("connection error", new IOException("connection refused")));
+    when(mockClient.check(any(), any())).thenThrow(new ServiceUnavailableException("unreachable"));
 
     assertThrows(ServiceUnavailableException.class,
         () -> orchestrator.check(ASSET_ID, PROFILE_ID, ASSET_PAYLOAD));
