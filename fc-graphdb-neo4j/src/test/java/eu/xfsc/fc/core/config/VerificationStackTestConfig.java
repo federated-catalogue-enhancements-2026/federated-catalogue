@@ -10,7 +10,6 @@ import eu.xfsc.fc.core.service.resolve.HttpDocumentResolver;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
 import eu.xfsc.fc.core.service.validation.rdf.RdfAssetParser;
-import eu.xfsc.fc.core.service.validation.strategy.ShaclValidationExecutor;
 import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.CredentialVerificationStrategy;
 import eu.xfsc.fc.core.service.verification.EnvelopedCredentialResolver;
@@ -70,7 +69,6 @@ import org.springframework.context.annotation.Import;
     SchemaStoreImpl.class,
     SchemaValidationServiceImpl.class,
     SecurityAuditorAware.class,
-    ShaclValidationExecutor.class,
     TrustFrameworkRegistryConfig.class,
     TrustFrameworkService.class,
     ValidatorCacheJpaDao.class,
