@@ -148,8 +148,8 @@ public class AssetValidationServiceImpl implements AssetValidationService {
    *
    * @throws ClientException if no registered strategy accepts a schema type,
    *     if a non-SHACL strategy receives more than one schema,
-   *     or if the matched strategy does not apply to the asset's format
-   * @throws VerificationException if the matched strategy's module is disabled
+   *     if the matched strategy does not apply to the asset's format,
+   *     or if the matched strategy's module is disabled ({@code module_disabled:<MODULE>})
    */
   private List<StrategyJob> planExplicit(AssetMetadata asset, List<String> schemaIds) {
     Map<ValidationStrategy, List<SchemaRecord>> byStrategy = new LinkedHashMap<>();
@@ -324,7 +324,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
-      throw new VerificationException("Validation module " + moduleType + " is disabled");
+      throw new ClientException("module_disabled:" + moduleType);
     }
   }
 

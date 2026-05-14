@@ -1287,6 +1287,11 @@ paths:
       tags:
         - SchemaValidationAdmin
       summary: Toggle a schema validation module
+      description: >-
+        Enables or disables one of the four schema validation modules.
+        Disabling a module makes affected endpoints return `400 module_disabled:<MODULE>`
+        (see `/assets/validate` and `/verification`). Storage of schemas is unaffected —
+        stored schemas remain queryable through `/schemas/**` regardless of toggle state.
       operationId: setSchemaModuleEnabled
       security:
         - jwt: []
@@ -1296,6 +1301,11 @@ paths:
           required: true
           schema:
             type: string
+            enum:
+              - SHACL
+              - JSON_SCHEMA
+              - XML_SCHEMA
+              - OWL
         - name: enabled
           in: query
           required: true
@@ -1666,7 +1676,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationResponse'
         '400':
-          $ref: '#/components/responses/ClientError'
+          description: >-
+            Client error. Includes `module_disabled:<MODULE>` when a schema validation
+            module required by the request is administratively disabled
+            (see `PUT /admin/schema-validation/modules/{type}`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2991,7 +3008,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/VerificationResult'
         '400':
-          $ref: '#/components/responses/ClientError'
+          description: >-
+            Client error. When `verifySchema=true` and the SHACL module is
+            administratively disabled, the body is `module_disabled:SHACL`
+            (see `PUT /admin/schema-validation/modules/{type}`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/Unprocessible'
         '500':
