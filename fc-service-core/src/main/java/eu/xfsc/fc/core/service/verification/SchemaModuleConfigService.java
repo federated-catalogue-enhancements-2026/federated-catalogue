@@ -40,6 +40,18 @@ public class SchemaModuleConfigService {
 
   /**
    * Evicts all cached module state. Call after any schema module config write.
+   *
+   * <p>The eviction is intentionally coarse ({@code allEntries = true}): a write that
+   * touches a single module key invalidates every cached module entry, not just the one
+   * that changed. This is the right trade-off here because module writes are admin
+   * operations (rare, well-defined latency) while module reads are on every credential
+   * verification (the hot path). Per-key eviction would shave a sub-millisecond
+   * re-read off the next request for the three unaffected modules, at the cost of a
+   * subtle bug class where eviction key derivation drifts from the read key.</p>
+   *
+   * <p>If module writes ever become frequent enough that re-warming the cache four
+   * times per write becomes measurable, narrow the eviction with
+   * {@code key = "#moduleType"} on the write methods that pass the type through.</p>
    */
   @CacheEvict(value = CACHE_NAME, allEntries = true)
   public void evictCache() {
