@@ -23,6 +23,7 @@
         <table class="table table-bordered table-light cell-border" id="svTable" style="width:100%">
             <thead>
             <tr>
+                <th style="width: 2rem;"></th>
                 <th>Module</th>
                 <th>Description</th>
                 <th>Schemas</th>
@@ -30,6 +31,26 @@
             </tr>
             </thead>
         </table>
+
+        <div id="owlOntologyPanel" class="card mt-2" style="display:none">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">
+                    <i class="bi bi-diagram-3 me-1"></i>Uploaded ontologies consulted when OWL is on
+                </span>
+                <small id="owlOntologyPanelHint" class="text-muted"></small>
+            </div>
+            <div class="card-body p-2">
+                <table class="table table-sm table-borderless mb-0" id="owlOntologyTable" style="width:100%">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Uploaded</th>
+                        <th>Contributions</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
 
     </div>
 </div>

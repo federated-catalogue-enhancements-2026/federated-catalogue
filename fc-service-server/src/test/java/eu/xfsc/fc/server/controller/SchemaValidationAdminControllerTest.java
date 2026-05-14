@@ -115,4 +115,29 @@ public class SchemaValidationAdminControllerTest {
             .with(csrf()))
         .andExpect(status().isBadRequest());
   }
+
+  @Test
+  @WithMockUser(roles = {ADMIN_ALL})
+  void getOntologyImpact_withAdminRole_returnsItemsArray() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/admin/schema-validation/ontologies")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").exists())
+        .andExpect(jsonPath("$.items").isArray());
+  }
+
+  @Test
+  @WithMockUser
+  void getOntologyImpact_withoutAdminRole_returns403() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/admin/schema-validation/ontologies")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getOntologyImpact_unauthenticated_returns401() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/admin/schema-validation/ontologies")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
 }

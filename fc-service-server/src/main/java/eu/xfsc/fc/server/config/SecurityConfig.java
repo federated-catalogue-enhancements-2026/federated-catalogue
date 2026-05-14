@@ -130,7 +130,7 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.PUT, "/admin/trust-frameworks/**").hasRole(ADMIN_ALL)
 
           // Schema Validation Admin APIs
-          .requestMatchers(HttpMethod.GET, "/admin/schema-validation").hasRole(ADMIN_ALL)
+          .requestMatchers(HttpMethod.GET, "/admin/schema-validation", "/admin/schema-validation/**").hasRole(ADMIN_ALL)
           .requestMatchers(HttpMethod.PUT, "/admin/schema-validation/**").hasRole(ADMIN_ALL)
 
           // Graph Database Admin APIs

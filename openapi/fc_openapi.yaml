@@ -726,6 +726,45 @@ components:
         enabled:
           type: boolean
           description: Whether this module is active
+    OntologyImpactList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OntologyImpactEntry'
+      required:
+        - items
+    OntologyImpactEntry:
+      type: object
+      description: >-
+        One runtime-uploaded ontology and its contribution to each
+        registered trust-framework role.
+      properties:
+        id:
+          type: string
+          description: Schema identifier
+        name:
+          type: string
+          description: Human-readable schema name
+        uploadedAt:
+          type: string
+          format: date-time
+          description: When the ontology was uploaded
+        contributions:
+          type: object
+          description: >-
+            For each registered role name, the number of distinct
+            rdfs:subClassOf+ descendants reachable from the role's primary
+            root and additional_roots, aggregated across active
+            trust-framework bundles. Roles with zero contributions are
+            omitted.
+          additionalProperties:
+            type: integer
+            format: int32
+      required:
+        - id
+        - contributions
     GraphDatabaseStatus:
       type: object
       properties:
@@ -1320,6 +1359,35 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /admin/schema-validation/ontologies:
+    get:
+      tags:
+        - SchemaValidationAdmin
+      summary: List uploaded ontologies and their subclass contributions to registered roles
+      description: >-
+        Returns the runtime-uploaded ontologies currently consulted by the OWL
+        module when it is enabled, with the number of subclasses each ontology
+        contributes to each registered trust-framework role (Participant,
+        ServiceOffering, Resource for the Gaia-X 2511 bundle). Read-only —
+        admins toggle the OWL module as a whole on
+        `PUT /admin/schema-validation/modules/{type}`. This endpoint surfaces
+        what that toggle is gating.
+      operationId: getOntologyImpact
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: List of ontologies with per-role subclass counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OntologyImpactList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/ServerError'
   /admin/graph-database:

@@ -9,6 +9,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import eu.xfsc.fc.api.generated.model.OntologyImpactList;
 import eu.xfsc.fc.api.generated.model.SchemaValidationModule;
 import eu.xfsc.fc.api.generated.model.SchemaValidationStatus;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigEntry;
@@ -16,6 +17,7 @@ import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
+import eu.xfsc.fc.core.service.verification.OntologyImpactService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import eu.xfsc.fc.server.generated.controller.SchemaValidationAdminApiDelegate;
@@ -55,6 +57,7 @@ public class SchemaValidationAdminService implements SchemaValidationAdminApiDel
 
   private final AdminConfigRepository adminConfigRepository;
   private final SchemaStore schemaStore;
+  private final OntologyImpactService ontologyImpactService;
 
   @Override
   public ResponseEntity<SchemaValidationStatus> getSchemaValidationStatus() {
@@ -102,5 +105,12 @@ public class SchemaValidationAdminService implements SchemaValidationAdminApiDel
     entry.setConfigValue(String.valueOf(enabled));
     adminConfigRepository.save(entry);
     return ResponseEntity.ok().build();
+  }
+
+  @Override
+  public ResponseEntity<OntologyImpactList> getOntologyImpact() {
+    OntologyImpactList list = new OntologyImpactList()
+        .items(ontologyImpactService.computeImpact());
+    return ResponseEntity.ok(list);
   }
 }
