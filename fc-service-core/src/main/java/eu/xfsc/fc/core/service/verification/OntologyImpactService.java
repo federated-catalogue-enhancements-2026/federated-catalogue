@@ -8,15 +8,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
+import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.vocabulary.RDFS;
 import org.springframework.stereotype.Service;
 
 import eu.xfsc.fc.api.generated.model.OntologyImpactEntry;
@@ -50,7 +50,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OntologyImpactService {
 
-  private static final Pattern VALID_SPARQL_URI_PATTERN = Pattern.compile("^[^<>\\s\\n\\r]*$");
+  private static final String SUBCLASS_QUERY =
+      "SELECT ?sub WHERE { ?sub rdfs:subClassOf+ ?root FILTER(?sub != ?root) }";
 
   private final SchemaStore schemaStore;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
@@ -99,7 +100,7 @@ public class OntologyImpactService {
         Set<String> rootsForRole = roleRoots.computeIfAbsent(roleName, k -> new HashSet<>());
         rootsForRole.add(namespace + roleName);
         for (String additionalRoot : roleEntry.getValue().additionalRoots()) {
-          if (additionalRoot != null) {
+          if (additionalRoot != null && !additionalRoot.isBlank()) {
             rootsForRole.add(additionalRoot);
           }
         }
@@ -123,9 +124,6 @@ public class OntologyImpactService {
     for (Map.Entry<String, Set<String>> roleEntry : roleRoots.entrySet()) {
       Set<String> subclasses = new HashSet<>();
       for (String root : roleEntry.getValue()) {
-        if (!VALID_SPARQL_URI_PATTERN.matcher(root).matches()) {
-          continue;
-        }
         subclasses.addAll(querySubclasses(model, root));
       }
       if (!subclasses.isEmpty()) {
@@ -152,10 +150,16 @@ public class OntologyImpactService {
 
   private Set<String> querySubclasses(OntModel model, String rootUri) {
     Set<String> result = new HashSet<>();
-    String query = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
-        + "SELECT ?sub WHERE { ?sub rdfs:subClassOf+ <" + rootUri + "> "
-        + "FILTER(?sub != <" + rootUri + ">) }";
-    try (var qe = QueryExecutionFactory.create(QueryFactory.create(query), model)) {
+    ParameterizedSparqlString pss = new ParameterizedSparqlString();
+    pss.setNsPrefix("rdfs", RDFS.getURI());
+    pss.setCommandText(SUBCLASS_QUERY);
+    try {
+      pss.setIri("root", rootUri);
+    } catch (RuntimeException ex) {
+      log.warn("computeImpact; could not bind root URI '{}': {}", rootUri, ex.getMessage());
+      return result;
+    }
+    try (var qe = QueryExecutionFactory.create(pss.asQuery(), model)) {
       qe.execSelect().forEachRemaining(row -> {
         Resource res = row.getResource("sub");
         if (res != null && res.isURIResource()) {

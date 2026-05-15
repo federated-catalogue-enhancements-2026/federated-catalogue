@@ -28,6 +28,9 @@ import eu.xfsc.fc.core.service.filestore.FileStore;
  */
 class XmlSchemaValidationStrategyApplicabilityTest {
 
+  // Mockito's mock(Class) returns the raw type, so casting it back to the parameterised
+  // ObjectProvider<T> is a checked-cast warning that cannot be avoided without changing
+  // the constructor signature. The mocks are never invoked in these applicability tests.
   @SuppressWarnings("unchecked")
   private final XmlSchemaValidationStrategy strategy =
       new XmlSchemaValidationStrategy(

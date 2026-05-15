@@ -1,6 +1,7 @@
 package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -113,7 +114,11 @@ public class SchemaValidationAdminControllerTest {
             .put("/admin/schema-validation/modules/INVALID")
             .param("enabled", "true")
             .with(csrf()))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value(containsString("SHACL")))
+        .andExpect(jsonPath("$.message").value(containsString("JSON_SCHEMA")))
+        .andExpect(jsonPath("$.message").value(containsString("XML_SCHEMA")))
+        .andExpect(jsonPath("$.message").value(containsString("OWL")));
   }
 
   @Test

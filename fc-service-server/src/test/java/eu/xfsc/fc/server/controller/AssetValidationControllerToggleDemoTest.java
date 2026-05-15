@@ -2,7 +2,9 @@ package eu.xfsc.fc.server.controller;
 
 import static eu.xfsc.fc.server.util.CommonConstants.ADMIN_ALL;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -65,6 +67,16 @@ public class AssetValidationControllerToggleDemoTest {
   }
 
   @Test
+  void validateAssets_unauthenticated_returns401() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(MULTI_ASSET_BODY)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   @WithMockUser(roles = {ADMIN_ALL})
   void validateAssets_shaclModuleDisabled_returns400ModuleDisabled() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders
@@ -92,21 +104,16 @@ public class AssetValidationControllerToggleDemoTest {
         .andExpect(status().isOk());
 
     // With SHACL enabled, the gate passes; the route then proceeds to asset lookup,
-    // which fails because the IDs are fake. The specific failure status does not matter
-    // here — what matters is that the response is not the disabled-module 400.
+    // which fails because the IDs are fake. The specific 4xx code does not matter here
+    // (404 vs 422 is a routing decision that should stay free to evolve) — what matters
+    // is that the response is a client error and is not the disabled-module 400 body.
     mockMvc.perform(MockMvcRequestBuilders.post("/assets/validate")
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content(MULTI_ASSET_BODY)
             .accept(MediaType.APPLICATION_JSON))
-        .andExpect(result -> {
-          int status = result.getResponse().getStatus();
-          String body = result.getResponse().getContentAsString();
-          if (status == 400 && body.contains("module_disabled")) {
-            throw new AssertionError(
-                "Unexpected module_disabled response when SHACL is enabled: " + body);
-          }
-        });
+        .andExpect(status().is4xxClientError())
+        .andExpect(content().string(not(containsString("module_disabled"))));
   }
 
   private static org.springframework.test.web.servlet.request.RequestPostProcessor adminUser() {

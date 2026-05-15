@@ -109,7 +109,10 @@ $(document).ready(function() {
       return '';
     }
     var d = new Date(data);
-    return isNaN(d.getTime()) ? data : d.toISOString().substring(0, 10);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().substring(0, 10);
+    }
+    return $('<span>').text(String(data)).prop('outerHTML');
   }
 
   var ontologyTableInstance = null;
@@ -199,6 +202,14 @@ $(document).ready(function() {
           + '?enabled=' + enabled,
         type: 'PUT',
         success: function() {
+          // Re-render the row so renderSchemaCount picks up the new enabled state
+          // and the badge styling reflects whether stored schemas are consulted.
+          var table = $('#svTable').DataTable();
+          var row = table.row($toggle.closest('tr'));
+          if (row.any()) {
+            row.data().enabled = enabled;
+            row.invalidate('data').draw(false);
+          }
           if (type === 'OWL' && $('#owlOntologyPanel').is(':visible')) {
             applyOwlEnabledStyle(enabled);
           }
