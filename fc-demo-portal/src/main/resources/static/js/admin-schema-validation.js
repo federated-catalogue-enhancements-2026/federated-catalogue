@@ -47,15 +47,20 @@ $(document).ready(function() {
   }
 
   function renderModuleToggle(data, type, row) {
+    // Use .attr('checked', ...) — not .prop() — because the resulting element
+    // is serialised via .prop('outerHTML'), which reflects the HTML attribute
+    // (default-checked state), not the live DOM property. .prop('checked')
+    // sets the property but the serialised HTML never includes the checked
+    // attribute, so every toggle renders as off regardless of state.
+    var $input = $('<input>', {
+      type: 'checkbox',
+      class: 'form-check-input sv-toggle'
+    }).attr('data-type', row.type);
+    if (data) {
+      $input.attr('checked', 'checked');
+    }
     return $('<div>', { class: 'form-check form-switch' })
-      .append(
-        $('<input>', {
-          type: 'checkbox',
-          class: 'form-check-input sv-toggle'
-        })
-          .attr('data-type', row.type)
-          .prop('checked', !!data)
-      )
+      .append($input)
       .prop('outerHTML');
   }
 
@@ -71,19 +76,6 @@ $(document).ready(function() {
       .prop('outerHTML');
   }
 
-  function renderOwlExpand(data, type, row) {
-    if (row.type !== 'OWL') {
-      return '';
-    }
-    return $('<button>', {
-      type: 'button',
-      class: 'btn btn-sm btn-link p-0 sv-owl-expand',
-      title: 'Show ontologies consulted when OWL is on',
-      'aria-expanded': 'false'
-    })
-      .append($('<i>', { class: 'bi bi-chevron-right' }))
-      .prop('outerHTML');
-  }
 
   function renderContributions(contributions) {
     var $container = $('<span>');
@@ -97,7 +89,7 @@ $(document).ready(function() {
     keys.sort();
     keys.forEach(function(role, idx) {
       $container.append(
-        $('<span>', { class: 'badge bg-primary-subtle text-primary-emphasis me-1' })
+        $('<span>', { class: 'badge bg-info me-1' })
           .text('+' + contributions[role] + ' ' + role)
       );
     });
@@ -162,28 +154,49 @@ $(document).ready(function() {
     }
   }
 
-  function isOwlEnabled() {
-    var $toggle = $('#svTable').find('.sv-toggle[data-type="OWL"]');
-    return $toggle.length > 0 ? $toggle.is(':checked') : true;
-  }
-
   function loadSchemaValidation() {
     $.getJSON('/admin/schema-validation', function(data) {
-      $('#totalSchemaCount').text(data.totalSchemaCount || 0);
+      var allModules = data.modules || [];
+      var validators = allModules.filter(function(m) { return m.type !== 'OWL'; });
+      var owls = allModules.filter(function(m) { return m.type === 'OWL'; });
 
-      $('#svTable').DataTable({
-        data: data.modules || [],
+      var validatorCount = validators.reduce(function(sum, m) {
+        return sum + (m.schemaCount || 0);
+      }, 0);
+      var ontologyCount = owls.reduce(function(sum, m) {
+        return sum + (m.schemaCount || 0);
+      }, 0);
+      $('#validatorSchemaCount').text(validatorCount);
+      $('#ontologySchemaCount').text(ontologyCount);
+
+      $('#svValidatorTable').DataTable({
+        data: validators,
         paging: false,
         searching: false,
         info: false,
         columns: [
-          { data: null, orderable: false, render: renderOwlExpand },
           { data: 'name', render: $.fn.dataTable.render.text() },
           { data: 'description', render: $.fn.dataTable.render.text() },
           { data: 'schemaCount', render: renderSchemaCount },
           { data: 'enabled', render: renderModuleToggle }
         ]
       });
+
+      $('#svOwlTable').DataTable({
+        data: owls,
+        paging: false,
+        searching: false,
+        info: false,
+        columns: [
+          { data: 'name', render: $.fn.dataTable.render.text() },
+          { data: 'description', render: $.fn.dataTable.render.text() },
+          { data: 'schemaCount', render: renderSchemaCount },
+          { data: 'enabled', render: renderModuleToggle }
+        ]
+      });
+
+      var owlEnabled = owls.length > 0 ? owls[0].enabled !== false : true;
+      loadOntologyImpact(owlEnabled);
     }).fail(function(xhr) {
       $('#admin-content').html(
         $('<div>', { class: 'alert alert-danger' })
@@ -191,11 +204,13 @@ $(document).ready(function() {
           .prop('outerHTML'));
     });
 
-    // Module toggle handler
-    $('#svTable').on('change', '.sv-toggle', function() {
+    // Module toggle handler — bound on both tables; the closest enclosing
+    // table is resolved per click so the right DataTable instance is invalidated.
+    $('#svValidatorTable, #svOwlTable').on('change', '.sv-toggle', function() {
       var $toggle = $(this);
       var type = $toggle.data('type');
       var enabled = $toggle.is(':checked');
+      var $table = $toggle.closest('table');
 
       $.ajax({
         url: '/admin/schema-validation/modules/' + encodeURIComponent(type)
@@ -204,13 +219,13 @@ $(document).ready(function() {
         success: function() {
           // Re-render the row so renderSchemaCount picks up the new enabled state
           // and the badge styling reflects whether stored schemas are consulted.
-          var table = $('#svTable').DataTable();
+          var table = $table.DataTable();
           var row = table.row($toggle.closest('tr'));
           if (row.any()) {
             row.data().enabled = enabled;
             row.invalidate('data').draw(false);
           }
-          if (type === 'OWL' && $('#owlOntologyPanel').is(':visible')) {
+          if (type === 'OWL') {
             applyOwlEnabledStyle(enabled);
           }
         },
@@ -221,24 +236,6 @@ $(document).ready(function() {
       });
     });
 
-    // OWL row expand/collapse
-    $('#svTable').on('click', '.sv-owl-expand', function() {
-      var $btn = $(this);
-      var $icon = $btn.find('i');
-      var $panel = $('#owlOntologyPanel');
-      var expanded = $btn.attr('aria-expanded') === 'true';
-
-      if (expanded) {
-        $panel.hide();
-        $icon.removeClass('bi-chevron-down').addClass('bi-chevron-right');
-        $btn.attr('aria-expanded', 'false');
-      } else {
-        $panel.show();
-        $icon.removeClass('bi-chevron-right').addClass('bi-chevron-down');
-        $btn.attr('aria-expanded', 'true');
-        loadOntologyImpact(isOwlEnabled());
-      }
-    });
   }
 
 });
