@@ -94,7 +94,7 @@ class LoirePolicyEnforcerTest {
   }
 
   @Test
-  void enforceIfApplicable_frameworkDisabled_noOp() {
+  void enforceIfApplicable_frameworkDisabled_noOp() throws Exception {
     stubEnabled(false);
     String invalidJwt = buildJwt(DID_KEY_ISSUER, null); // would fail DID check if enabled
 
