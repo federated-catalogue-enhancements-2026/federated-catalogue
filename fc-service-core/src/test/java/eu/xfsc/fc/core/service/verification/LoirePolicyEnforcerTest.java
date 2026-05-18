@@ -174,7 +174,8 @@ class LoirePolicyEnforcerTest {
   @Test
   void enforceIfApplicable_jwkWithX5cOnly_throwsClientException() {
     stubEnabled(true);
-    String jwk = "{\"kty\":\"EC\",\"x5c\":[\"MIIBxxx\"]}";
+    String jwk = """
+        {"kty":"EC","x5c":["MIIBxxx"]}""";
     var validator = new Validator(DID_WEB_ISSUER, jwk, null);
 
     assertThrows(ClientException.class,
@@ -184,7 +185,8 @@ class LoirePolicyEnforcerTest {
   @Test
   void enforceIfApplicable_jwkWithNoX5cOrX5u_throwsVerificationException() {
     stubEnabled(true);
-    String jwk = "{\"kty\":\"EC\",\"crv\":\"P-256\"}";
+    String jwk = """
+        {"kty":"EC","crv":"P-256"}""";
     var validator = new Validator(DID_WEB_ISSUER, jwk, null);
 
     assertThrows(VerificationException.class,
@@ -195,7 +197,8 @@ class LoirePolicyEnforcerTest {
   void enforceIfApplicable_jwkX5uTrustAnchorRegistered_passes() {
     stubEnabled(true);
     String x5uUrl = "https://example.com/chain.pem";
-    String jwk = "{\"kty\":\"EC\",\"x5u\":\"" + x5uUrl + "\"}";
+    String jwk = """
+        {"kty":"EC","x5u":"%s"}""".formatted(x5uUrl);
     var validator = new Validator(DID_WEB_ISSUER, jwk, null);
     when(restTemplate.getForObject(x5uUrl, String.class)).thenReturn(TEST_CERT_PEM);
     when(restTemplate.postForEntity(eq(TRUST_ANCHOR_URL), any(), eq(Map.class)))
@@ -208,7 +211,8 @@ class LoirePolicyEnforcerTest {
   void enforceIfApplicable_jwkX5uTrustAnchorNotRegistered_throwsVerificationException() {
     stubEnabled(true);
     String x5uUrl = "https://example.com/chain.pem";
-    String jwk = "{\"kty\":\"EC\",\"x5u\":\"" + x5uUrl + "\"}";
+    String jwk = """
+        {"kty":"EC","x5u":"%s"}""".formatted(x5uUrl);
     var validator = new Validator(DID_WEB_ISSUER, jwk, null);
     when(restTemplate.getForObject(x5uUrl, String.class)).thenReturn(TEST_CERT_PEM);
     when(restTemplate.postForEntity(eq(TRUST_ANCHOR_URL), any(), eq(Map.class)))

@@ -4,6 +4,7 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.EVC_TYP
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.EVP_TYPE;
 import static eu.xfsc.fc.core.service.verification.VerificationConstants.VC_20_CONTEXT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -123,12 +124,12 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void isEnvelopedVerifiableCredential_wrongType_returnsFalse() {
-    assertTrue(!EnvelopedCredentialResolver.isEnvelopedVerifiableCredential("Other", VC_20_CONTEXT));
+    assertFalse(EnvelopedCredentialResolver.isEnvelopedVerifiableCredential("Other", VC_20_CONTEXT));
   }
 
   @Test
   void isEnvelopedVerifiableCredential_correctTypeWrongContext_returnsFalse() {
-    assertTrue(!EnvelopedCredentialResolver.isEnvelopedVerifiableCredential(EVC_TYPE, "https://other.org/v1"));
+    assertFalse(EnvelopedCredentialResolver.isEnvelopedVerifiableCredential(EVC_TYPE, "https://other.org/v1"));
   }
 
   @Test
@@ -145,7 +146,7 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void isEnvelopedVerifiableCredential_nullType_returnsFalse() {
-    assertTrue(!EnvelopedCredentialResolver.isEnvelopedVerifiableCredential(null, VC_20_CONTEXT));
+    assertFalse(EnvelopedCredentialResolver.isEnvelopedVerifiableCredential(null, VC_20_CONTEXT));
   }
 
 
@@ -176,31 +177,32 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void extractEnvelopedJwt_evcWrapperWrongContext_returnsNull() {
-    String body = "{\"type\":\"" + EVC_TYPE + "\",\"@context\":\"https://other.org/v1\","
-        + "\"id\":\"data:application/vc+jwt,eyJ\"}";
+    String body = """
+        {"type":"%s","@context":"https://other.org/v1","id":"data:application/vc+jwt,eyJ"}""".formatted(EVC_TYPE);
 
     assertNull(resolver.extractEnvelopedJwt(body));
   }
 
   @Test
   void extractEnvelopedJwt_evcWrapperMissingCommaInDataUri_throwsClientException() {
-    String body = "{\"type\":\"" + EVC_TYPE + "\",\"@context\":\"" + VC_20_CONTEXT + "\","
-        + "\"id\":\"data:notype\"}";
+    String body = """
+        {"type":"%s","@context":"%s","id":"data:notype"}""".formatted(EVC_TYPE, VC_20_CONTEXT);
 
     assertThrows(ClientException.class, () -> resolver.extractEnvelopedJwt(body));
   }
 
   @Test
   void extractEnvelopedJwt_evcWrapperEmptyPayload_throwsClientException() {
-    String body = "{\"type\":\"" + EVC_TYPE + "\",\"@context\":\"" + VC_20_CONTEXT + "\","
-        + "\"id\":\"data:application/vc+jwt,\"}";
+    String body = """
+        {"type":"%s","@context":"%s","id":"data:application/vc+jwt,"}""".formatted(EVC_TYPE, VC_20_CONTEXT);
 
     assertThrows(ClientException.class, () -> resolver.extractEnvelopedJwt(body));
   }
 
   @Test
   void extractEnvelopedJwt_plainVcJsonLd_returnsNull() {
-    String body = "{\"@context\":[\"" + VC_20_CONTEXT + "\"],\"type\":[\"VerifiableCredential\"]}";
+    String body = """
+        {"@context":["%s"],"type":["VerifiableCredential"]}""".formatted(VC_20_CONTEXT);
 
     assertNull(resolver.extractEnvelopedJwt(body));
   }
@@ -215,26 +217,27 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void resolveInnerEnvelopedCredentials_nonVpPayload_returnsOriginal() {
-    var payload = new ContentAccessorDirect(
-        "{\"@context\":[\"" + VC_20_CONTEXT + "\"],\"type\":[\"VerifiableCredential\"]}");
+    var payload = new ContentAccessorDirect("""
+        {"@context":["%s"],"type":["VerifiableCredential"]}""".formatted(VC_20_CONTEXT));
 
     assertSame(payload, resolver.resolveInnerEnvelopedCredentials(payload));
   }
 
   @Test
   void resolveInnerEnvelopedCredentials_vpWithNoVcList_returnsOriginal() {
-    var payload = new ContentAccessorDirect(
-        "{\"@context\":[\"" + VC_20_CONTEXT + "\"],\"type\":[\"VerifiablePresentation\"]}");
+    var payload = new ContentAccessorDirect("""
+        {"@context":["%s"],"type":["VerifiablePresentation"]}""".formatted(VC_20_CONTEXT));
 
     assertSame(payload, resolver.resolveInnerEnvelopedCredentials(payload));
   }
 
   @Test
   void resolveInnerEnvelopedCredentials_vpWithNonEvcEntries_returnsOriginal() {
-    String vcEntry = "{\"@context\":[\"" + VC_20_CONTEXT + "\"],\"type\":[\"VerifiableCredential\"]}";
-    var payload = new ContentAccessorDirect(
-        "{\"@context\":[\"" + VC_20_CONTEXT + "\"],\"type\":[\"VerifiablePresentation\"],"
-            + "\"verifiableCredential\":[" + vcEntry + "]}");
+    String vcEntry = """
+        {"@context":["%s"],"type":["VerifiableCredential"]}""".formatted(VC_20_CONTEXT);
+    var payload = new ContentAccessorDirect("""
+        {"@context":["%s"],"type":["VerifiablePresentation"],"verifiableCredential":[%s]}""".formatted(VC_20_CONTEXT,
+        vcEntry));
 
     assertSame(payload, resolver.resolveInnerEnvelopedCredentials(payload));
   }
@@ -242,7 +245,8 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void verifyInnerVcCredentials_noVcKey_returnsEmptyList() throws Exception {
-    JsonLDObject ld = JsonLDObject.fromJson("{\"@context\":\"" + VC_20_CONTEXT + "\"}");
+    JsonLDObject ld = JsonLDObject.fromJson("""
+        {"@context":"%s"}""".formatted(VC_20_CONTEXT));
 
     List<Validator> result = resolver.verifyInnerVcCredentials(ld);
 
@@ -254,8 +258,8 @@ class EnvelopedCredentialResolverTest {
     String jwtStr = buildMinimalJwt();
     var validator = new Validator("did:web:example.com", null, null);
     when(jwtSignatureVerifier.verify(jwtStr)).thenReturn(validator);
-    JsonLDObject ld = JsonLDObject.fromJson(
-        "{\"verifiableCredential\":[\"" + jwtStr + "\"]}");
+    JsonLDObject ld = JsonLDObject.fromJson("""
+        {"verifiableCredential":["%s"]}""".formatted(jwtStr));
 
     List<Validator> result = resolver.verifyInnerVcCredentials(ld);
 
@@ -268,10 +272,10 @@ class EnvelopedCredentialResolverTest {
     String dataUri = "data:application/vc+jwt,eyJfake";
     var validator = new Validator("did:web:example.com", null, null);
     when(jwtSignatureVerifier.verifyFromDataUrl(dataUri)).thenReturn(validator);
-    String evcEntry = "{\"type\":\"" + EVC_TYPE + "\",\"@context\":\"" + VC_20_CONTEXT + "\","
-        + "\"id\":\"" + dataUri + "\"}";
-    JsonLDObject ld = JsonLDObject.fromJson(
-        "{\"verifiableCredential\":[" + evcEntry + "]}");
+    String evcEntry = """
+        {"type":"%s","@context":"%s","id":"%s"}""".formatted(EVC_TYPE, VC_20_CONTEXT, dataUri);
+    JsonLDObject ld = JsonLDObject.fromJson("""
+        {"verifiableCredential":[%s]}""".formatted(evcEntry));
 
     List<Validator> result = resolver.verifyInnerVcCredentials(ld);
 
@@ -281,10 +285,10 @@ class EnvelopedCredentialResolverTest {
 
   @Test
   void verifyInnerVcCredentials_jsonLdProofEntry_throwsVerificationException() {
-    String jsonLdEntry = "{\"@context\":\"" + VC_20_CONTEXT
-        + "\",\"type\":\"VerifiableCredential\",\"proof\":{}}";
-    JsonLDObject ld = JsonLDObject.fromJson(
-        "{\"verifiableCredential\":[" + jsonLdEntry + "]}");
+    String jsonLdEntry = """
+        {"@context":"%s","type":"VerifiableCredential","proof":{}}""".formatted(VC_20_CONTEXT);
+    JsonLDObject ld = JsonLDObject.fromJson("""
+        {"verifiableCredential":[%s]}""".formatted(jsonLdEntry));
 
     assertThrows(VerificationException.class, () -> resolver.verifyInnerVcCredentials(ld));
   }
@@ -299,12 +303,12 @@ class EnvelopedCredentialResolverTest {
   }
 
   private static String buildEvcWrapper(String jwtStr) {
-    return "{\"@context\":\"" + VC_20_CONTEXT + "\",\"type\":\"" + EVC_TYPE + "\","
-        + "\"id\":\"data:application/vc+jwt," + jwtStr + "\"}";
+    return """
+        {"@context":"%s","type":"%s","id":"data:application/vc+jwt,%s"}""".formatted(VC_20_CONTEXT, EVC_TYPE, jwtStr);
   }
 
   private static String buildEvpWrapper(String jwtStr) {
-    return "{\"@context\":\"" + VC_20_CONTEXT + "\",\"type\":\"" + EVP_TYPE + "\","
-        + "\"id\":\"data:application/vp+jwt," + jwtStr + "\"}";
+    return """
+        {"@context":"%s","type":"%s","id":"data:application/vp+jwt,%s"}""".formatted(VC_20_CONTEXT, EVP_TYPE, jwtStr);
   }
 }

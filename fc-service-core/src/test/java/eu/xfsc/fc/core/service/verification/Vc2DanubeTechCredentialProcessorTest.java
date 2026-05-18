@@ -104,7 +104,8 @@ class Vc2DanubeTechCredentialProcessorTest {
 
   @Test
   void match_nonJwtWithVc20ContextString_returnsDanubeTech() throws Exception {
-    JsonNode parsedJson = OBJECT_MAPPER.readTree("{\"@context\":\"" + VC_20_CONTEXT + "\"}");
+    JsonNode parsedJson = OBJECT_MAPPER.readTree("""
+        {"@context":"%s"}""".formatted(VC_20_CONTEXT));
     var ctx = new DetectionContext("{}", null, parsedJson);
 
     assertEquals(Optional.of(CredentialFormat.VC2_DANUBETECH), processor.match(ctx));
@@ -112,8 +113,8 @@ class Vc2DanubeTechCredentialProcessorTest {
 
   @Test
   void match_nonJwtWithVc20ContextInArray_returnsDanubeTech() throws Exception {
-    JsonNode parsedJson = OBJECT_MAPPER.readTree(
-        "{\"@context\":[\"" + VC_20_CONTEXT + "\",\"https://schema.org\"]}");
+    JsonNode parsedJson = OBJECT_MAPPER.readTree("""
+        {"@context":["%s","https://schema.org"]}""".formatted(VC_20_CONTEXT));
     var ctx = new DetectionContext("{}", null, parsedJson);
 
     assertEquals(Optional.of(CredentialFormat.VC2_DANUBETECH), processor.match(ctx));
@@ -160,7 +161,8 @@ class Vc2DanubeTechCredentialProcessorTest {
 
   @Test
   void process_nonJwtBody_skipsVerifyAndIsJwtFalse() {
-    var body = "{\"@context\":\"" + VC_20_CONTEXT + "\"}";
+    var body = """
+        {"@context":"%s"}""".formatted(VC_20_CONTEXT);
     var payload = new ContentAccessorDirect(body);
     var unwrapped = new ContentAccessorDirect(body);
     when(jwtPreprocessor.unwrap(payload)).thenReturn(unwrapped);
