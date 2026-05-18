@@ -4,9 +4,6 @@
 # validation_type is "shacl" so the bundle is indexed by TrustFrameworkRegistry,
 # but there are no shape files to validate against.
 #
-# The family "mock" seed row in the DB is disabled by default (enabled=false).
-# Enable it in docker-compose.override.yml or test fixtures as needed.
-#
 # serviceUrl should be overridden per environment (e.g. WireMock container in compose).
 
 id: mock-2026

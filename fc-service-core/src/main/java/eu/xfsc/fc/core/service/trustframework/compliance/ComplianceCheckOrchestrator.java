@@ -1,5 +1,6 @@
 package eu.xfsc.fc.core.service.trustframework.compliance;
 
+import com.nimbusds.jwt.JWTParser;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.ServiceUnavailableException;
@@ -48,7 +49,9 @@ public class ComplianceCheckOrchestrator {
    * @param assetId            identifier of the asset being checked
    * @param frameworkProfileId profile to use for the check; must not be {@code null}
    * @param assetPayload       raw credential payload forwarded to the compliance service; must not be {@code null}
-   * @return the compliance outcome; never {@code null}
+   * @return the compliance outcome; never {@code null}. Returns {@link UnverifiableAttestation}
+   *         when {@code assetPayload} is a parseable JWT whose {@code id} claim is non-blank and
+   *         does not equal {@code assetId}, without contacting the compliance service.
    * @throws ClientException              when inputs are null, the profile is not registered,
    *                                      or the resolved client type is unknown
    * @throws ConflictException            when the profile's family is disabled
@@ -63,6 +66,15 @@ public class ComplianceCheckOrchestrator {
       throw new ClientException("assetPayload must not be null");
     }
 
+    String vpId = extractVpId(assetPayload);
+    if (!vpId.isBlank() && !vpId.equals(assetId)) {
+      return new UnverifiableAttestation(
+          FailureCategory.UNVERIFIABLE_ATTESTATION,
+          assetPayload,
+          "VP id '%s' does not match requested asset id '%s'".formatted(vpId, assetId)
+      );
+    }
+
     MDC.put(MDC_ASSET_ID, assetId);
     MDC.put(MDC_PROFILE_ID, frameworkProfileId);
     try {
@@ -70,6 +82,15 @@ public class ComplianceCheckOrchestrator {
     } finally {
       MDC.remove(MDC_ASSET_ID);
       MDC.remove(MDC_PROFILE_ID);
+    }
+  }
+
+  private String extractVpId(String payload) {
+    try {
+      String value = JWTParser.parse(payload).getJWTClaimsSet().getStringClaim("id");
+      return value != null ? value : "";
+    } catch (Exception e) {
+      return "";
     }
   }
 

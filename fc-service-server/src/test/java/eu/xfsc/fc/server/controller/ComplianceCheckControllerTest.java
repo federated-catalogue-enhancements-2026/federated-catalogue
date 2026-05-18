@@ -9,6 +9,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,12 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.exception.ConflictException;
 import eu.xfsc.fc.core.exception.TimeoutException;
+import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
+import eu.xfsc.fc.core.service.trustframework.FrameworkBundleConfig;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkBundle;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
+import eu.xfsc.fc.core.service.trustframework.TrustFrameworkService;
+import eu.xfsc.fc.core.service.trustframework.ValidationType;
 import eu.xfsc.fc.core.service.trustframework.compliance.ComplianceCheckOrchestrator;
 import eu.xfsc.fc.core.service.trustframework.compliance.IssuedAttestation;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
@@ -57,6 +66,12 @@ public class ComplianceCheckControllerTest {
 
   @MockitoBean
   private ComplianceCheckOrchestrator orchestrator;
+
+  @MockitoBean
+  private TrustFrameworkService trustFrameworkService;
+
+  @MockitoBean
+  private TrustFrameworkRegistry registry;
 
   @Test
   @WithMockUser(roles = {ASSET_UPDATE})
@@ -122,11 +137,48 @@ public class ComplianceCheckControllerTest {
 
   @Test
   @WithMockUser
-  void getTrustFrameworksPublic_authenticated_returns200WithEnabledFamilies() throws Exception {
+  void getTrustFrameworksPublic_noEnabledFrameworks_returnsEmptyArray() throws Exception {
+    when(trustFrameworkService.findAll()).thenReturn(List.of(
+        new TrustFrameworkConfig("gaia-x", "Gaia-X Trust Framework", null, "22.10", 30, false, null, null)));
+    when(registry.getActiveBundles()).thenReturn(List.of());
+
     mockMvc.perform(MockMvcRequestBuilders.get("/trust-frameworks")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isArray());
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  @WithMockUser
+  void getTrustFrameworksPublic_enabledFramework_returnsEntryWithIdAndName() throws Exception {
+    when(trustFrameworkService.findAll()).thenReturn(List.of(
+        new TrustFrameworkConfig("gaia-x", "Gaia-X Trust Framework", null, "22.10", 30, true, null, null)));
+    when(registry.getActiveBundles()).thenReturn(List.of());
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/trust-frameworks")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value("gaia-x"))
+        .andExpect(jsonPath("$[0].name").value("Gaia-X Trust Framework"))
+        .andExpect(jsonPath("$[0].profiles").isArray())
+        .andExpect(jsonPath("$[0].profiles").isEmpty());
+  }
+
+  @Test
+  @WithMockUser
+  void getTrustFrameworksPublic_enabledFrameworkWithActiveProfile_returnsProfileInEntry() throws Exception {
+    when(trustFrameworkService.findAll()).thenReturn(List.of(
+        new TrustFrameworkConfig("gaia-x", "Gaia-X Trust Framework", null, "22.10", 30, true, null, null)));
+    var bundleCfg = new FrameworkBundleConfig("gaia-x-2511", "gaia-x",
+        "https://compliance.gaia-x.eu/", ValidationType.SHACL, Map.of(), Map.of());
+    when(registry.getActiveBundles()).thenReturn(List.of(new TrustFrameworkBundle(bundleCfg, null, null)));
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/trust-frameworks")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value("gaia-x"))
+        .andExpect(jsonPath("$[0].profiles[0]").value("gaia-x-2511"));
   }
 
   @Test

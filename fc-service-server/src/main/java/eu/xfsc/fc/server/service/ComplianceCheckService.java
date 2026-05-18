@@ -3,6 +3,7 @@ package eu.xfsc.fc.server.service;
 import java.util.List;
 
 import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
+import eu.xfsc.fc.core.service.trustframework.compliance.TrustFrameworkProfileConfig;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -46,7 +47,7 @@ public class ComplianceCheckService implements ComplianceApiDelegate {
         request.getCredential());
 
     String familyId = registry.getProfileConfig(request.getFrameworkProfileId())
-        .map(cfg -> cfg.familyId())
+        .map(TrustFrameworkProfileConfig::familyId)
         .orElse(request.getFrameworkProfileId());
 
     resultStore.store(assetId, request.getFrameworkProfileId(), familyId, outcome);
@@ -100,8 +101,6 @@ public class ComplianceCheckService implements ComplianceApiDelegate {
     switch (outcome) {
       case IssuedAttestation ia -> result.setAttestationCredential(ia.attestationCredential());
       case UnverifiableAttestation ua -> result.setFailureCategory(ua.failureCategory().name());
-      default -> {
-      }
     }
     return result;
   }

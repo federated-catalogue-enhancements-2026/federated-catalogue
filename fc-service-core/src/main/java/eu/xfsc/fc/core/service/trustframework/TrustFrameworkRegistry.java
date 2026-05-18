@@ -56,6 +56,15 @@ public class TrustFrameworkRegistry {
    */
   private static final Pattern VALID_SPARQL_URI_PATTERN = Pattern.compile("^[^<>\\s\\n\\r]*$");
 
+  public static final String DEFAULT_API_VERSION = "1.0";
+  public static final int DEFAULT_TIMEOUT_SECONDS = 30;
+
+  // Property keys for deriving TrustFrameworkProfileConfig from bundle properties
+  public static final String CLIENT_TYPE = "client_type";
+  public static final String SERVICE_URL = "service_url";
+  public static final String API_VERSION = "api_version";
+  public static final String TIMEOUT_SECONDS = "timeout_seconds";
+
   private final Map<String, ResolvedRole> typeIndex;
   private final Map<String, TrustFrameworkBundle> bundleIndex;
   private final Set<String> activeProfileIds;
@@ -105,7 +114,7 @@ public class TrustFrameworkRegistry {
     }
     if (!ns.endsWith("/") && !ns.endsWith("#")) {
       throw new IllegalArgumentException(
-          "Bundle '" + config.id() + "' namespace '" + ns + "' must end with '/' or '#'");
+          "Bundle '%s' namespace '%s' must end with '/' or '#'".formatted(config.id(), ns));
     }
   }
 
@@ -155,7 +164,7 @@ public class TrustFrameworkRegistry {
    * profile ID. Returns empty when no bundle is registered for that ID.
    *
    * <p>Fields absent from the bundle configuration fall back to safe defaults:
-   * {@code apiVersion} defaults to {@code "1.0"}, {@code timeoutSeconds} to {@code 30}.
+   * {@code apiVersion} defaults to {@code DEFAULT_API_VERSION}, {@code timeoutSeconds} to {@code DEFAULT_TIMEOUT_SECONDS}.
    *
    * @param profileId the ID of the profile to look up
    * @return an Optional containing the derived config, or empty if no bundle is registered
@@ -164,12 +173,12 @@ public class TrustFrameworkRegistry {
     return getBundle(profileId).map(bundle -> {
       FrameworkBundleConfig cfg = bundle.config();
       Map<String, String> props = cfg.properties();
-      String clientType = props.get("client_type");
-      String serviceUrl = props.get("service_url");
-      String rawApiVersion = props.get("api_version");
-      String apiVersion = rawApiVersion != null ? rawApiVersion : "1.0";
-      String rawTimeout = props.get("timeout_seconds");
-      int timeoutSeconds = rawTimeout != null ? Integer.parseInt(rawTimeout) : 30;
+      String clientType = props.get(CLIENT_TYPE);
+      String serviceUrl = props.get(SERVICE_URL);
+      String rawApiVersion = props.get(API_VERSION);
+      String apiVersion = rawApiVersion != null ? rawApiVersion : DEFAULT_API_VERSION;
+      String rawTimeout = props.get(TIMEOUT_SECONDS);
+      int timeoutSeconds = rawTimeout != null ? Integer.parseInt(rawTimeout) : DEFAULT_TIMEOUT_SECONDS;
       return new TrustFrameworkProfileConfig(
           cfg.id(),
           cfg.family(),

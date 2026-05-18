@@ -35,6 +35,9 @@ public class ComplianceResultStoreImpl implements ComplianceResultStore {
   private static final String FIELD_VERIFICATION_ERROR = "verificationError";
   private static final String FIELD_RAW_ATTESTATION = "rawAttestation";
 
+  private static final int MAX_RAW_ATTESTATION_SIZE = 65_536;
+  private static final String TRUNCATION_MARKER = "...[TRUNCATED]";
+
   private final ValidationResultStore validationResultStore;
   private final ObjectMapper objectMapper;
 
@@ -58,6 +61,13 @@ public class ComplianceResultStoreImpl implements ComplianceResultStore {
     return validationResultStore.getByAssetId(assetId, pageable);
   }
 
+  private static String truncate(String value) {
+    if (value.length() <= MAX_RAW_ATTESTATION_SIZE) {
+      return value;
+    }
+    return value.substring(0, MAX_RAW_ATTESTATION_SIZE) + TRUNCATION_MARKER;
+  }
+
   private String buildReport(ComplianceCheckOutcome outcome) {
     ObjectNode node = objectMapper.createObjectNode();
     switch (outcome) {
@@ -69,7 +79,7 @@ public class ComplianceResultStoreImpl implements ComplianceResultStore {
       case UnverifiableAttestation ua -> {
         node.put(FIELD_FAILURE_CATEGORY, ua.failureCategory().name());
         if (ua.rawAttestation() != null) {
-          node.put(FIELD_RAW_ATTESTATION, ua.rawAttestation());
+          node.put(FIELD_RAW_ATTESTATION, truncate(ua.rawAttestation()));
         }
         if (ua.verificationError() != null) {
           node.put(FIELD_VERIFICATION_ERROR, ua.verificationError());

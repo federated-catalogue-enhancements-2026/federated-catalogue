@@ -88,14 +88,47 @@ class ComplianceResultStoreImplTest {
   }
 
   @Test
+  void store_unverifiableAttestation_rawAttestationAtSizeLimit_storedVerbatim() {
+    String atLimit = "x".repeat(65_536);
+    var outcome = new UnverifiableAttestation(
+        FailureCategory.UNVERIFIABLE_ATTESTATION, atLimit, null);
+    when(validationResultStore.store(any())).thenReturn(1L);
+
+    subject.store("asset:3", "gaia-x-2511", "gaia-x", outcome);
+
+    ArgumentCaptor<ValidationResultRecord> captor = forClass(ValidationResultRecord.class);
+    verify(validationResultStore).store(captor.capture());
+    String report = captor.getValue().report();
+    assertFalse(report.contains("[TRUNCATED]"));
+    assertTrue(report.contains(atLimit));
+  }
+
+  @Test
+  void store_unverifiableAttestation_rawAttestationExceedsLimit_truncatedWithMarker() {
+    String oversized = "x".repeat(65_537);
+    var outcome = new UnverifiableAttestation(
+        FailureCategory.UNVERIFIABLE_ATTESTATION, oversized, null);
+    when(validationResultStore.store(any())).thenReturn(1L);
+
+    subject.store("asset:4", "gaia-x-2511", "gaia-x", outcome);
+
+    ArgumentCaptor<ValidationResultRecord> captor = forClass(ValidationResultRecord.class);
+    verify(validationResultStore).store(captor.capture());
+    String report = captor.getValue().report();
+    assertTrue(report.contains("...[TRUNCATED]"));
+    assertFalse(report.contains(oversized));
+  }
+
+  @Test
   void findByAssetId_delegatesToValidationResultStore() {
     var pageable = PageRequest.of(0, 10);
     Page<ValidationResult> expected = new PageImpl<>(List.of());
-    when(validationResultStore.getByAssetId(eq("asset:1"), eq(pageable))).thenReturn(expected);
+    String value = "asset:1";
+    when(validationResultStore.getByAssetId(eq(value), eq(pageable))).thenReturn(expected);
 
-    Page<ValidationResult> result = subject.findByAssetId("asset:1", pageable);
+    Page<ValidationResult> result = subject.findByAssetId(value, pageable);
 
     assertEquals(expected, result);
-    verify(validationResultStore).getByAssetId("asset:1", pageable);
+    verify(validationResultStore).getByAssetId(value, pageable);
   }
 }

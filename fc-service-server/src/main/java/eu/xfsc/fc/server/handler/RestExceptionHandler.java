@@ -144,7 +144,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
    */
   @ExceptionHandler({ServiceUnavailableException.class})
   protected ResponseEntity<Error> handleServiceUnavailableException(ServiceUnavailableException exception) {
-    log.warn("handleServiceUnavailableException; error: {}", exception.getMessage());
+    log.warn("handleServiceUnavailableException; error: {}", exception.getMessage(), exception);
     return new ResponseEntity<>(new Error("service_unavailable", exception.getMessage()), SERVICE_UNAVAILABLE);
   }
 
