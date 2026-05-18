@@ -37,6 +37,8 @@ import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.util.ClaimValidator;
 import foundation.identity.jsonld.JsonLDObject;
 import jakarta.annotation.PostConstruct;
+
+import java.text.ParseException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -286,8 +288,8 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
         if (verifySemantics) {
           checkVpJwtHolder(jwtClaims);
         }
-      } catch (java.text.ParseException ex) {
-        log.warn("collectValidators; JWT claims re-parse error: {}", ex.getMessage());
+      } catch (ParseException ex) {
+        log.warn("collectValidators; JWT claims re-parse error: {}", ex.getMessage(), ex);
       }
     }
 
@@ -366,7 +368,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
     try {
       return JsonLDObject.fromJson(content.getContentAsString());
     } catch (Exception ex) {
-      log.warn("parseContent.syntactic error: {}", ex.getMessage());
+      log.warn("parseContent.syntactic error: {}", ex.getMessage(), ex);
       throw new ClientException("Syntactic error: " + ex.getMessage(), ex);
     }
   }
@@ -592,7 +594,7 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
       // VC-JOSE-COSE / VCDM 2.0: holder is a top-level claim; legacy VC-JWT: nested in vp claim
       String holder = claims.getStringClaim("holder");
       if (holder == null) {
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unchecked") // use of raw Map is unavoidable due to the flexible VP claim structure
         Map<String, Object> vpClaim = (Map<String, Object>) claims.getClaim("vp");
         if (vpClaim != null) {
           holder = (String) vpClaim.get("holder");
@@ -618,8 +620,8 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
         throw new VerificationException(
             "VP JWT iss '" + iss + "' does not match VP holder '" + holder + "'");
       }
-    } catch (java.text.ParseException ex) {
-      log.warn("checkVpJwtHolder; unexpected claims parse error: {}", ex.getMessage());
+    } catch (ParseException ex) {
+      log.warn("checkVpJwtHolder; unexpected claims parse error: {}", ex.getMessage(), ex);
     }
   }
 }
