@@ -14,6 +14,8 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -33,16 +35,13 @@ import org.springframework.web.client.RestTemplate;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GxdchComplianceClient implements TrustFrameworkClient {
 
   private static final String CLIENT_TYPE = "gxdch-loire";
   private static final String COMPLIANCE_PATH = "/api/credential-offers/standard-compliance";
 
-  private final ConcurrentHashMap<Integer, RestTemplate> restTemplateCache;
-
-  public GxdchComplianceClient() {
-    this.restTemplateCache = new ConcurrentHashMap<>();
-  }
+  private final ConcurrentHashMap<Integer, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
   @Override
   public String clientType() {
