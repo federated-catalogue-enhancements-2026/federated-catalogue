@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.trustframework.compliance;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import eu.xfsc.fc.core.exception.ServiceUnavailableException;
 import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -10,9 +10,9 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -38,11 +38,9 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
   private static final String CLIENT_TYPE = "gxdch-loire";
   private static final String COMPLIANCE_PATH = "/api/credential-offers/standard-compliance";
 
-  private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<Integer, RestTemplate> restTemplateCache;
 
   public GxdchComplianceClient() {
-    this.objectMapper = new ObjectMapper();
     this.restTemplateCache = new ConcurrentHashMap<>();
   }
 
@@ -125,8 +123,9 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
 
   private String extractJwtClaim(String jwt, String claim) {
     try {
-      JsonNode payload = readJwtPayload(jwt);
-      return payload.path(claim).asText("");
+      JWTClaimsSet claims = readJwtPayload(jwt);
+      String value = claims.getStringClaim(claim);
+      return value != null ? value : "";
     } catch (Exception e) {
       log.error("Failed to extract claim '{}' from JWT", claim, e);
       return "";
@@ -135,9 +134,12 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
 
   private ComplianceCheckOutcome parseComplianceJwt(String jwt) {
     try {
-      JsonNode payload = readJwtPayload(jwt);
-      Instant validUntil = payload.has("exp")
-          ? Instant.ofEpochSecond(payload.get("exp").asLong())
+      JWTClaimsSet claims = readJwtPayload(jwt);
+      // Signature not verified: the compliance credential arrives over HTTPS directly from GXDCH;
+      // the transport layer provides authenticity. The raw JWT is stored as-is for downstream
+      // relying parties who may verify it independently.
+      Instant validUntil = claims.getExpirationTime() != null
+          ? claims.getExpirationTime().toInstant()
           : null;
       return new IssuedAttestation(jwt, validUntil);
     } catch (Exception e) {
@@ -150,14 +152,7 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
     }
   }
 
-  private JsonNode readJwtPayload(String jwt) throws Exception {
-    String[] parts = jwt.split("\\.");
-    if (parts.length < 2) {
-      throw new IllegalArgumentException("Not a JWT: fewer than two dot-separated parts");
-    }
-    int rem = parts[1].length() % 4;
-    String padded = rem == 0 ? parts[1] : parts[1] + "=".repeat(4 - rem);
-    byte[] decoded = Base64.getUrlDecoder().decode(padded);
-    return objectMapper.readTree(new String(decoded, StandardCharsets.UTF_8));
+  private JWTClaimsSet readJwtPayload(String jwt) throws ParseException {
+    return SignedJWT.parse(jwt).getJWTClaimsSet();
   }
 }

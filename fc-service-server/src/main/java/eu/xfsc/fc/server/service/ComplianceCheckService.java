@@ -2,6 +2,7 @@ package eu.xfsc.fc.server.service;
 
 import java.util.List;
 
+import eu.xfsc.fc.core.pojo.TrustFrameworkConfig;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -75,10 +76,11 @@ public class ComplianceCheckService implements ComplianceApiDelegate {
   public ResponseEntity<List<TrustFrameworkPublicEntry>> getTrustFrameworksPublic() {
     log.debug("getTrustFrameworksPublic");
 
+    var activeBundles = registry.getActiveBundles();
     List<TrustFrameworkPublicEntry> entries = trustFrameworkService.findAll().stream()
-        .filter(cfg -> cfg.enabled())
+        .filter(TrustFrameworkConfig::enabled)
         .map(cfg -> {
-          List<String> profiles = registry.getActiveBundles().stream()
+          List<String> profiles = activeBundles.stream()
               .filter(bundle -> cfg.id().equals(bundle.config().family()))
               .map(bundle -> bundle.config().id())
               .toList();
