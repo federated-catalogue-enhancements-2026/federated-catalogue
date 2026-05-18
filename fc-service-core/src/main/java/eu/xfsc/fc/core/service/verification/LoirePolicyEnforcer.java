@@ -81,6 +81,10 @@ public class LoirePolicyEnforcer {
     rest = new RestTemplate(factory);
   }
 
+  void setRest(RestTemplate rest) {
+    this.rest = rest;
+  }
+
   /**
    * Applies Loire policies to a JWT credential body when the Loire framework is enabled.
    * No-op otherwise. Safe to call for any credential format — callers do not need to

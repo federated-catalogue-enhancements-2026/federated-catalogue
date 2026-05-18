@@ -61,7 +61,7 @@ public class EnvelopedCredentialResolver {
   private Map<CredentialFormat, CredentialFormatProcessor> processorsByFormat;
 
   @PostConstruct
-  private void indexProcessors() {
+  void indexProcessors() {
     processorsByFormat = new EnumMap<>(CredentialFormat.class);
     for (CredentialFormatProcessor p : formatProcessors) {
       processorsByFormat.put(p.getFormat(), p);
