@@ -59,8 +59,6 @@ class ComplianceCheckServiceTest {
   @InjectMocks
   private ComplianceCheckService service;
 
-  // --- runComplianceCheck ---
-
   @Test
   void runComplianceCheck_issuedAttestation_returnsConformsTrueAndCredential() {
     var outcome = new IssuedAttestation(CANNED_VC_JWT, null);
@@ -112,8 +110,6 @@ class ComplianceCheckServiceTest {
     verify(resultStore).store(ASSET_ID, PROFILE_ID, PROFILE_ID, outcome);
   }
 
-  // --- getComplianceChecks ---
-
   @Test
   void getComplianceChecks_nullOffsetAndLimit_usesDefaultPagination() {
     when(resultStore.findByAssetId(eq(ASSET_ID), any(Pageable.class)))
@@ -159,8 +155,6 @@ class ComplianceCheckServiceTest {
     assertThat(response.getBody().getFirst().getConforms()).isTrue();
   }
 
-  // --- getTrustFrameworksPublic ---
-
   @Test
   void getTrustFrameworksPublic_disabledFrameworkExcluded() {
     var enabled = tfConfig("gaia-x", "GAIA-X", true);
@@ -202,8 +196,6 @@ class ComplianceCheckServiceTest {
     assertThat(response.getBody()).hasSize(1);
     assertThat(response.getBody().getFirst().getProfiles()).isEmpty();
   }
-
-  // --- helpers ---
 
   private static ComplianceCheckRequest request(String profileId, String credential) {
     return new ComplianceCheckRequest().frameworkProfileId(profileId).credential(credential);
