@@ -81,6 +81,10 @@ public class LoirePolicyEnforcer {
     rest = new RestTemplate(factory);
   }
 
+  void setRest(RestTemplate rest) {
+    this.rest = rest;
+  }
+
   /**
    * Applies Loire policies to a JWT credential body when the Loire framework is enabled.
    * No-op otherwise. Safe to call for any credential format — callers do not need to
@@ -191,7 +195,7 @@ public class LoirePolicyEnforcer {
       CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
       certs = (List<X509Certificate>) certFactory.generateCertificates(certStream);
     } catch (CertificateException ex) {
-      log.warn("validateTrustAnchorChain; certificate error: {}", ex.getMessage());
+      log.warn("validateTrustAnchorChain; certificate error: {}", ex.getMessage(), ex);
       throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
     }
 
@@ -223,7 +227,7 @@ public class LoirePolicyEnforcer {
     } catch (VerificationException ex) {
       throw ex;
     } catch (Exception ex) {
-      log.warn("validateTrustAnchorChain; trust anchor error: {}", ex.getMessage());
+      log.warn("validateTrustAnchorChain; trust anchor error: {}", ex.getMessage(), ex);
       throw new VerificationException("Signatures error; " + ex.getMessage(), ex);
     }
     Instant exp = relevant == null ? null : relevant.getNotAfter().toInstant();

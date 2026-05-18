@@ -23,11 +23,11 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 public interface RdfIngestionStrategy {
 
   /**
-   * Verifies a credential payload according to the implementation's logic.
+   * Ingests an RDF asset according to the implementation's logic.
    *
    * <p>All implementations of that method must apply namespace filtering according to
    * requirement CAT-FR-GD-09 as specified in
-   * https://github.com/eclipse-xfsc/docs/blob/f3c6e6b6fbcc87732a1dfe83f060fa58a9a97873/federated-catalogue/src/docs/CAT%20Enhancement/CAT_Enhancement_Specifications%20v1.0.pdf
+   * {@link <a href=https://github.com/eclipse-xfsc/docs/blob/f3c6e6b6fbcc87732a1dfe83f060fa58a9a97873/federated-catalogue/src/docs/CAT%20Enhancement/CAT_Enhancement_Specifications%20v1.0.pdf>the FCE SRS</a>}
    * before returning claims.</p>
    *
    * @param payload            the credential content to verify

@@ -42,11 +42,11 @@ public interface CredentialFormatProcessor {
    * and requested), apply any format-specific policies, and unwrap the payload to JSON-LD.
    * The strategy calls this exactly once per credential, after format detection.
    *
-   * @param body        the original raw body (compact JWT or JSON-LD)
-   * @param payload     the {@link ContentAccessor} for the same body
-   * @param verifySigs  whether the caller requested signature verification at all
+   * @param body       the original raw body (compact JWT or JSON-LD)
+   * @param payload    the {@link ContentAccessor} for the same body
+   * @param verifySigs whether the caller requested signature verification at all
    * @return the unwrapped JSON-LD payload, the resulting JWT validator (or {@code null}),
-   *         and whether this envelope was a compact JWT
+   * and whether this envelope was a compact JWT
    */
   ProcessedEnvelope process(String body, ContentAccessor payload, boolean verifySigs);
 
