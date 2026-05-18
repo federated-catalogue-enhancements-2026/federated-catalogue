@@ -3,6 +3,7 @@ package eu.xfsc.fc.core.service.trustframework.compliance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -173,13 +174,15 @@ class GxdchComplianceClientTest {
 
     var trailingSlashConfig = new TrustFrameworkProfileConfig(
         "mock-2026", "mock", "gxdch-loire",
-        server.url("").toString() + "/", "loire", 30
+        server.url("") + "/", "loire", 30
     );
     var credential = new ContentAccessorDirect(TEST_VP_JWT);
 
-    client.check(credential, trailingSlashConfig);
+    assertInstanceOf(IssuedAttestation.class, client.check(credential, trailingSlashConfig),
+        "Expected HTTP request to be made and compliance credential returned");
 
-    RecordedRequest req = server.takeRequest();
+    RecordedRequest req = server.takeRequest(1, TimeUnit.SECONDS);
+    assertNotNull(req, "Expected an HTTP request to be recorded");
     assertTrue(req.getPath().startsWith("/api/credential-offers/standard-compliance"),
         "Path must not have double slash from trailing serviceUrl");
   }

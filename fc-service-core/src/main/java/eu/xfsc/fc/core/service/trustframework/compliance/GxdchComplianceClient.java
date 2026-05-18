@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.trustframework.compliance;
 
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.JWTParser;
 import eu.xfsc.fc.core.exception.ServiceUnavailableException;
 import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -153,6 +153,6 @@ public class GxdchComplianceClient implements TrustFrameworkClient {
   }
 
   private JWTClaimsSet readJwtPayload(String jwt) throws ParseException {
-    return SignedJWT.parse(jwt).getJWTClaimsSet();
+    return JWTParser.parse(jwt).getJWTClaimsSet();
   }
 }
