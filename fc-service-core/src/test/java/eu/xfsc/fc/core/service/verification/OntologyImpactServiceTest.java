@@ -1,6 +1,7 @@
 package eu.xfsc.fc.core.service.verification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import eu.xfsc.fc.api.generated.model.OntologyImpactEntry;
+import eu.xfsc.fc.api.generated.model.OntologyImpactList;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
@@ -76,10 +78,12 @@ class OntologyImpactServiceTest {
   @Test
   void computeImpact_noOntologiesStored_returnsEmptyList() {
     when(schemaStore.getSchemaList()).thenReturn(Map.of());
+    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
 
-    List<OntologyImpactEntry> result = service.computeImpact();
+    OntologyImpactList result = service.computeImpact();
 
-    assertTrue(result.isEmpty(), "no stored ontologies → empty impact list");
+    assertTrue(result.getItems().isEmpty(), "no stored ontologies → empty impact list");
+    assertFalse(result.getNoActiveBundles(), "bundles are active");
   }
 
   @Test
@@ -87,11 +91,12 @@ class OntologyImpactServiceTest {
     seedSingleOntology();
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
 
-    List<OntologyImpactEntry> result = service.computeImpact();
+    OntologyImpactList result = service.computeImpact();
 
-    assertEquals(1, result.size(), "one stored ontology → one impact entry");
-    OntologyImpactEntry entry = result.get(0);
+    assertEquals(1, result.getItems().size(), "one stored ontology → one impact entry");
+    OntologyImpactEntry entry = result.getItems().get(0);
     assertEquals(SCHEMA_ID, entry.getId());
+    assertFalse(entry.getParseError(), "well-formed Turtle parses cleanly");
     Map<String, Integer> contributions = entry.getContributions();
 
     assertEquals(Integer.valueOf(2), contributions.get("Participant"),
@@ -104,7 +109,7 @@ class OntologyImpactServiceTest {
   }
 
   @Test
-  void computeImpact_unparseableOntology_returnsEntryWithEmptyContributions() {
+  void computeImpact_unparseableOntology_marksEntryWithParseError() {
     SchemaRecord garbageRecord = new SchemaRecord(
         SCHEMA_ID, SCHEMA_ID, SchemaType.ONTOLOGY,
         Instant.parse("2026-05-14T10:00:00Z"), Instant.parse("2026-05-14T10:00:00Z"),
@@ -113,22 +118,26 @@ class OntologyImpactServiceTest {
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(garbageRecord);
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
 
-    List<OntologyImpactEntry> result = service.computeImpact();
+    OntologyImpactList result = service.computeImpact();
 
-    assertEquals(1, result.size());
-    assertTrue(result.get(0).getContributions().isEmpty(),
+    assertEquals(1, result.getItems().size());
+    OntologyImpactEntry entry = result.getItems().get(0);
+    assertTrue(entry.getParseError(), "parse failure surfaces as parseError=true");
+    assertNotNull(entry.getParseErrorMessage(), "parseError carries a human-readable message");
+    assertTrue(entry.getContributions().isEmpty(),
         "unparseable ontology contributes nothing rather than failing the whole call");
   }
 
   @Test
-  void computeImpact_noActiveBundles_returnsEntryWithEmptyContributions() {
+  void computeImpact_noActiveBundles_setsNoActiveBundlesFlag() {
     seedSingleOntology();
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(List.of());
 
-    List<OntologyImpactEntry> result = service.computeImpact();
+    OntologyImpactList result = service.computeImpact();
 
-    assertEquals(1, result.size());
-    assertTrue(result.get(0).getContributions().isEmpty(),
+    assertTrue(result.getNoActiveBundles(), "no active bundles → flag set");
+    assertEquals(1, result.getItems().size());
+    assertTrue(result.getItems().get(0).getContributions().isEmpty(),
         "no registered roots → no contributions to count");
   }
 

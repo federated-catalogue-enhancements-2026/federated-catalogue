@@ -733,6 +733,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OntologyImpactEntry'
+        noActiveBundles:
+          type: boolean
+          default: false
+          description: >-
+            True when no trust-framework bundles are active. In that case
+            contributions cannot be computed for any ontology; the UI
+            should surface a banner explaining that the OWL toggle has no
+            roles to gate.
       required:
         - items
     OntologyImpactEntry:
@@ -746,7 +754,9 @@ components:
           description: Schema identifier
         name:
           type: string
-          description: Human-readable schema name
+          description: >-
+            Display name for the ontology. Derived from the parsed
+            owl:Ontology IRI when present; falls back to the schema id.
         uploadedAt:
           type: string
           format: date-time
@@ -758,10 +768,24 @@ components:
             rdfs:subClassOf+ descendants reachable from the role's primary
             root and additional_roots, aggregated across active
             trust-framework bundles. Roles with zero contributions are
-            omitted.
+            omitted. Empty when parseError is true.
           additionalProperties:
             type: integer
             format: int32
+        parseError:
+          type: boolean
+          default: false
+          description: >-
+            True when the ontology could not be parsed or the subclass
+            walk timed out. The contributions map will be empty; the UI
+            should render a warning row so the admin does not conclude
+            the ontology is safe to ignore.
+        parseErrorMessage:
+          type: string
+          nullable: true
+          description: >-
+            Human-readable explanation when parseError is true. Null
+            otherwise.
       required:
         - id
         - contributions

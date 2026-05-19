@@ -11,15 +11,18 @@ import java.util.Set;
 
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
+import org.apache.jena.ontology.Ontology;
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDFS;
 import org.springframework.stereotype.Service;
 
 import eu.xfsc.fc.api.generated.model.OntologyImpactEntry;
+import eu.xfsc.fc.api.generated.model.OntologyImpactList;
 import eu.xfsc.fc.core.service.schemastore.SchemaRecord;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
@@ -41,6 +44,11 @@ import lombok.extern.slf4j.Slf4j;
  * is concrete: admins can see what each stored ontology contributes before flipping the
  * toggle off.
  *
+ * <p>When an ontology fails to parse the entry carries {@code parseError=true} so the
+ * UI can warn the admin instead of silently hiding the row — otherwise an unparseable
+ * ontology looks identical to a healthy ontology with zero matching roles, and an admin
+ * would draw the wrong conclusion about whether disabling OWL is safe.
+ *
  * <p>The computation is read-only and consults only data already in the catalogue. No
  * caching is in place — Jena parsing is fast for the expected ontology count; add
  * {@code @Cacheable} keyed on the schema content hash if measurements show it slow.
@@ -52,24 +60,25 @@ public class OntologyImpactService {
 
   private static final String SUBCLASS_QUERY =
       "SELECT ?sub WHERE { ?sub rdfs:subClassOf+ ?root FILTER(?sub != ?root) }";
+  private static final String PARSE_ERROR_MESSAGE = "Could not parse ontology";
 
   private final SchemaStore schemaStore;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
 
   /**
-   * Returns one entry per stored ontology, with a map of role name to subclass count.
-   * Roles with zero contributions are omitted from the per-entry map.
+   * Returns the impact list: one entry per stored ontology with a role-to-count map,
+   * plus a {@code noActiveBundles} flag when there are no active bundles to compute
+   * contributions against.
    *
-   * @return list of impact entries; empty if no ontologies are stored
+   * @return populated {@link OntologyImpactList}; entries is empty when no ontologies
+   *         are stored
    */
-  public List<OntologyImpactEntry> computeImpact() {
+  public OntologyImpactList computeImpact() {
     Map<SchemaType, List<String>> schemaList = schemaStore.getSchemaList();
     List<String> ontologyIds = schemaList.getOrDefault(SchemaType.ONTOLOGY, List.of());
-    if (ontologyIds.isEmpty()) {
-      return List.of();
-    }
-
     Map<String, Set<String>> roleRoots = collectRoleRoots();
+    boolean noActiveBundles = roleRoots.isEmpty();
+
     List<OntologyImpactEntry> entries = new ArrayList<>(ontologyIds.size());
     for (String schemaId : ontologyIds) {
       SchemaRecord record;
@@ -77,11 +86,13 @@ public class OntologyImpactService {
         record = schemaStore.getSchemaRecord(schemaId);
       } catch (RuntimeException ex) {
         log.warn("computeImpact; could not load schema record '{}': {}", schemaId, ex.getMessage());
+        entries.add(parseErrorEntry(schemaId, "Could not load schema record"));
         continue;
       }
       entries.add(buildEntry(record, roleRoots));
     }
-    return entries;
+
+    return new OntologyImpactList().items(entries).noActiveBundles(noActiveBundles);
   }
 
   /**
@@ -110,27 +121,51 @@ public class OntologyImpactService {
   }
 
   private OntologyImpactEntry buildEntry(SchemaRecord record, Map<String, Set<String>> roleRoots) {
-    OntologyImpactEntry entry = new OntologyImpactEntry()
-        .id(record.getId())
-        .name(record.getId())
-        .uploadedAt(record.createdAt())
-        .contributions(new HashMap<>());
+    Map<String, Integer> contribs = new HashMap<>();
+    String displayName = record.getId();
+    boolean parseError = false;
+    String parseErrorMessage = null;
 
     OntModel model = parseOntology(record);
     if (model == null) {
-      return entry;
+      parseError = true;
+      parseErrorMessage = PARSE_ERROR_MESSAGE;
+    } else {
+      try {
+        String resolvedName = extractDisplayName(model);
+        if (resolvedName != null && !resolvedName.isBlank()) {
+          displayName = resolvedName;
+        }
+        for (Map.Entry<String, Set<String>> roleEntry : roleRoots.entrySet()) {
+          Set<String> subclasses = new HashSet<>();
+          for (String root : roleEntry.getValue()) {
+            subclasses.addAll(querySubclasses(model, root));
+          }
+          if (!subclasses.isEmpty()) {
+            contribs.put(roleEntry.getKey(), subclasses.size());
+          }
+        }
+      } finally {
+        model.close();
+      }
     }
 
-    for (Map.Entry<String, Set<String>> roleEntry : roleRoots.entrySet()) {
-      Set<String> subclasses = new HashSet<>();
-      for (String root : roleEntry.getValue()) {
-        subclasses.addAll(querySubclasses(model, root));
-      }
-      if (!subclasses.isEmpty()) {
-        entry.putContributionsItem(roleEntry.getKey(), subclasses.size());
-      }
-    }
-    return entry;
+    return new OntologyImpactEntry()
+        .id(record.getId())
+        .name(displayName)
+        .uploadedAt(record.createdAt())
+        .contributions(contribs)
+        .parseError(parseError)
+        .parseErrorMessage(parseErrorMessage);
+  }
+
+  private OntologyImpactEntry parseErrorEntry(String schemaId, String message) {
+    return new OntologyImpactEntry()
+        .id(schemaId)
+        .name(schemaId)
+        .contributions(new HashMap<>())
+        .parseError(true)
+        .parseErrorMessage(message);
   }
 
   private OntModel parseOntology(SchemaRecord record) {
@@ -143,9 +178,34 @@ public class OntologyImpactService {
     } catch (RuntimeException ex) {
       log.warn("computeImpact; could not parse ontology '{}' as Turtle: {}",
           record.getId(), ex.getMessage());
+      model.close();
       return null;
     }
     return model;
+  }
+
+  /**
+   * Returns the URI of the first {@code owl:Ontology} subject declared in the model,
+   * or {@code null} if none is present.
+   */
+  private String extractDisplayName(OntModel model) {
+    ExtendedIterator<Ontology> ontologies = null;
+    try {
+      ontologies = model.listOntologies();
+      if (ontologies.hasNext()) {
+        Ontology ontology = ontologies.next();
+        if (ontology != null && ontology.isURIResource()) {
+          return ontology.getURI();
+        }
+      }
+    } catch (RuntimeException ex) {
+      log.debug("computeImpact; could not extract owl:Ontology display name: {}", ex.getMessage());
+    } finally {
+      if (ontologies != null) {
+        ontologies.close();
+      }
+    }
+    return null;
   }
 
   private Set<String> querySubclasses(OntModel model, String rootUri) {

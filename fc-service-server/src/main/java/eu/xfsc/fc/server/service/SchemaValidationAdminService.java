@@ -109,8 +109,6 @@ public class SchemaValidationAdminService implements SchemaValidationAdminApiDel
 
   @Override
   public ResponseEntity<OntologyImpactList> getOntologyImpact() {
-    OntologyImpactList list = new OntologyImpactList()
-        .items(ontologyImpactService.computeImpact());
-    return ResponseEntity.ok(list);
+    return ResponseEntity.ok(ontologyImpactService.computeImpact());
   }
 }
