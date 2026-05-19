@@ -61,9 +61,6 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY)
 class CredentialVerificationStrategyOwlToggleTest {
 
-  private static final boolean SKIP = false;
-  private static final boolean DO = true;
-
   private static final String PARTICIPANT_FIXTURE =
       "VerificationService/syntax/participantCredential2.jsonld";
 
@@ -113,7 +110,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(true);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
 
     assertNotNull(result);
     verify(schemaStore, atLeastOnce()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -124,7 +121,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
 
     assertNotNull(result);
     verify(schemaStore, never()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -137,7 +134,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), DO, SKIP, SKIP, SKIP);
+        getAccessor(PARTICIPANT_FIXTURE), true, false, false, false);
 
     assertNotNull(result);
     verify(schemaStore, never()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -149,7 +146,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(true);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(CUSTOM_PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+        getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false, false);
 
     assertNotNull(result);
     assertEquals("Participant", result.getRole(),
@@ -166,7 +163,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     // ClientException (→ HTTP 400). Mirrors the user-visible effect of the OWL kill-switch.
     ClientException ex = assertThrows(ClientException.class,
         () -> verificationService.verifyCredential(
-            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP));
+            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false, false));
     assertNotNull(ex.getMessage());
   }
 
@@ -178,7 +175,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
 
     assertNotNull(result);
     assertNotNull(result.getRole(), "registry-direct type resolves regardless of OWL toggle");

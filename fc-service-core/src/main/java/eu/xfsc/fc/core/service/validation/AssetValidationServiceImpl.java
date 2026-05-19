@@ -324,7 +324,7 @@ public class AssetValidationServiceImpl implements AssetValidationService {
 
   private void requireModuleEnabled(String moduleType) {
     if (!moduleConfig.isModuleEnabled(moduleType)) {
-      throw new ClientException("module_disabled:" + moduleType);
+      throw new ClientException(SchemaModuleConfigService.MODULE_DISABLED_PREFIX + moduleType);
     }
   }
 

@@ -743,6 +743,7 @@ components:
             roles to gate.
       required:
         - items
+        - noActiveBundles
     OntologyImpactEntry:
       type: object
       description: >-
@@ -788,7 +789,9 @@ components:
             otherwise.
       required:
         - id
+        - name
         - contributions
+        - parseError
     GraphDatabaseStatus:
       type: object
       properties:

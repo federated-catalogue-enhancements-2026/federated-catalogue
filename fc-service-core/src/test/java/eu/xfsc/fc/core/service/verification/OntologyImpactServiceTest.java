@@ -78,7 +78,7 @@ class OntologyImpactServiceTest {
   @Test
   void computeImpact_noOntologiesStored_returnsEmptyList() {
     when(schemaStore.getSchemaList()).thenReturn(Map.of());
-    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
+    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(buildGx2511Bundles());
 
     OntologyImpactList result = service.computeImpact();
 
@@ -89,7 +89,7 @@ class OntologyImpactServiceTest {
   @Test
   void computeImpact_gx2511OntologyAgainstGx2511Bundle_returnsExpectedSubclassCounts() {
     seedSingleOntology();
-    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
+    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(buildGx2511Bundles());
 
     OntologyImpactList result = service.computeImpact();
 
@@ -116,7 +116,7 @@ class OntologyImpactServiceTest {
         "not valid turtle", Set.of());
     when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.ONTOLOGY, List.of(SCHEMA_ID)));
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(garbageRecord);
-    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(gx2511Bundles());
+    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(buildGx2511Bundles());
 
     OntologyImpactList result = service.computeImpact();
 
@@ -150,7 +150,7 @@ class OntologyImpactServiceTest {
     when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(record);
   }
 
-  private Collection<TrustFrameworkBundle> gx2511Bundles() {
+  private Collection<TrustFrameworkBundle> buildGx2511Bundles() {
     Map<String, RoleConfig> roles = Map.of(
         "Participant", new RoleConfig(List.of(), List.of()),
         "ServiceOffering", new RoleConfig(

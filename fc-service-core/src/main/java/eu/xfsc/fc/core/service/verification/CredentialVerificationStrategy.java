@@ -138,7 +138,8 @@ public class CredentialVerificationStrategy implements RdfIngestionStrategy {
 
     if (verifySchema) {
       if (!schemaModuleConfigService.isModuleEnabled(SchemaModuleType.SHACL)) {
-        throw new ClientException("module_disabled:" + SchemaModuleType.SHACL);
+        throw new ClientException(
+            SchemaModuleConfigService.MODULE_DISABLED_PREFIX + SchemaModuleType.SHACL);
       }
       validateSchema(filtered.claims());
     }

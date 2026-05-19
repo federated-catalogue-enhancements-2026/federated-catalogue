@@ -19,6 +19,15 @@ import lombok.RequiredArgsConstructor;
 public class SchemaModuleConfigService {
 
   public static final String CACHE_NAME = "schemaModuleConfig";
+
+  /**
+   * Error-body prefix returned by every gate that rejects a request because a schema module
+   * is administratively disabled. Concatenated with a {@link SchemaModuleType} constant —
+   * e.g. {@code module_disabled:SHACL}. The OpenAPI spec documents this exact prefix for
+   * 400 responses on the validation and verification endpoints.
+   */
+  public static final String MODULE_DISABLED_PREFIX = "module_disabled:";
+
   private static final String CONFIG_PREFIX = "schema.module.";
   private static final String CONFIG_SUFFIX = ".enabled";
 

@@ -13,10 +13,13 @@ import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
 import org.apache.jena.ontology.Ontology;
 import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.QueryException;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RiotException;
+import org.apache.jena.shared.JenaException;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDFS;
 import org.springframework.stereotype.Service;
@@ -85,6 +88,9 @@ public class OntologyImpactService {
       try {
         record = schemaStore.getSchemaRecord(schemaId);
       } catch (RuntimeException ex) {
+        // Defensive iteration: one bad record must not break the whole batch. The exact
+        // exception types thrown by SchemaStore implementations vary (NotFoundException,
+        // DataAccessException, etc.), so the catch is intentionally broad here only.
         log.warn("computeImpact; could not load schema record '{}': {}", schemaId, ex.getMessage());
         entries.add(parseErrorEntry(schemaId, "Could not load schema record"));
         continue;
@@ -175,7 +181,7 @@ public class OntologyImpactService {
     OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM);
     try {
       model.read(new StringReader(record.content()), null, Lang.TURTLE.getName());
-    } catch (RuntimeException ex) {
+    } catch (RiotException ex) {
       log.warn("computeImpact; could not parse ontology '{}' as Turtle: {}",
           record.getId(), ex.getMessage());
       model.close();
@@ -198,7 +204,7 @@ public class OntologyImpactService {
           return ontology.getURI();
         }
       }
-    } catch (RuntimeException ex) {
+    } catch (JenaException ex) {
       log.debug("computeImpact; could not extract owl:Ontology display name: {}", ex.getMessage());
     } finally {
       if (ontologies != null) {
@@ -215,7 +221,7 @@ public class OntologyImpactService {
     pss.setCommandText(SUBCLASS_QUERY);
     try {
       pss.setIri("root", rootUri);
-    } catch (RuntimeException ex) {
+    } catch (IllegalArgumentException ex) {
       log.warn("computeImpact; could not bind root URI '{}': {}", rootUri, ex.getMessage());
       return result;
     }
@@ -226,7 +232,7 @@ public class OntologyImpactService {
           result.add(res.getURI());
         }
       });
-    } catch (RuntimeException ex) {
+    } catch (QueryException ex) {
       log.warn("computeImpact; SPARQL subclass query for root '{}' failed: {}",
           rootUri, ex.getMessage());
     }
