@@ -262,7 +262,7 @@ class AssetValidationServiceImplTest {
   }
 
   @Test
-  void validateAsset_rdfAsset_validateAll_shaclEnabledNoShapesAndNoOtherModule_throwsVerificationException() {
+  void validateAsset_rdfAsset_validateAll_shaclEnabledNoShapesAndNoOtherModule_throwsClientException() {
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     givenShaclModuleEnabled();
     when(schemaStore.getCompositeSchema(SchemaType.SHAPE)).thenReturn(null);
@@ -272,13 +272,13 @@ class AssetValidationServiceImplTest {
     request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(VerificationException.class, () -> service.validateAssets(request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   // === validateAsset — RDF validateAll C-2: skip disabled modules ===
 
   @Test
-  void validateAsset_rdfAsset_validateAll_allModulesDisabled_throwsVerificationException() {
+  void validateAsset_rdfAsset_validateAll_allModulesDisabled_throwsClientException() {
     registerStrategyList();
     when(assetStore.getById(ASSET_ID)).thenReturn(buildRdfAsset(ASSET_ID));
     // no module mocked → all return false
@@ -287,7 +287,7 @@ class AssetValidationServiceImplTest {
     request.setAssetIds(List.of(ASSET_ID));
     request.setValidateAgainstAllSchemas(true);
 
-    assertThrows(VerificationException.class, () -> service.validateAssets(request));
+    assertThrows(ClientException.class, () -> service.validateAssets(request));
   }
 
   // === Positive tests for RDF serializations + SHACL ===
