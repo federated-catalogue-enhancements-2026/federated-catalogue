@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.verification.OntologyImpactService;
-import eu.xfsc.fc.core.service.verification.RevalidationService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleConfigService;
 import eu.xfsc.fc.core.service.verification.SchemaModuleType;
 import eu.xfsc.fc.server.generated.controller.SchemaValidationAdminApiDelegate;
@@ -62,14 +60,6 @@ public class SchemaValidationAdminService implements SchemaValidationAdminApiDel
   private final AdminConfigRepository adminConfigRepository;
   private final SchemaStore schemaStore;
   private final OntologyImpactService ontologyImpactService;
-  /**
-   * Optional — only present when {@code RevalidationServiceImpl} is registered as a Spring
-   * bean (test contexts today; production-side wiring is not active out of the box).
-   * Used to trigger a full re-sweep when the SHACL toggle flips from disabled to enabled,
-   * because chunks skipped while SHACL was off are recorded as "checked" at pickup and
-   * would otherwise never be revisited.
-   */
-  private final ObjectProvider<RevalidationService> revalidationServiceProvider;
 
   @Override
   public ResponseEntity<SchemaValidationStatus> getSchemaValidationStatus() {
@@ -114,35 +104,9 @@ public class SchemaValidationAdminService implements SchemaValidationAdminApiDel
     String key = CONFIG_PREFIX + type + CONFIG_SUFFIX;
     AdminConfigEntry entry = adminConfigRepository.findById(key)
         .orElse(new AdminConfigEntry(key, null, null));
-    boolean previouslyEnabled = entry.getConfigValue() == null
-        || "true".equalsIgnoreCase(entry.getConfigValue());
     entry.setConfigValue(String.valueOf(enabled));
     adminConfigRepository.save(entry);
-
-    if (SchemaModuleType.SHACL.equals(type)
-        && Boolean.TRUE.equals(enabled)
-        && !previouslyEnabled) {
-      triggerRevalidationSweep();
-    }
     return ResponseEntity.ok().build();
-  }
-
-  /**
-   * Forces a full revalidation re-sweep when SHACL transitions from disabled to enabled.
-   * The background sweep marks each chunk's {@code lastcheck} time at pickup, so chunks
-   * skipped while SHACL was off would otherwise never be revisited unless a fresh SHACL
-   * shape is uploaded. Calling {@code startValidating()} resets all chunk times so the
-   * next manager cycle re-sweeps every active asset.
-   */
-  private void triggerRevalidationSweep() {
-    RevalidationService revalidationService = revalidationServiceProvider.getIfAvailable();
-    if (revalidationService == null) {
-      log.debug("setSchemaModuleEnabled; SHACL re-enabled but no RevalidationService bean "
-          + "is registered — re-sweep skipped");
-      return;
-    }
-    log.info("setSchemaModuleEnabled; SHACL re-enabled — triggering full revalidation sweep");
-    revalidationService.startValidating();
   }
 
   @Override
