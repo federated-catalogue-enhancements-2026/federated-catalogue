@@ -13,9 +13,30 @@ $(document).ready(function() {
     }
   });
 
+  // Backend returns machine-readable tokens like `module_disabled:SHACL` in the error
+  // body; map them to operator-facing strings for the admin UI. The raw token is kept on
+  // the alert element's `data-error-token` attribute for diagnostics.
+  var MODULE_DISABLED_MESSAGES = {
+    SHACL: 'SHACL validation is currently disabled by the administrator.',
+    JSON_SCHEMA: 'JSON Schema validation is currently disabled by the administrator.',
+    XML_SCHEMA: 'XML Schema validation is currently disabled by the administrator.',
+    OWL: 'OWL ontology resolution is currently disabled by the administrator.'
+  };
+
+  function humanizeBackendMessage(message) {
+    if (typeof message !== 'string') {
+      return message;
+    }
+    if (message.indexOf('module_disabled:') === 0) {
+      var module = message.substring('module_disabled:'.length);
+      return MODULE_DISABLED_MESSAGES[module] || message;
+    }
+    return message;
+  }
+
   function describeAjaxError(xhr) {
     if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-      return xhr.responseJSON.message;
+      return humanizeBackendMessage(xhr.responseJSON.message);
     }
     if (xhr && xhr.status) {
       return 'HTTP ' + xhr.status + (xhr.statusText ? ' ' + xhr.statusText : '');
@@ -23,7 +44,14 @@ $(document).ready(function() {
     return 'unknown error';
   }
 
-  function showError(message) {
+  function rawBackendMessage(xhr) {
+    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+      return xhr.responseJSON.message;
+    }
+    return null;
+  }
+
+  function showError(message, rawToken) {
     var $banner = $('#sv-error-banner');
     if ($banner.length === 0) {
       $banner = $('<div>', {
@@ -43,6 +71,11 @@ $(document).ready(function() {
       $('#admin-content').prepend($banner);
     }
     $banner.find('.sv-error-text').text(message);
+    if (rawToken) {
+      $banner.attr('data-error-token', rawToken);
+    } else {
+      $banner.removeAttr('data-error-token');
+    }
     $banner.removeClass('d-none');
   }
 
@@ -77,8 +110,15 @@ $(document).ready(function() {
   }
 
 
-  function renderContributions(contributions) {
+  function renderContributions(contributions, type, row) {
     var $container = $('<span>');
+    if (row && row.parseError) {
+      var errMsg = row.parseErrorMessage || 'Ontology could not be parsed';
+      return $container.append(
+        $('<span>', { class: 'badge bg-warning text-dark', title: errMsg })
+          .text('parse error')
+      ).prop('outerHTML');
+    }
     var keys = Object.keys(contributions || {});
     if (keys.length === 0) {
       return $container.append(
@@ -87,7 +127,7 @@ $(document).ready(function() {
       ).prop('outerHTML');
     }
     keys.sort();
-    keys.forEach(function(role, idx) {
+    keys.forEach(function(role) {
       $container.append(
         $('<span>', { class: 'badge bg-info me-1' })
           .text('+' + contributions[role] + ' ' + role)
@@ -109,10 +149,27 @@ $(document).ready(function() {
 
   var ontologyTableInstance = null;
 
+  function applyNoActiveBundlesBanner(noActiveBundles) {
+    var $banner = $('#owlNoActiveBundlesBanner');
+    if (noActiveBundles) {
+      if ($banner.length === 0) {
+        $banner = $('<div>', {
+          id: 'owlNoActiveBundlesBanner',
+          class: 'alert alert-info py-2 small mb-2'
+        }).text('No active trust frameworks — ontology contributions cannot be computed.');
+        $('#owlOntologyPanel').prepend($banner);
+      }
+      $banner.show();
+    } else if ($banner.length) {
+      $banner.hide();
+    }
+  }
+
   function loadOntologyImpact(owlEnabled) {
     $.getJSON('/admin/schema-validation/ontologies')
       .done(function(data) {
         var items = (data && data.items) ? data.items : [];
+        var noActiveBundles = !!(data && data.noActiveBundles);
         if (ontologyTableInstance) {
           ontologyTableInstance.clear().rows.add(items).draw();
         } else {
@@ -133,10 +190,12 @@ $(document).ready(function() {
             ]
           });
         }
+        applyNoActiveBundlesBanner(noActiveBundles);
         applyOwlEnabledStyle(owlEnabled);
       })
       .fail(function(xhr) {
-        showError('Failed to load ontology list: ' + describeAjaxError(xhr));
+        showError('Failed to load ontology list: ' + describeAjaxError(xhr),
+            rawBackendMessage(xhr));
       });
   }
 
@@ -198,10 +257,13 @@ $(document).ready(function() {
       var owlEnabled = owls.length > 0 ? owls[0].enabled !== false : true;
       loadOntologyImpact(owlEnabled);
     }).fail(function(xhr) {
-      $('#admin-content').html(
-        $('<div>', { class: 'alert alert-danger' })
-          .text('Failed to load schema validation status: ' + describeAjaxError(xhr))
-          .prop('outerHTML'));
+      var $alert = $('<div>', { class: 'alert alert-danger' })
+        .text('Failed to load schema validation status: ' + describeAjaxError(xhr));
+      var raw = rawBackendMessage(xhr);
+      if (raw) {
+        $alert.attr('data-error-token', raw);
+      }
+      $('#admin-content').html($alert.prop('outerHTML'));
     });
 
     // Module toggle handler — bound on both tables; the closest enclosing
@@ -227,11 +289,17 @@ $(document).ready(function() {
           }
           if (type === 'OWL') {
             applyOwlEnabledStyle(enabled);
+            // The contribution counts shown in the ontology sub-panel are a snapshot
+            // computed when the page loaded. After toggling OWL we re-load them so
+            // the panel reflects the post-toggle state — without this the panel
+            // undims but still shows stale data.
+            loadOntologyImpact(enabled);
           }
         },
         error: function(xhr) {
           $toggle.prop('checked', !enabled);
-          showError('Failed to update module status: ' + describeAjaxError(xhr));
+          showError('Failed to update module status: ' + describeAjaxError(xhr),
+              rawBackendMessage(xhr));
         }
       });
     });
