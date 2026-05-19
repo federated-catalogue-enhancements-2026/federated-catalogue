@@ -1,7 +1,9 @@
 package eu.xfsc.fc.core.service.verification;
 
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,6 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import eu.xfsc.fc.core.config.VerificationStackTestConfig;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.schemastore.SchemaStore.SchemaType;
 import eu.xfsc.fc.core.service.schemastore.SchemaStoreImpl;
@@ -63,6 +66,15 @@ class CredentialVerificationStrategyOwlToggleTest {
 
   private static final String PARTICIPANT_FIXTURE =
       "VerificationService/syntax/participantCredential2.jsonld";
+
+  // Credential typed `ext:CustomParticipant`, which is declared in
+  // `custom-participant-extension.ttl` as `rdfs:subClassOf gx:LegalPerson` — i.e. the type
+  // is only reachable via the runtime composite ontology, not via the bundle's tier-1 index.
+  // With OWL on the credential resolves; with OWL off it does not.
+  private static final String CUSTOM_PARTICIPANT_FIXTURE =
+      "VerificationService/syntax/customExtParticipant.jsonld";
+  private static final String CUSTOM_PARTICIPANT_ONTOLOGY =
+      "Schema-Tests/custom-participant-extension.ttl";
 
   @SpringBootApplication
   public static class TestApplication {
@@ -129,5 +141,46 @@ class CredentialVerificationStrategyOwlToggleTest {
 
     assertNotNull(result);
     verify(schemaStore, never()).getCompositeSchema(SchemaType.ONTOLOGY);
+  }
+
+  @Test
+  void verifyCredential_owlEnabled_customSubclassFromRuntimeOntology_resolvesRole() {
+    schemaStore.addSchema(getAccessor(CUSTOM_PARTICIPANT_ONTOLOGY));
+    when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(true);
+
+    CredentialVerificationResult result = verificationService.verifyCredential(
+        getAccessor(CUSTOM_PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+
+    assertNotNull(result);
+    assertEquals("Participant", result.getRole(),
+        "ext:CustomParticipant rdfs:subClassOf gx:LegalPerson → resolves to Participant role");
+  }
+
+  @Test
+  void verifyCredential_owlDisabled_customSubclassFromRuntimeOntology_rejectedWithClientException() {
+    schemaStore.addSchema(getAccessor(CUSTOM_PARTICIPANT_ONTOLOGY));
+    when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
+
+    // Custom subclass is only reachable through the runtime composite; with OWL off the
+    // strategy returns role=null and VerificationServiceImpl rejects the credential with
+    // ClientException (→ HTTP 400). Mirrors the user-visible effect of the OWL kill-switch.
+    ClientException ex = assertThrows(ClientException.class,
+        () -> verificationService.verifyCredential(
+            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP));
+    assertNotNull(ex.getMessage());
+  }
+
+  @Test
+  void verifyCredential_owlDisabled_registryDirectType_stillResolves() {
+    // Control case: framework-direct types (gx:Participant) keep resolving via the
+    // tier-1 registry index regardless of the OWL toggle. Only runtime-uploaded
+    // subclass-only types are rejected.
+    when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
+
+    CredentialVerificationResult result = verificationService.verifyCredential(
+        getAccessor(PARTICIPANT_FIXTURE), SKIP, SKIP, SKIP, SKIP);
+
+    assertNotNull(result);
+    assertNotNull(result.getRole(), "registry-direct type resolves regardless of OWL toggle");
   }
 }

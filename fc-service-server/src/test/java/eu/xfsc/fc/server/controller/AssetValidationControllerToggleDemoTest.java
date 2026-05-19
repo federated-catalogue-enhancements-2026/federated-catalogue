@@ -50,8 +50,11 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class AssetValidationControllerToggleDemoTest {
 
-  private static final String MULTI_ASSET_BODY =
-      "{\"assetIds\":[\"urn:fake-asset-1\",\"urn:fake-asset-2\"]}";
+  private static final String MULTI_ASSET_BODY = """
+      {
+        "assetIds": ["urn:fake-asset-1", "urn:fake-asset-2"]
+      }
+      """;
 
   @Autowired
   private MockMvc mockMvc;
