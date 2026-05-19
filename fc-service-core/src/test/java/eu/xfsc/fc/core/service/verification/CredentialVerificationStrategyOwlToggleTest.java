@@ -47,6 +47,14 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
  * of the toggle gate. Outcome-level assertions (registry-direct types keep resolving) are
  * covered by {@link RoleResolutionCharacterisationTest}; null-tolerance of the downstream
  * {@code ClaimValidator.resolveSubjectRole} is covered by {@link LoireTypeResolutionTest}.
+ *
+ * <p><b>Fixture note:</b> the {@code participantCredential2.jsonld}, {@code
+ * customExtParticipant.jsonld}, and {@code gx-2511-test-ontology.ttl} fixtures used below
+ * are a snapshot of the current default bundle (Gaia-X 2511). The custom-subclass test
+ * relies on {@code ext:CustomParticipant rdfs:subClassOf gx:LegalPerson} being a subclass
+ * chain that ultimately lands under a registered role in the active bundle. If the
+ * default bundle ever changes, swap the fixtures for ones rooted under whatever
+ * registry-direct type the new bundle declares.
  */
 @SpringBootTest(properties = {
     "federated-catalogue.verification.signature-verifier=uni-res",

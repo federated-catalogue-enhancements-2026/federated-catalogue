@@ -38,8 +38,16 @@ import eu.xfsc.fc.core.service.trustframework.ValidationType;
  * Unit tests for {@link OntologyImpactService}.
  *
  * <p>Verifies that uploaded ontologies contribute the expected subclass counts under each
- * registered trust-framework role. Uses the Gaia-X 2511 test ontology fixture, which
- * declares:
+ * registered trust-framework role.
+ *
+ * <p><b>Fixture note:</b> these tests pin behaviour against a snapshot of the current
+ * default bundle (Gaia-X 2511). The bundle name, namespace, fixture file, and the role
+ * names/types asserted here are <em>examples</em> chosen because the catalogue ships with
+ * Gaia-X 2511 as the default. The service itself is bundle-agnostic — if the project
+ * adopts a different default trust-framework, the constants and fixture in this class
+ * need to be updated to match, but {@code OntologyImpactService} does not.
+ *
+ * <p>The Gaia-X 2511 test ontology declares:
  * <ul>
  *   <li>{@code gx:LegalPerson}, {@code gx:NaturalPerson} as subclasses of {@code gx:Participant}</li>
  *   <li>{@code gx:VirtualResource}, {@code gx:PhysicalResource} as subclasses of {@code gx:Resource}</li>
@@ -50,6 +58,9 @@ import eu.xfsc.fc.core.service.trustframework.ValidationType;
 @ExtendWith(MockitoExtension.class)
 class OntologyImpactServiceTest {
 
+  // Snapshot of the current default trust-framework — see class Javadoc. Swap these
+  // three constants (plus the fixture file under Schema-Tests/) if the default bundle
+  // changes; the assertions below describe role wiring, not Gaia-X-specific behaviour.
   private static final String SCHEMA_ID = "schema:gx-2511-test-ontology";
   private static final String PROFILE_ID = "gaia-x-2511";
   private static final String NAMESPACE = "https://w3id.org/gaia-x/2511#";
@@ -139,6 +150,36 @@ class OntologyImpactServiceTest {
     assertEquals(1, result.getItems().size());
     assertTrue(result.getItems().get(0).getContributions().isEmpty(),
         "no registered roots → no contributions to count");
+  }
+
+  @Test
+  void computeImpact_ontologyWithRelativeIris_resolvesAgainstStableBaseUri() {
+    // Turtle ontology that declares a subclass of gx:Participant using a relative IRI.
+    // Before the base-URI fix this resolved to a `file:`/empty-base IRI that did not
+    // match the registry root and produced zero contributions silently. With the fix,
+    // the relative IRI gets a stable absolute form per ontology.
+    String relativeIriOntology = """
+        @prefix gx: <https://w3id.org/gaia-x/2511#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        <RelativeCustomParticipant> a owl:Class ;
+            rdfs:subClassOf gx:Participant .
+        """;
+    SchemaRecord record = new SchemaRecord(
+        SCHEMA_ID, SCHEMA_ID, SchemaType.ONTOLOGY,
+        Instant.parse("2026-05-19T10:00:00Z"), Instant.parse("2026-05-19T10:00:00Z"),
+        relativeIriOntology, Set.of());
+    when(schemaStore.getSchemaList()).thenReturn(Map.of(SchemaType.ONTOLOGY, List.of(SCHEMA_ID)));
+    when(schemaStore.getSchemaRecord(SCHEMA_ID)).thenReturn(record);
+    when(trustFrameworkRegistry.getActiveBundles()).thenReturn(buildGx2511Bundles());
+
+    OntologyImpactList result = service.computeImpact();
+
+    assertEquals(1, result.getItems().size());
+    OntologyImpactEntry entry = result.getItems().get(0);
+    assertFalse(entry.getParseError(), "well-formed Turtle parses cleanly");
+    assertEquals(Integer.valueOf(1), entry.getContributions().get("Participant"),
+        "relative IRI is resolved against the per-ontology base URI and counts under Participant");
   }
 
   private void seedSingleOntology() {

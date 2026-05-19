@@ -9,12 +9,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
 import org.apache.jena.ontology.Ontology;
 import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.QueryCancelledException;
 import org.apache.jena.query.QueryException;
-import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryExecution;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
@@ -64,6 +67,23 @@ public class OntologyImpactService {
   private static final String SUBCLASS_QUERY =
       "SELECT ?sub WHERE { ?sub rdfs:subClassOf+ ?root FILTER(?sub != ?root) }";
   private static final String PARSE_ERROR_MESSAGE = "Could not parse ontology";
+  private static final String SUBCLASS_TIMEOUT_MESSAGE =
+      "Subclass walk timed out — ontology may have a deeply cyclic subClassOf graph";
+
+  /**
+   * Per-root SPARQL timeout for the {@code rdfs:subClassOf+} walk. A pathological ontology
+   * (deeply cyclic or very large class hierarchy) could otherwise block the admin HTTP
+   * thread indefinitely. The walk is read-only so a hard cap is safe; the entry is marked
+   * {@code parseError=true} when the cap fires.
+   */
+  private static final long SUBCLASS_QUERY_TIMEOUT_MS = 2_000L;
+
+  /**
+   * Base URI used when parsing an ontology so relative IRIs (e.g. {@code <MyClass>})
+   * resolve to predictable absolute IRIs instead of unresolved literals. Concatenated
+   * with the schema id, so each ontology gets its own stable base.
+   */
+  private static final String ONTOLOGY_BASE_URI_PREFIX = "urn:fc:ontology:";
 
   private final SchemaStore schemaStore;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
@@ -151,6 +171,13 @@ public class OntologyImpactService {
             contribs.put(roleEntry.getKey(), subclasses.size());
           }
         }
+      } catch (QueryCancelledException ex) {
+        // The subclass walk timed out — mark the entry parseError so the admin sees the
+        // gap. Drop any partial contributions because the count is no longer trustworthy.
+        log.warn("computeImpact; subclass walk timed out for ontology '{}'", record.getId());
+        contribs.clear();
+        parseError = true;
+        parseErrorMessage = SUBCLASS_TIMEOUT_MESSAGE;
       } finally {
         model.close();
       }
@@ -179,8 +206,13 @@ public class OntologyImpactService {
     // SPARQL query handles transitive closure. A reasoner like OWL_MEM_MICRO_RULE_INF
     // would otherwise count owl:Nothing as a subclass of every class.
     OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM);
+    // A stable per-ontology base URI ensures relative IRIs in Turtle (e.g. `<MyClass>`)
+    // resolve to a predictable absolute form instead of `file://` (default working dir)
+    // or empty-base failure. Without this, an ontology authored with relative IRIs
+    // contributes zero subclasses to every role and silently misleads admins.
+    String baseUri = ONTOLOGY_BASE_URI_PREFIX + record.getId();
     try {
-      model.read(new StringReader(record.content()), null, Lang.TURTLE.getName());
+      model.read(new StringReader(record.content()), baseUri, Lang.TURTLE.getName());
     } catch (RiotException ex) {
       log.warn("computeImpact; could not parse ontology '{}' as Turtle: {}",
           record.getId(), ex.getMessage());
@@ -225,13 +257,24 @@ public class OntologyImpactService {
       log.warn("computeImpact; could not bind root URI '{}': {}", rootUri, ex.getMessage());
       return result;
     }
-    try (var qe = QueryExecutionFactory.create(pss.asQuery(), model)) {
+    // Hard cap so a pathological ontology (deep cyclic subClassOf, very large class
+    // hierarchy) cannot hang the admin HTTP thread. Cancellation propagates as
+    // QueryCancelledException; the caller marks the entry parseError.
+    try (QueryExecution qe = QueryExecution.model(model)
+        .query(pss.asQuery())
+        .timeout(SUBCLASS_QUERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .build()) {
       qe.execSelect().forEachRemaining(row -> {
         Resource res = row.getResource("sub");
         if (res != null && res.isURIResource()) {
           result.add(res.getURI());
         }
       });
+    } catch (QueryCancelledException ex) {
+      // Bubble up so buildEntry can mark the whole entry parseError — partial counts from
+      // earlier roots would mislead the admin.
+      log.warn("computeImpact; SPARQL subclass query for root '{}' timed out", rootUri);
+      throw ex;
     } catch (QueryException ex) {
       log.warn("computeImpact; SPARQL subclass query for root '{}' failed: {}",
           rootUri, ex.getMessage());
