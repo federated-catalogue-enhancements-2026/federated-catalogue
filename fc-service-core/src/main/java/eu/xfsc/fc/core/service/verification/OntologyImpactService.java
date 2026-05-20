@@ -111,7 +111,7 @@ public class OntologyImpactService {
         // Defensive iteration: one bad record must not break the whole batch. The exact
         // exception types thrown by SchemaStore implementations vary (NotFoundException,
         // DataAccessException, etc.), so the catch is intentionally broad here only.
-        log.warn("computeImpact; could not load schema record '{}': {}", schemaId, ex.getMessage());
+        log.warn("computeImpact; could not load schema record '{}'", schemaId, ex);
         entries.add(parseErrorEntry(schemaId, "Could not load schema record"));
         continue;
       }
@@ -214,8 +214,8 @@ public class OntologyImpactService {
     try {
       model.read(new StringReader(record.content()), baseUri, Lang.TURTLE.getName());
     } catch (RiotException ex) {
-      log.warn("computeImpact; could not parse ontology '{}' as Turtle: {}",
-          record.getId(), ex.getMessage());
+      log.warn("computeImpact; could not parse ontology '{}' as Turtle",
+          record.getId(), ex);
       model.close();
       return null;
     }
@@ -237,7 +237,7 @@ public class OntologyImpactService {
         }
       }
     } catch (JenaException ex) {
-      log.debug("computeImpact; could not extract owl:Ontology display name: {}", ex.getMessage());
+      log.debug("computeImpact; could not extract owl:Ontology display name", ex);
     } finally {
       if (ontologies != null) {
         ontologies.close();
@@ -254,7 +254,7 @@ public class OntologyImpactService {
     try {
       pss.setIri("root", rootUri);
     } catch (IllegalArgumentException ex) {
-      log.warn("computeImpact; could not bind root URI '{}': {}", rootUri, ex.getMessage());
+      log.warn("computeImpact; could not bind root URI '{}'", rootUri, ex);
       return result;
     }
     // Hard cap so a pathological ontology (deep cyclic subClassOf, very large class
@@ -276,8 +276,8 @@ public class OntologyImpactService {
       log.warn("computeImpact; SPARQL subclass query for root '{}' timed out", rootUri);
       throw ex;
     } catch (QueryException ex) {
-      log.warn("computeImpact; SPARQL subclass query for root '{}' failed: {}",
-          rootUri, ex.getMessage());
+      log.warn("computeImpact; SPARQL subclass query for root '{}' failed",
+          rootUri, ex);
     }
     return result;
   }
