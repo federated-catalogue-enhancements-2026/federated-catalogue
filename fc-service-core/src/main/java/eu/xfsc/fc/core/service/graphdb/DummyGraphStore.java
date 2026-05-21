@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
@@ -16,9 +15,6 @@ import eu.xfsc.fc.core.pojo.PaginatedResults;
 
 //@Slf4j
 @Component
-@ConditionalOnExpression(
-    "'${graphstore.impl:none}'.equals('none') "
-    + "|| ${graphstore.routing-enabled:false}")
 public class DummyGraphStore implements GraphStore {
 
     @Override

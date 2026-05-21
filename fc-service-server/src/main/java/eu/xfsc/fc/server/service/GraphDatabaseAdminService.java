@@ -2,7 +2,6 @@ package eu.xfsc.fc.server.service;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -15,7 +14,6 @@ import eu.xfsc.fc.core.dao.adminconfig.AdminConfigEntry;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.assets.ContentKind;
 import eu.xfsc.fc.core.exception.ClientException;
-import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
@@ -49,7 +47,7 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
   private final AssetStore assetStore;
   private final AdminConfigRepository adminConfigRepository;
   private final GraphStoreProbe graphStoreProbe;
-  private final Optional<RoutingGraphStore> routingGraphStore;
+  private final RoutingGraphStore routingGraphStore;
 
   @Override
   public ResponseEntity<GraphDatabaseStatus> getGraphDatabaseStatus() {
@@ -88,18 +86,12 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
           + ". Verify the backend container is up and the URI configuration is correct.");
     }
 
-    if (routingGraphStore.isEmpty()) {
-      throw new ServerException(
-          "Live backend switch requires graphstore.routing-enabled=true. "
-          + "The current deployment is configured for a single fixed backend.");
-    }
-
     AdminConfigEntry entry = adminConfigRepository.findById(KEY_PREFERRED_BACKEND)
         .orElse(new AdminConfigEntry(KEY_PREFERRED_BACKEND, null, null));
     entry.setConfigValue(target.name());
     adminConfigRepository.save(entry);
 
-    routingGraphStore.get().setActive(target);
+    routingGraphStore.setActive(target);
 
     GraphDatabaseSwitchResult result = new GraphDatabaseSwitchResult();
     result.setMessage("Graph database backend switched to " + target.name()

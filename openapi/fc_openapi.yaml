@@ -1497,18 +1497,17 @@ paths:
     post:
       tags:
         - GraphDatabaseAdmin
-      summary: Switch the graph database backend (requires restart)
+      summary: Switch the graph database backend
       description: |
-        Persists the target backend to `admin_config[graphstore.preferred.backend]`.
-        The persisted value is read at the next boot by
-        `GraphStorePreferenceEnvPostProcessor` and overrides the `graphstore.impl`
-        environment value.
+        Performs a live in-process swap to the target backend and persists the
+        choice to `admin_config[graphstore.preferred.backend]` so the same backend
+        is reactivated on the next cold boot.
 
-        The target backend is pre-flighted before the preference is persisted: if
-        the configured URI for that backend is unreachable, the request is rejected
-        with `400 Bad Request` and a message describing what to fix. This prevents
-        the operator from persisting a preference that would cause the server to
-        fail on the next restart.
+        The target backend is pre-flighted before either the swap or the persist:
+        if the configured URI for that backend is unreachable, the request is
+        rejected with `400 Bad Request` and a message describing what to fix. The
+        active adapter and the persisted preference are both left untouched on
+        rejection.
       operationId: switchGraphDatabase
       security:
         - jwt: []

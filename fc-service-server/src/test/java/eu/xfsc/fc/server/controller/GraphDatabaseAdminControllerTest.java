@@ -38,10 +38,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-    "graphstore.impl=fuseki",
-    "graphstore.routing-enabled=true"
-})
+@TestPropertySource(properties = {"graphstore.impl=fuseki"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class GraphDatabaseAdminControllerTest {

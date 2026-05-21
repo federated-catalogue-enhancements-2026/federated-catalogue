@@ -154,9 +154,9 @@ services:
       KEYCLOAK_CREDENTIALS_SECRET: "${FC_CLIENT_SECRET}"
       KEYCLOAK_ADMIN_CONSOLE_URL: "${KEYCLOAK_ADMIN_CONSOLE_URL}"
       SPRING_DATASOURCE_URL: "${DB_URL}"
-      # Bootstrap default. After first admin "Switch Backend" action the persisted
-      # admin_config[graphstore.preferred.backend] takes over via
-      # GraphStorePreferenceEnvPostProcessor; this env var only seeds first boot.
+      # Cold-boot fallback only. After the first admin "Switch Backend" action,
+      # admin_config[graphstore.preferred.backend] takes precedence — this env
+      # var only seeds the first boot before any persisted preference exists.
       GRAPHSTORE_IMPL: "${GRAPH_STORE_IMPL:-fuseki}"
       # Per-backend URIs — both are read at runtime so the pre-flight probe in
       # GraphDatabaseAdminService can verify the target before the operator persists

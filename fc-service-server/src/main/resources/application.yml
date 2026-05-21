@@ -92,10 +92,6 @@ graphstore:
   # second, NONE last. The admin "Switch Backend" action performs a live in-process
   # switch and updates the persisted preference for subsequent boots.
   impl: fuseki #neo4j, none
-  # When true (production default) wire all three adapter beans and route through
-  # RoutingGraphStore so switches take effect without a JVM restart. When false
-  # (tests) keep the legacy single-adapter wiring driven by `graphstore.impl`.
-  routing-enabled: true
   auto-rebuild-on-empty: false
   # Per-backend URIs. Both are read at runtime; only the URI for the active backend
   # opens a driver. The pre-flight probe in GraphDatabaseAdminService reads the other

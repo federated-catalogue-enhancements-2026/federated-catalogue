@@ -23,7 +23,6 @@ import org.neo4j.driver.internal.InternalNode;
 import org.neo4j.driver.internal.InternalRelationship;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-@Transactional // not sure it is correct annotation 
-@ConditionalOnExpression("'${graphstore.impl}'.equals('neo4j') || ${graphstore.routing-enabled:false}")
+@Transactional // not sure it is correct annotation
 public class Neo4jGraphStore implements GraphStore {
 
     private static final String queryInsert = "CALL n10s.rdf.import.inline($payload, \"N-Triples\");"; 
@@ -50,7 +48,11 @@ public class Neo4jGraphStore implements GraphStore {
     private static final String queryUpdate = "MATCH (n) WHERE $uri IN n.claimsGraphUri\n" +
                                               "SET n.claimsGraphUri = [g IN n.claimsGraphUri WHERE g <> $uri];";
     
-    @Autowired
+    // required = false so the adapter can be wired in test contexts that do not
+    // import an embedded Neo4j (Driver bean absent). Calls into this adapter when
+    // driver is null will fail at runtime; the routing layer is expected to keep
+    // a Neo4j-less deployment from selecting NEO4J as active.
+    @Autowired(required = false)
     private Driver driver;
     private final ClaimValidator claimValidator;
     private volatile boolean schemaInitialized;
@@ -114,6 +116,9 @@ public class Neo4jGraphStore implements GraphStore {
     /** {@inheritDoc} */
     @Override
     public boolean isHealthy() {
+        if (driver == null) {
+            return false;
+        }
         try {
             driver.verifyConnectivity();
             ensureInitialized();

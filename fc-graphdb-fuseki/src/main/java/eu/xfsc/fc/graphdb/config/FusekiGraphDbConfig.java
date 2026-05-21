@@ -13,9 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
-@ConditionalOnExpression(
-    "'${federated-catalogue.scope}'.equals('runtime') "
-    + "&& ('${graphstore.impl}'.equals('fuseki') || ${graphstore.routing-enabled:false})")
+@ConditionalOnExpression("'${federated-catalogue.scope}'.equals('runtime')")
 public class FusekiGraphDbConfig {
 
     @Value("${graphstore.fuseki.uri:${graphstore.uri}}")

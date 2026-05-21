@@ -8,7 +8,6 @@ import java.util.Optional;
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -40,7 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Primary
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = "graphstore.routing-enabled", havingValue = "true")
 public class RoutingGraphStore implements GraphStore {
 
   static final String KEY_PREFERRED_BACKEND = "graphstore.preferred.backend";
