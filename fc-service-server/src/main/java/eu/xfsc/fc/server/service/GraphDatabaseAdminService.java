@@ -2,6 +2,7 @@ package eu.xfsc.fc.server.service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,12 @@ import eu.xfsc.fc.core.dao.adminconfig.AdminConfigEntry;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.core.dao.assets.ContentKind;
 import eu.xfsc.fc.core.exception.ClientException;
+import eu.xfsc.fc.core.exception.ServerException;
 import eu.xfsc.fc.core.pojo.AssetFilter;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.service.assetstore.AssetStore;
 import eu.xfsc.fc.core.service.graphdb.GraphStore;
+import eu.xfsc.fc.server.service.graphdb.RoutingGraphStore;
 import eu.xfsc.fc.server.generated.controller.GraphDatabaseAdminApiDelegate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,16 +28,15 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service for graph database administration endpoints.
  *
- * <p>The graph backend choice is persisted to
- * {@code admin_config[graphstore.preferred.backend]}. The persisted value is read at
- * boot by {@code GraphStorePreferenceEnvPostProcessor} and overrides the
- * {@code graphstore.impl} environment value, so an admin-issued switch actually takes
- * effect on the next restart.
+ * <p>A "Switch Backend" request performs an in-process swap via
+ * {@link RoutingGraphStore#setActive(GraphBackendType)} so the change takes effect
+ * immediately, with no JVM restart. The chosen backend is also written to
+ * {@code admin_config} so the same backend is reactivated on the next cold boot.
  *
  * <p>Switches are pre-flighted via {@link GraphStoreProbe} against the target backend's
  * configured URI. Persisting a preference for an unreachable backend would trap the
- * operator (server would fail to boot on next restart), so the endpoint rejects with
- * {@code 400} when the probe fails.
+ * next cold boot, so the endpoint rejects with {@code 400} when the probe fails and
+ * leaves both the persisted preference and the active adapter untouched.
  */
 @Slf4j
 @Service
@@ -47,6 +49,7 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
   private final AssetStore assetStore;
   private final AdminConfigRepository adminConfigRepository;
   private final GraphStoreProbe graphStoreProbe;
+  private final Optional<RoutingGraphStore> routingGraphStore;
 
   @Override
   public ResponseEntity<GraphDatabaseStatus> getGraphDatabaseStatus() {
@@ -58,7 +61,6 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
       status.setConnected(backendType != GraphBackendType.NONE && graphStore.isHealthy());
       status.setClaimCount(graphStore.getClaimCount());
       status.setVersion(buildVersionString(backendType));
-      status.setPreferredBackend(readPreferredBackend().orElse(backendType.name()));
       status.setRebuildNeeded(computeRebuildNeeded(backendType, status.getClaimCount(),
           rdfAssetCount));
       status.setRdfAssetCount(rdfAssetCount);
@@ -83,8 +85,13 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
     if (!probe.reachable()) {
       throw new ClientException(
           "Target backend " + target.name() + " is not reachable: " + probe.message()
-          + ". Persisting this preference would prevent the server from starting on next "
-          + "restart. Verify the backend container is up and the URI configuration is correct.");
+          + ". Verify the backend container is up and the URI configuration is correct.");
+    }
+
+    if (routingGraphStore.isEmpty()) {
+      throw new ServerException(
+          "Live backend switch requires graphstore.routing-enabled=true. "
+          + "The current deployment is configured for a single fixed backend.");
     }
 
     AdminConfigEntry entry = adminConfigRepository.findById(KEY_PREFERRED_BACKEND)
@@ -92,12 +99,13 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
     entry.setConfigValue(target.name());
     adminConfigRepository.save(entry);
 
+    routingGraphStore.get().setActive(target);
+
     GraphDatabaseSwitchResult result = new GraphDatabaseSwitchResult();
-    result.setRestartRequired(true);
-    result.setMessage("Graph database backend set to " + target.name()
+    result.setMessage("Graph database backend switched to " + target.name()
         + ". " + probe.message()
-        + ". Restart the server for the change to take effect; after restart, the page will "
-        + "offer a one-click rebuild if assets exist but the new graph is empty.");
+        + ". If the new graph store has no claims but RDF assets exist, the page will "
+        + "offer a one-click rebuild.");
     return ResponseEntity.ok(result);
   }
 
@@ -112,11 +120,6 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
       throw new ClientException("Invalid graph database backend: " + backend
           + ". Valid options: NEO4J, FUSEKI, NONE");
     }
-  }
-
-  private java.util.Optional<String> readPreferredBackend() {
-    return adminConfigRepository.findById(KEY_PREFERRED_BACKEND)
-        .map(AdminConfigEntry::getConfigValue);
   }
 
   private boolean computeRebuildNeeded(GraphBackendType backendType, long claimCount,

@@ -38,7 +38,10 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = {"graphstore.impl=fuseki"})
+@TestPropertySource(properties = {
+    "graphstore.impl=fuseki",
+    "graphstore.routing-enabled=true"
+})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @AutoConfigureEmbeddedDatabase(provider = DatabaseProvider.ZONKY)
 public class GraphDatabaseAdminControllerTest {
@@ -68,9 +71,10 @@ public class GraphDatabaseAdminControllerTest {
         .andExpect(jsonPath("$.activeBackend").value(isA(String.class)))
         .andExpect(jsonPath("$.connected").value(isA(Boolean.class)))
         .andExpect(jsonPath("$.claimCount").value(isA(Number.class)))
-        .andExpect(jsonPath("$.preferredBackend").value(isA(String.class)))
         .andExpect(jsonPath("$.rebuildNeeded").value(isA(Boolean.class)))
-        .andExpect(jsonPath("$.rdfAssetCount").value(isA(Number.class)));
+        .andExpect(jsonPath("$.rdfAssetCount").value(isA(Number.class)))
+        .andExpect(jsonPath("$.preferredBackend").doesNotExist())
+        .andExpect(jsonPath("$.restartRequired").doesNotExist());
   }
 
   @Test
@@ -102,18 +106,23 @@ public class GraphDatabaseAdminControllerTest {
 
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
-  void switchGraphDatabase_validBackend_returnsRestartRequiredAndPersists() throws Exception {
+  void switchGraphDatabase_validBackend_appliesLiveAndPersists() throws Exception {
     mockMvc.perform(MockMvcRequestBuilders.post("/admin/graph-database/switch")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"backend\":\"FUSEKI\"}")
+            .content("{\"backend\":\"NEO4J\"}")
             .with(csrf()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.restartRequired").value(true))
-        .andExpect(jsonPath("$.message").value(isA(String.class)));
+        .andExpect(jsonPath("$.message").value(isA(String.class)))
+        .andExpect(jsonPath("$.restartRequired").doesNotExist());
 
     String persisted = adminConfigRepository.findById("graphstore.preferred.backend")
         .orElseThrow().getConfigValue();
-    org.junit.jupiter.api.Assertions.assertEquals("FUSEKI", persisted);
+    org.junit.jupiter.api.Assertions.assertEquals("NEO4J", persisted);
+
+    mockMvc.perform(MockMvcRequestBuilders.get("/admin/graph-database")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.activeBackend").value("NEO4J"));
   }
 
   @Test

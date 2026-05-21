@@ -1,6 +1,7 @@
 $(document).ready(function() {
 
   var currentBackend = '';
+  var currentClaimCount = 0;
   var rebuildPollHandle = null;
 
   $.ajax({
@@ -29,15 +30,8 @@ $(document).ready(function() {
       type: 'GET',
       success: function(data) {
         currentBackend = data.activeBackend || 'UNKNOWN';
+        currentClaimCount = typeof data.claimCount === 'number' ? data.claimCount : 0;
         $('#activeBackend').text(currentBackend);
-
-        var preferred = data.preferredBackend || currentBackend;
-        $('#preferredBackend').text(preferred);
-        if (preferred !== currentBackend) {
-          $('#preferredHint').text('Persisted; takes effect after restart.');
-        } else {
-          $('#preferredHint').text('');
-        }
 
         if (data.connected) {
           $('#connectionStatus').removeClass('bg-secondary bg-danger').addClass('bg-success').text('Connected');
@@ -45,7 +39,7 @@ $(document).ready(function() {
           $('#connectionStatus').removeClass('bg-secondary bg-success').addClass('bg-danger').text('Disconnected');
         }
 
-        $('#claimCount').text(data.claimCount >= 0 ? data.claimCount.toLocaleString() : 'N/A');
+        $('#claimCount').text(currentClaimCount >= 0 ? currentClaimCount.toLocaleString() : 'N/A');
         $('#versionInfo').text(data.version || '-');
 
         $('.backend-radio').prop('checked', false);
@@ -62,6 +56,8 @@ $(document).ready(function() {
         } else {
           $('#rebuildBanner').addClass('d-none');
         }
+
+        $('#rebuildBtn').prop('disabled', currentBackend === 'NONE');
       },
       error: function(xhr) {
         showError('Failed to load graph database status: ' + (xhr.responseJSON?.message || xhr.status));
@@ -91,10 +87,9 @@ $(document).ready(function() {
       type: 'POST',
       contentType: 'application/json',
       data: JSON.stringify({ backend: selected }),
-      success: function(data) {
+      success: function() {
         bootstrap.Modal.getInstance(document.getElementById('confirmSwitchModal')).hide();
         loadStatus();
-        alert(data.message || 'Backend switch persisted. Restart the server for the change to take effect.');
       },
       error: function(xhr) {
         bootstrap.Modal.getInstance(document.getElementById('confirmSwitchModal')).hide();
@@ -105,6 +100,20 @@ $(document).ready(function() {
   });
 
   $('#rebuildBtn').on('click', function() {
+    if (currentClaimCount > 0) {
+      $('#modalClaimCount').text(currentClaimCount.toLocaleString());
+      new bootstrap.Modal('#confirmRebuildModal').show();
+    } else {
+      startRebuild();
+    }
+  });
+
+  $('#confirmRebuildBtn').on('click', function() {
+    bootstrap.Modal.getInstance(document.getElementById('confirmRebuildModal')).hide();
+    startRebuild();
+  });
+
+  function startRebuild() {
     clearError();
     $('#rebuildBtn').prop('disabled', true).text('Starting…');
     $.ajax({
@@ -120,7 +129,7 @@ $(document).ready(function() {
         showError('Failed to start rebuild: ' + (xhr.responseJSON?.message || xhr.status));
       }
     });
-  });
+  }
 
   function startRebuildPoll() {
     if (rebuildPollHandle) {
