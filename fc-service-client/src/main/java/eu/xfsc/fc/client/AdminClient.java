@@ -13,6 +13,7 @@ import eu.xfsc.fc.api.generated.model.GraphDatabaseStatus;
 import eu.xfsc.fc.api.generated.model.GraphDatabaseSwitchResult;
 import eu.xfsc.fc.api.generated.model.KeycloakAdminUrl;
 import eu.xfsc.fc.api.generated.model.OntologyImpactList;
+import eu.xfsc.fc.api.generated.model.RebuildStatus;
 import eu.xfsc.fc.api.generated.model.SchemaValidationStatus;
 import eu.xfsc.fc.api.generated.model.TrustFrameworkConfigUpdate;
 import eu.xfsc.fc.api.generated.model.TrustFrameworkEntry;
@@ -101,5 +102,17 @@ public class AdminClient extends ServiceClient {
         return doPost("/admin/graph-database/switch",
             Map.of("backend", backend), Map.of(), null,
             GraphDatabaseSwitchResult.class, authorizedClient);
+    }
+
+    /** Triggers an asynchronous rebuild of the active graph backend. */
+    public RebuildStatus triggerGraphRebuild(OAuth2AuthorizedClient authorizedClient) {
+        return doPost("/admin/graph/rebuild", Map.of(), Map.of(), null,
+            RebuildStatus.class, authorizedClient);
+    }
+
+    /** Polls graph rebuild progress. */
+    public RebuildStatus getGraphRebuildStatus(OAuth2AuthorizedClient authorizedClient) {
+        return doGet("/admin/graph/rebuild/status", Map.of(), null,
+            RebuildStatus.class, authorizedClient);
     }
 }

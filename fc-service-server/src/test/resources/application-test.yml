@@ -22,6 +22,10 @@ federated-catalogue:
 # @Import(EmbeddedNeo4JConfig.class) to their test class.
 graphstore:
   impl: none
+  # Tests keep the legacy single-adapter wiring driven by `graphstore.impl`.
+  # Commit 3 sweeps individual tests onto RoutingGraphStore.setActive(...) and then
+  # drops this flag globally.
+  routing-enabled: false
   query-timeout-in-seconds: 5
 
 scheduler:

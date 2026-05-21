@@ -27,7 +27,7 @@ import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.sparql.core.ResultBinding;
 import org.apache.jena.system.Txn;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Component
 @Transactional
-@ConditionalOnProperty(value = "graphstore.impl", havingValue = "fuseki")
+@ConditionalOnExpression("'${graphstore.impl}'.equals('fuseki') || ${graphstore.routing-enabled:false}")
 public class SparqlGraphStore implements GraphStore {
 
     private static final String PROP_CREDENTIAL_SUBJECT = "https://www.w3.org/2018/credentials#credentialSubject";

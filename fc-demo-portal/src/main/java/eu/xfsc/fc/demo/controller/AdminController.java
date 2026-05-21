@@ -20,6 +20,7 @@ import eu.xfsc.fc.api.generated.model.GraphDatabaseSwitchResult;
 import eu.xfsc.fc.api.generated.model.AdminStats;
 import eu.xfsc.fc.api.generated.model.KeycloakAdminUrl;
 import eu.xfsc.fc.api.generated.model.OntologyImpactList;
+import eu.xfsc.fc.api.generated.model.RebuildStatus;
 import eu.xfsc.fc.api.generated.model.SchemaValidationStatus;
 import eu.xfsc.fc.api.generated.model.TrustFrameworkConfigUpdate;
 import eu.xfsc.fc.api.generated.model.TrustFrameworkEntry;
@@ -134,5 +135,19 @@ public class AdminController {
       @RequestBody Map<String, String> body,
       @RegisteredOAuth2AuthorizedClient("fc-client-oidc") OAuth2AuthorizedClient authorizedClient) {
     return adminClient.switchGraphDatabase(body.get("backend"), authorizedClient);
+  }
+
+  /** Trigger a graph rebuild over the current backend. */
+  @PostMapping("/graph/rebuild")
+  public RebuildStatus triggerGraphRebuild(
+      @RegisteredOAuth2AuthorizedClient("fc-client-oidc") OAuth2AuthorizedClient authorizedClient) {
+    return adminClient.triggerGraphRebuild(authorizedClient);
+  }
+
+  /** Poll graph rebuild progress. */
+  @GetMapping("/graph/rebuild/status")
+  public RebuildStatus getGraphRebuildStatus(
+      @RegisteredOAuth2AuthorizedClient("fc-client-oidc") OAuth2AuthorizedClient authorizedClient) {
+    return adminClient.getGraphRebuildStatus(authorizedClient);
   }
 }

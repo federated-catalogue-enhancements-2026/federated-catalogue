@@ -808,6 +808,28 @@ components:
         version:
           type: string
           description: Graph database version or implementation info
+        preferredBackend:
+          type: string
+          description: |
+            Backend the admin has persisted as the runtime preference, applied at the
+            next restart. Equal to `activeBackend` when the persisted value already
+            took effect, differs when the operator requested a switch and has not yet
+            restarted.
+        rebuildNeeded:
+          type: boolean
+          description: |
+            True when the active graph store has no claims but RDF assets exist in
+            storage — typical after a backend switch or fresh start. The admin UI
+            surfaces a rebuild prompt that calls `POST /admin/graph/rebuild`. Non-RDF
+            assets are excluded from this check because they do not produce graph
+            claims even after a successful rebuild.
+        rdfAssetCount:
+          type: integer
+          format: int64
+          description: |
+            Number of active RDF assets in storage that would be re-indexed by a
+            rebuild. Surfaced alongside `rebuildNeeded` so the UI can show how many
+            assets the rebuild will process.
     GraphDatabaseSwitchResult:
       type: object
       properties:
@@ -1486,6 +1508,17 @@ paths:
       tags:
         - GraphDatabaseAdmin
       summary: Switch the graph database backend (requires restart)
+      description: |
+        Persists the target backend to `admin_config[graphstore.preferred.backend]`.
+        The persisted value is read at the next boot by
+        `GraphStorePreferenceEnvPostProcessor` and overrides the `graphstore.impl`
+        environment value.
+
+        The target backend is pre-flighted before the preference is persisted: if
+        the configured URI for that backend is unreachable, the request is rejected
+        with `400 Bad Request` and a message describing what to fix. This prevents
+        the operator from persisting a preference that would cause the server to
+        fail on the next restart.
       operationId: switchGraphDatabase
       security:
         - jwt: []
@@ -1509,7 +1542,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/GraphDatabaseSwitchResult'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: |
+            Invalid backend value, or target backend is unreachable. The response
+            body's `message` field carries the specific reason (probe failure
+            message for unreachable targets, list of valid values for invalid
+            input).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
