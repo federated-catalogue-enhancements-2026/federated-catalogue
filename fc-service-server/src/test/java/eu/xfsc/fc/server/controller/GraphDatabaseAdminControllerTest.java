@@ -105,9 +105,10 @@ public class GraphDatabaseAdminControllerTest {
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
   void switchGraphDatabase_validBackend_appliesLiveAndPersists() throws Exception {
+    // FUSEKI is the adapter wired in this test context (graphstore.impl=fuseki).
     mockMvc.perform(MockMvcRequestBuilders.post("/admin/graph-database/switch")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"backend\":\"NEO4J\"}")
+            .content("{\"backend\":\"FUSEKI\"}")
             .with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value(isA(String.class)))
@@ -115,12 +116,31 @@ public class GraphDatabaseAdminControllerTest {
 
     String persisted = adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND)
         .orElseThrow().getConfigValue();
-    org.junit.jupiter.api.Assertions.assertEquals("NEO4J", persisted);
+    org.junit.jupiter.api.Assertions.assertEquals("FUSEKI", persisted);
 
     mockMvc.perform(MockMvcRequestBuilders.get("/admin/graph-database")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.activeBackend").value("NEO4J"));
+        .andExpect(jsonPath("$.activeBackend").value("FUSEKI"));
+  }
+
+  @Test
+  @WithMockUser(roles = {ADMIN_ALL})
+  void switchGraphDatabase_targetAdapterMissing_returns400AndDoesNotPersist() throws Exception {
+    // Neo4j adapter is not registered in this Fuseki-only test context. The probe is
+    // mocked to "reachable", so the only way the endpoint can reject is by detecting
+    // the missing adapter — a silent fall-back to NONE would return 200 and persist a
+    // preference the next cold boot cannot honor.
+    mockMvc.perform(MockMvcRequestBuilders.post("/admin/graph-database/switch")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"backend\":\"NEO4J\"}")
+            .with(csrf()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value(containsString("NEO4J")));
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND).isEmpty(),
+        "Preference must not be persisted when the target adapter is not registered");
   }
 
   @Test

@@ -124,10 +124,12 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
   }
 
   private long countActiveRdfAssets() {
+    // AssetFilter.setLimit(0) means "no limit" — would materialize every row on each
+    // status load. Page size 1 still yields the full totalCount via the COUNT query.
     AssetFilter filter = new AssetFilter();
     filter.setStatuses(List.of(AssetStatus.ACTIVE));
     filter.setContentKinds(List.of(ContentKind.RDF));
-    filter.setLimit(0);
+    filter.setLimit(1);
     filter.setOffset(0);
     return assetStore.getByFilter(filter, false, false).getTotalCount();
   }

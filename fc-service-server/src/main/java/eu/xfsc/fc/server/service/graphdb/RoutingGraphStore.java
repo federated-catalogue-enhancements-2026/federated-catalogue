@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import eu.xfsc.fc.api.generated.model.QueryLanguage;
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
+import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.pojo.GraphBackendType;
 import eu.xfsc.fc.core.pojo.GraphQuery;
 import eu.xfsc.fc.core.pojo.PaginatedResults;
@@ -113,10 +114,21 @@ public class RoutingGraphStore implements GraphStore {
    * apply one at a time. The volatile reference makes the change immediately visible to
    * any thread observing it on the next read.
    *
+   * <p>Unlike cold-boot resolution, an explicit switch must not silently fall back when
+   * the requested backend has no registered adapter — that would let a probe-passing
+   * switch return 200 against a backend the server cannot actually serve. Throws a
+   * {@link ClientException} so the admin endpoint returns {@code 400}.
+   *
    * @param target the backend to activate
+   * @throws ClientException if no adapter is registered for the requested backend
    */
   public synchronized void setActive(GraphBackendType target) {
-    GraphStore next = adapterFor(target);
+    GraphStore next = adapterByType.get(target);
+    if (next == null) {
+      throw new ClientException(
+          "Backend %s is not available in this deployment (no adapter registered). Available backends: %s".formatted(
+              target.name(), adapterByType.keySet()));
+    }
     GraphBackendType previous = activeAdapter == null ? null : activeAdapter.getBackendType();
     activeAdapter = next;
     log.info("RoutingGraphStore active backend changed: {} -> {}", previous, target);
