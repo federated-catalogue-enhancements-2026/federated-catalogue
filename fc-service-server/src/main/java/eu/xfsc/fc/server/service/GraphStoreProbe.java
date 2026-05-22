@@ -5,8 +5,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,7 +60,15 @@ public class GraphStoreProbe {
     if (neo4jUri == null || neo4jUri.isBlank()) {
       return Result.unreachable("Neo4j URI is not configured (graphstore.neo4j.uri)");
     }
-    try (Driver driver = GraphDatabase.driver(neo4jUri, AuthTokens.basic(neo4jUser, neo4jPassword))) {
+    // Cap driver-side connect / acquisition / pool size so a black-holed host fails within
+    // PROBE_TIMEOUT instead of stalling on the OS-level connect timeout (~75s on Linux).
+    Config cfg = Config.builder()
+        .withConnectionTimeout(PROBE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+        .withConnectionAcquisitionTimeout(PROBE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+        .withMaxConnectionPoolSize(1)
+        .build();
+    try (Driver driver = GraphDatabase.driver(
+        neo4jUri, AuthTokens.basic(neo4jUser, neo4jPassword), cfg)) {
       driver.verifyConnectivity();
       return Result.reachable("Neo4j at " + neo4jUri + " is reachable");
     } catch (RuntimeException ex) {
