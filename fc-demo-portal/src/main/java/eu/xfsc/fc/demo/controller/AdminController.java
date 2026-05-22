@@ -3,6 +3,7 @@ package eu.xfsc.fc.demo.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -139,7 +140,7 @@ public class AdminController {
 
   /** Trigger a graph rebuild over the current backend. */
   @PostMapping("/graph/rebuild")
-  public RebuildStatus triggerGraphRebuild(
+  public ResponseEntity<RebuildStatus> triggerGraphRebuild(
       @RegisteredOAuth2AuthorizedClient("fc-client-oidc") OAuth2AuthorizedClient authorizedClient) {
     return adminClient.triggerGraphRebuild(authorizedClient);
   }

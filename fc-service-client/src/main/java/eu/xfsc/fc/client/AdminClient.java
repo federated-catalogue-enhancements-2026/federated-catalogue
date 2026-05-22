@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -104,10 +106,28 @@ public class AdminClient extends ServiceClient {
             GraphDatabaseSwitchResult.class, authorizedClient);
     }
 
-    /** Triggers an asynchronous rebuild of the active graph backend. */
-    public RebuildStatus triggerGraphRebuild(OAuth2AuthorizedClient authorizedClient) {
-        return doPost("/admin/graph/rebuild", Map.of(), Map.of(), null,
-            RebuildStatus.class, authorizedClient);
+  /**
+   * Triggers an asynchronous rebuild of the active graph backend.
+   *
+   * <p>The status code carries the outcome: {@code 202 ACCEPTED} when a fresh rebuild
+   * was started, {@code 409 CONFLICT} when a rebuild was already running. Both
+   * responses share the same {@link RebuildStatus} body so callers can inspect
+   * current progress without a follow-up call.
+   *
+   * @return the rebuild status together with the originating HTTP status
+   */
+  public ResponseEntity<RebuildStatus> triggerGraphRebuild(OAuth2AuthorizedClient authorizedClient) {
+    try {
+      RebuildStatus body = doPost("/admin/graph/rebuild", Map.of(), Map.of(), null,
+          RebuildStatus.class, authorizedClient);
+      return ResponseEntity.accepted().body(body);
+    } catch (ExternalServiceException ex) {
+      if (ex.getStatus() != null && ex.getStatus().value() == HttpStatus.CONFLICT.value()) {
+        RebuildStatus body = mapper.convertValue(ex.getDetails(), RebuildStatus.class);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+      }
+      throw ex;
+    }
     }
 
     /** Polls graph rebuild progress. */
