@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import eu.xfsc.fc.core.dao.adminconfig.AdminConfigRepository;
 import eu.xfsc.fc.server.service.GraphStoreProbe;
+import eu.xfsc.fc.server.service.graphdb.RoutingGraphStore;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 
@@ -56,7 +57,7 @@ public class GraphDatabaseAdminControllerTest {
   void resetProbe() {
     when(graphStoreProbe.probe(any()))
         .thenReturn(GraphStoreProbe.Result.reachable("ok"));
-    adminConfigRepository.deleteById("graphstore.preferred.backend");
+    adminConfigRepository.deleteById(RoutingGraphStore.KEY_PREFERRED_BACKEND);
   }
 
   @Test
@@ -112,7 +113,7 @@ public class GraphDatabaseAdminControllerTest {
         .andExpect(jsonPath("$.message").value(isA(String.class)))
         .andExpect(jsonPath("$.restartRequired").doesNotExist());
 
-    String persisted = adminConfigRepository.findById("graphstore.preferred.backend")
+    String persisted = adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND)
         .orElseThrow().getConfigValue();
     org.junit.jupiter.api.Assertions.assertEquals("NEO4J", persisted);
 
@@ -146,7 +147,7 @@ public class GraphDatabaseAdminControllerTest {
         .andExpect(jsonPath("$.message").value(containsString("connection refused")));
 
     org.junit.jupiter.api.Assertions.assertTrue(
-        adminConfigRepository.findById("graphstore.preferred.backend").isEmpty(),
+        adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND).isEmpty(),
         "Preference must not be persisted when probe rejects the target");
   }
 

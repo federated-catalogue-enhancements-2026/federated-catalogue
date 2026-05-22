@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RoutingGraphStore implements GraphStore {
 
-  static final String KEY_PREFERRED_BACKEND = "graphstore.preferred.backend";
+  public static final String KEY_PREFERRED_BACKEND = "graphstore.preferred.backend";
 
   private final List<GraphStore> availableAdapters;
   private final AdminConfigRepository adminConfigRepository;

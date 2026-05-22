@@ -41,8 +41,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate {
 
-  private static final String KEY_PREFERRED_BACKEND = "graphstore.preferred.backend";
-
   private final GraphStore graphStore;
   private final AssetStore assetStore;
   private final AdminConfigRepository adminConfigRepository;
@@ -86,8 +84,8 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
           + ". Verify the backend container is up and the URI configuration is correct.");
     }
 
-    AdminConfigEntry entry = adminConfigRepository.findById(KEY_PREFERRED_BACKEND)
-        .orElse(new AdminConfigEntry(KEY_PREFERRED_BACKEND, null, null));
+    AdminConfigEntry entry = adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND)
+        .orElse(new AdminConfigEntry(RoutingGraphStore.KEY_PREFERRED_BACKEND, null, null));
     entry.setConfigValue(target.name());
     adminConfigRepository.save(entry);
 
