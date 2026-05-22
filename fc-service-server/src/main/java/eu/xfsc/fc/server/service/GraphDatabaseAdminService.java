@@ -84,12 +84,15 @@ public class GraphDatabaseAdminService implements GraphDatabaseAdminApiDelegate 
           + ". Verify the backend container is up and the URI configuration is correct.");
     }
 
+    // Swap the live adapter first; persist the preference only after a successful swap.
+    // Reversing this order would leave a preference pointing at a backend the server
+    // could not actually serve, trapping the next cold boot.
+    routingGraphStore.setActive(target);
+
     AdminConfigEntry entry = adminConfigRepository.findById(RoutingGraphStore.KEY_PREFERRED_BACKEND)
         .orElse(new AdminConfigEntry(RoutingGraphStore.KEY_PREFERRED_BACKEND, null, null));
     entry.setConfigValue(target.name());
     adminConfigRepository.save(entry);
-
-    routingGraphStore.setActive(target);
 
     GraphDatabaseSwitchResult result = new GraphDatabaseSwitchResult();
     result.setMessage("Graph database backend switched to " + target.name()
