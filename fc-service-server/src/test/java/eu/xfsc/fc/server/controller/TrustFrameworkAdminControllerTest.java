@@ -151,9 +151,7 @@ public class TrustFrameworkAdminControllerTest {
         .andExpect(jsonPath("$[0].apiVersion").value("v2"))
         .andExpect(jsonPath("$[0].timeoutSeconds").value(60));
   }
-
-  // --- AC-3: role-toggle endpoint ---
-
+  
   @Test
   @WithMockUser(roles = {ADMIN_ALL})
   void setTrustFrameworkRoleEnabled_knownBundleAndRole_returns200() throws Exception {
