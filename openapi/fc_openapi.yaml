@@ -865,6 +865,21 @@ components:
         version:
           type: string
           description: Graph database version or implementation info
+        rebuildNeeded:
+          type: boolean
+          description: |
+            True when the active graph store has no claims but RDF assets exist in
+            storage — typical after a backend switch or fresh start. The admin UI
+            surfaces a rebuild prompt that calls `POST /admin/graph/rebuild`. Non-RDF
+            assets are excluded from this check because they do not produce graph
+            claims even after a successful rebuild.
+        rdfAssetCount:
+          type: integer
+          format: int64
+          description: |
+            Number of active RDF assets in storage that would be re-indexed by a
+            rebuild. Surfaced alongside `rebuildNeeded` so the UI can show how many
+            assets the rebuild will process.
     GraphDatabaseSwitchResult:
       type: object
       properties:
