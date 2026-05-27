@@ -24,12 +24,23 @@ import eu.xfsc.fc.core.service.verification.VerificationServiceImpl;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import eu.xfsc.fc.graphdb.config.EmbeddedNeo4JConfig;
 import eu.xfsc.fc.graphdb.service.Neo4jGraphStore;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.Ed25519Signer;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.OctetKeyPair;
+import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
+import com.nimbusds.jose.util.JSONObjectUtils;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -114,6 +125,14 @@ public class AssetStoreCompositeTest {
 
     @Autowired
     private GraphRebuilder graphRebuilder;
+
+    private JWSSigner jwtSigner;
+
+    @BeforeAll
+    void initSigner() throws Exception {
+        OctetKeyPair jwk = new OctetKeyPairGenerator(Curve.Ed25519).keyID("test-key").generate();
+        jwtSigner = new Ed25519Signer(jwk);
+    }
 
     @BeforeEach
     void stubValidationResultStore() {
@@ -288,5 +307,46 @@ public class AssetStoreCompositeTest {
                 "Graph must contain non-credential triples after rebuild");
 
         assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
+    }
+
+    @Test
+    void test05RebuildGraphDb_jwtWrappedCredential_restoresSameClaims() throws Exception {
+
+        schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
+        String vpJson = getAccessor("Claims-Extraction-Tests/providerTest.jsonld").getContentAsString();
+        ContentAccessor content =
+                new ContentAccessorDirect(danubetechVpJwt(vpJson), VerificationConstants.MEDIA_TYPE_VP_JWT);
+
+        // Upload path: unwrap JWT → extract claims
+        CredentialVerificationResult result = verificationService.verifyCredential(content, true, false, false, false);
+        AssetMetadata assetMeta = new AssetMetadata(content, result);
+        assetStorePublisher.storeCredential(assetMeta, result);
+
+        int afterStore = graphStore.queryData(new GraphQuery("MATCH (n) RETURN n", null)).getResults().size();
+        Assertions.assertTrue(afterStore > 1, "JWT-wrapped credential must yield claims at upload time");
+
+        graphStore.deleteClaims(assetMeta.getId());
+        int afterDelete = graphStore.queryData(new GraphQuery("MATCH (n) RETURN n", null)).getResults().size();
+        Assertions.assertTrue(afterDelete < afterStore, "claims must be removed before rebuild");
+
+        graphRebuilder.rebuildGraphDb(1, 0, 1, 1);
+
+        int afterRebuild = graphStore.queryData(new GraphQuery("MATCH (n) RETURN n", null)).getResults().size();
+        Assertions.assertEquals(afterStore, afterRebuild,
+                "rebuild must restore the same claims for a JWT-wrapped credential as at upload");
+
+        assetStorePublisher.deleteAsset(assetMeta.getAssetHash());
+    }
+
+    /** Wraps a JSON-LD Verifiable Presentation into a danubetech-style compact JWT (vp wrapper claim). */
+    private String danubetechVpJwt(String vpJson) throws Exception {
+        Map<String, Object> vp = JSONObjectUtils.parse(vpJson);
+        JWTClaimsSet claims = new JWTClaimsSet.Builder().claim("vp", vp).build();
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.EdDSA)
+                .keyID("did:web:example.com#test-key")
+                .build();
+        SignedJWT signedJwt = new SignedJWT(header, claims);
+        signedJwt.sign(jwtSigner);
+        return signedJwt.serialize();
     }
 }
