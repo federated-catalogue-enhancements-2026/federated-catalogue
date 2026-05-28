@@ -18,7 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Reproduces the JSON-LD expansion behaviour observed in story 050 to confirm
+ * Reproduces the JSON-LD expansion behaviour observed to confirm
  * the hypothesis that the failure is shape-driven, not a clash of @protected
  * terms between the W3C VC v2 and Gaia-X 2511 contexts.
  *
@@ -146,7 +146,7 @@ class LoireVpShapeReproductionTest {
       """;
 
   @Test
-  @DisplayName("Original story-050 fixture — does participant.vp2.jsonld trip Titanium expansion?")
+  @DisplayName("Original fixture — does participant.vp2.jsonld trip Titanium expansion?")
   void malformedLoireVp_diagnostic() {
     runDiagnostic("MALFORMED_VP_2511", MALFORMED_VP_2511);
   }
@@ -157,7 +157,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(CONFORMANT_VP);
     System.out.println(">>> CONFORMANT_VP → expanded.size=" + expanded.size());
     assertNotNull(expanded, "expansion result must be non-null");
-    assertTrue(expanded.size() > 0, "expansion of a conformant VP must produce a non-empty array");
+    assertTrue(!expanded.isEmpty(), "expansion of a conformant VP must produce a non-empty array");
   }
 
   @Test
@@ -194,10 +194,12 @@ class LoireVpShapeReproductionTest {
     System.out.println(">>> DECODED_VP_JWT_PAYLOAD → code=" + thrown.getCode()
         + " ; message=" + thrown.getMessage());
     assertCode(thrown, JsonLdErrorCode.INVALID_CONTEXT_NULLIFICATION,
-        "VP whose verifiableCredential array contains a raw JWT compact string "
-            + "(instead of EnvelopedVerifiableCredential objects with data: URLs) "
-            + "trips the W3C v2 context's protected scope. THIS is the production-observed "
-            + "story-050 trigger — not the gaia-x/2511 context, not the participant.vp2.jsonld fixture as-is.");
+        """
+            VP whose verifiableCredential array contains a raw JWT compact string \
+            (instead of EnvelopedVerifiableCredential objects with data: URLs) \
+            trips the W3C v2 context's protected scope. THIS is the production-observed \
+            trigger — not the gaia-x/2511 context, not the participant.vp2.jsonld fixture as-is.
+            """);
   }
 
   // Control: replace the raw-JWT-string with an EnvelopedVerifiableCredential
@@ -225,7 +227,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(DECODED_VP_JWT_PAYLOAD_FIXED);
     System.out.println(">>> DECODED_VP_JWT_PAYLOAD_FIXED → expanded.size=" + expanded.size());
     assertNotNull(expanded);
-    assertTrue(expanded.size() > 0,
+    assertTrue(!expanded.isEmpty(),
         "wrapping the raw JWT inside EnvelopedVerifiableCredential removes the trigger");
   }
 
@@ -255,7 +257,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(FIXED_FIXTURE_DECODED_VP_PAYLOAD);
     System.out.println(">>> FIXED_FIXTURE_DECODED_VP_PAYLOAD → expanded.size=" + expanded.size());
     assertNotNull(expanded);
-    assertTrue(expanded.size() > 0);
+    assertTrue(!expanded.isEmpty());
   }
 
   // ---------- helpers ----------
