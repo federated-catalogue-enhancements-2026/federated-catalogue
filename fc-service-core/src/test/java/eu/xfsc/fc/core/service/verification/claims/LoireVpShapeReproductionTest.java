@@ -1,7 +1,7 @@
 package eu.xfsc.fc.core.service.verification.claims;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.apicatalog.jsonld.JsonLd;
@@ -157,7 +157,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(CONFORMANT_VP);
     System.out.println(">>> CONFORMANT_VP → expanded.size=" + expanded.size());
     assertNotNull(expanded, "expansion result must be non-null");
-    assertTrue(!expanded.isEmpty(), "expansion of a conformant VP must produce a non-empty array");
+    assertFalse(expanded.isEmpty(), "expansion of a conformant VP must produce a non-empty array");
   }
 
   @Test
@@ -227,8 +227,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(DECODED_VP_JWT_PAYLOAD_FIXED);
     System.out.println(">>> DECODED_VP_JWT_PAYLOAD_FIXED → expanded.size=" + expanded.size());
     assertNotNull(expanded);
-    assertTrue(!expanded.isEmpty(),
-        "wrapping the raw JWT inside EnvelopedVerifiableCredential removes the trigger");
+    assertFalse(expanded.isEmpty(), "wrapping the raw JWT inside EnvelopedVerifiableCredential removes the trigger");
   }
 
   // Regression pin — decoded payload of the FIXED participant.vp2.signed.jwt produced
@@ -257,7 +256,7 @@ class LoireVpShapeReproductionTest {
     JsonArray expanded = runExpansionExpectingSuccess(FIXED_FIXTURE_DECODED_VP_PAYLOAD);
     System.out.println(">>> FIXED_FIXTURE_DECODED_VP_PAYLOAD → expanded.size=" + expanded.size());
     assertNotNull(expanded);
-    assertTrue(!expanded.isEmpty());
+    assertFalse(expanded.isEmpty());
   }
 
   // ---------- helpers ----------
