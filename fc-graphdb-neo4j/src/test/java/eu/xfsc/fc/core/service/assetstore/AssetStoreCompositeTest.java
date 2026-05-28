@@ -42,10 +42,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.neo4j.harness.Neo4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -69,7 +67,6 @@ import static eu.xfsc.fc.core.util.TestUtil.assertThatAssetHasTheSameData;
 import static eu.xfsc.fc.core.util.TestUtil.getAccessor;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@TestMethodOrder(MethodOrderer.MethodName.class)
 @SpringBootTest
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {
@@ -155,7 +152,7 @@ public class AssetStoreCompositeTest {
      * it again.
      */
     @Test
-    void test01StoreCredential() {
+    void storeCredential_validCredential_isRetrievableAndDeletable() {
 
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
@@ -188,7 +185,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Test
-    void test02RebuildGraphDb() {
+    void rebuildGraphDb_afterClaimsDeleted_restoresClaims() {
 
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/providerTest.jsonld");
@@ -227,7 +224,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Test
-    void test03RebuildGraphDb_filtersProtectedNamespaceClaims() {
+    void rebuildGraphDb_protectedNamespaceClaims_filtersThemOut() {
 
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-with-fcmeta.jsonld");
@@ -265,7 +262,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Test
-    void test04RebuildGraphDb_nonCredentialNTriples_restoresClaimsAfterRebuild() {
+    void rebuildGraphDb_nonCredentialNTriples_restoresClaims() {
 
         // Arrange — minimal N-Triples document, deliberately not a VC/VP
         final String subjectUri = "http://example.org/non-credential-test/subject1";
@@ -310,7 +307,7 @@ public class AssetStoreCompositeTest {
     }
 
     @Test
-    void test05RebuildGraphDb_jwtWrappedCredential_restoresSameClaims() throws Exception {
+    void rebuildGraphDb_jwtWrappedCredential_restoresSameClaims() throws Exception {
 
         schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
         String vpJson = getAccessor("Claims-Extraction-Tests/providerTest.jsonld").getContentAsString();
