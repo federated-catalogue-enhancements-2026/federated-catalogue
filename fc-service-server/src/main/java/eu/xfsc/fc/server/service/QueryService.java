@@ -161,7 +161,7 @@ public class QueryService implements QueryApiDelegate {
     info.setEnabled(supported.isPresent());
     supported.ifPresent(lang -> {
       QueryLanguageProperties props = QueryLanguageProperties.of(lang);
-      info.setQueryLanguage(lang.name());
+      info.setQueryLanguage(eu.xfsc.fc.api.generated.model.QueryLanguage.fromValue(lang.name()));
       info.setContentType(props.contentType());
       info.setExampleQuery(props.exampleQuery());
       info.setDocumentation(props.documentationUrl());
