@@ -5,7 +5,7 @@
   "description": "Tooling for linting the Federated Catalogue OpenAPI spec.",
   "license": "EPL-2.0",
   "scripts": {
-    "lint": "redocly lint fc_openapi.yaml --config .redocly.yaml"
+    "lint": "redocly lint fc_openapi.yaml --config redocly.yaml"
   },
   "devDependencies": {
     "@redocly/cli": "2.31.5"
