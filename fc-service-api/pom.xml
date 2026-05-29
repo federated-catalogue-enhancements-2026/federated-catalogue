@@ -40,8 +40,8 @@
                 <version>2.0.0</version>
                 <configuration>
                     <installDirectory>${project.build.directory}</installDirectory>
-                    <workingDirectory>${project.build.directory}</workingDirectory>
-                    <nodeVersion>v22.11.0</nodeVersion>
+                    <workingDirectory>${project.parent.basedir}/openapi</workingDirectory>
+                    <nodeVersion>v24.16.0</nodeVersion>
                 </configuration>
                 <executions>
                     <execution>
@@ -52,15 +52,23 @@
                         </goals>
                     </execution>
                     <execution>
+                        <id>install-openapi-lint-deps</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install --no-audit --no-fund --silent</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>lint-openapi-spec</id>
                         <phase>validate</phase>
                         <goals>
-                            <goal>npx</goal>
+                            <goal>npm</goal>
                         </goals>
                         <configuration>
-                            <arguments>--yes @redocly/cli@2.31.5 lint ${project.parent.basedir}/openapi/fc_openapi.yaml
-                                --config ${project.parent.basedir}/openapi/.redocly.yaml
-                            </arguments>
+                            <arguments>run lint</arguments>
                         </configuration>
                     </execution>
                 </executions>
