@@ -52,23 +52,13 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>install-openapi-lint-deps</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <configuration>
-                            <arguments>install --no-audit --no-fund --silent</arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>lint-openapi-spec</id>
                         <phase>validate</phase>
                         <goals>
-                            <goal>npm</goal>
+                            <goal>npx</goal>
                         </goals>
                         <configuration>
-                            <arguments>run lint</arguments>
+                            <arguments>--yes @redocly/cli@2.31.5 lint fc_openapi.yaml --config redocly.yaml</arguments>
                         </configuration>
                     </execution>
                 </executions>

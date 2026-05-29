@@ -43,10 +43,6 @@ fc-service-server/logs/
 
 docker/certs/
 
-### OpenAPI lint (Node deps installed at build time)
-openapi/node_modules/
-openapi/package-lock.json
-
 ### Kubernetes ###
 /deployment/helm/fc-service/charts/*.tgz
 
