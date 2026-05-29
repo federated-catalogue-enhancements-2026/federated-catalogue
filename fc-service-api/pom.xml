@@ -35,25 +35,31 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>2.0.0</version>
+                <configuration>
+                    <installDirectory>${project.build.directory}</installDirectory>
+                    <workingDirectory>${project.build.directory}</workingDirectory>
+                    <nodeVersion>v22.11.0</nodeVersion>
+                </configuration>
                 <executions>
+                    <execution>
+                        <id>install-node-for-openapi-lint</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>lint-openapi-spec</id>
                         <phase>validate</phase>
                         <goals>
-                            <goal>exec</goal>
+                            <goal>npx</goal>
                         </goals>
                         <configuration>
-                            <executable>npx</executable>
-                            <arguments>
-                                <argument>--yes</argument>
-                                <argument>@redocly/cli@1.34.3</argument>
-                                <argument>lint</argument>
-                                <argument>${project.parent.basedir}/openapi/fc_openapi.yaml</argument>
-                                <argument>--config</argument>
-                                <argument>${project.parent.basedir}/openapi/.redocly.yaml</argument>
+                            <arguments>--yes @redocly/cli@2.31.5 lint ${project.parent.basedir}/openapi/fc_openapi.yaml
+                                --config ${project.parent.basedir}/openapi/.redocly.yaml
                             </arguments>
                         </configuration>
                     </execution>
