@@ -80,6 +80,21 @@ trust-framework bundles; the admin API and the `getTrustFrameworks` endpoint exp
 For the architecture of the trust-framework bundle / family / profile model, see the
 [Architecture Document](https://github.com/eclipse-xfsc/docs/tree/main/federated-catalogue).
 
+## Verification: Base Class Requirement
+
+| Property                                              | Env var                                               | Default |
+|-------------------------------------------------------|-------------------------------------------------------|---------|
+| `federated-catalogue.verification.require-base-class` | `FEDERATED_CATALOGUE_VERIFICATION_REQUIRE_BASE_CLASS` | `false` |
+
+When `true`, the catalogue rejects credentials whose `@type` is not a registered base class in any active
+trust-framework bundle (HTTP 400). The default `false` reflects the principle that trust-framework compliance is not
+required at upload time. The bundled `docker-compose.strict.yml` overlay flips this to `true` to preserve the legacy
+strict-gate behavior.
+
+For the full set of verification toggles and the conceptual distinction between this property,
+`verification.semantics`, and the runtime OWL schema-validation module, see the
+[Operator Wiki](https://github.com/eclipse-xfsc/federated-catalogue/wiki).
+
 ## Supported Credential Formats
 
 The Federated Catalogue accepts the following Verifiable Credential formats for submission:

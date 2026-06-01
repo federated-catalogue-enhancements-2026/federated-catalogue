@@ -10,11 +10,13 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import eu.xfsc.fc.core.exception.ClientException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -41,6 +43,17 @@ class VerificationServiceImplTest {
 
   @Mock
   private TrustFrameworkRegistry trustFrameworkRegistry;
+
+  // The require-base-class gate defaults to false. The two
+  // null-base-class tests below assert the strict-gate behavior, so we flip the
+  // flag on for the whole class. Other tests are unaffected: they either return
+  // a NonCredentialVerificationResult (short-circuits the gate) or a result with
+  // a resolved base class. See VerificationServiceRequireBaseClassTest for the
+  // toggle's own contract tests.
+  @BeforeEach
+  void enableRequireBaseClassByDefault() {
+    ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", true);
+  }
 
   @Test
   void verifyCredential_jwtPayload_strategyReturnsNullRole_throwsClientException() {

@@ -50,7 +50,10 @@ import lombok.extern.slf4j.Slf4j;
     // Disable signature verification for role-resolution tests.
     // Tests that require signature verification pass the flag explicitly via the verifyCredential overload.
     "federated-catalogue.verification.vc-signature=false",
-    "federated-catalogue.verification.vp-signature=false"
+    "federated-catalogue.verification.vp-signature=false",
+    // flipped the default to false; this characterisation suite
+    // exercises the strict-gate behavior, so opt in explicitly.
+    "federated-catalogue.verification.require-base-class=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")

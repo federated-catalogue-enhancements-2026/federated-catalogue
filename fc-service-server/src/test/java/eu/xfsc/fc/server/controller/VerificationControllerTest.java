@@ -33,7 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 
-@SpringBootTest
+// require-base-class defaults to false; the legacy
+// strict-gate behavior assumed throughout this suite is opted in here so the
+// existing unknown-type rejection tests continue to assert their contract.
+@SpringBootTest(properties = "federated-catalogue.verification.require-base-class=true")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

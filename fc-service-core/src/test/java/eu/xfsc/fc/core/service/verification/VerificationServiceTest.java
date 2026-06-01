@@ -54,7 +54,11 @@ import static org.mockito.Mockito.when;
  * lookup against the bundled 2511 ontology.
  */
 @Slf4j
-@SpringBootTest
+// require-base-class are set to false by default; the legacy
+// strict-gate behavior assumed throughout this suite is opted in here so the
+// existing unknown-type rejection tests continue to assert their contract.
+// VerificationServiceRequireBaseClassTest covers both toggle states.
+@SpringBootTest(properties = "federated-catalogue.verification.require-base-class=true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, VerificationStackTestConfig.class})

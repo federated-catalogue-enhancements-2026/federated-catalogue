@@ -1531,6 +1531,14 @@ paths:
         affected endpoints return `400 module_disabled:<MODULE>` (see `/assets/validate`
         and `/verification`). Storage of schemas is unaffected — stored schemas remain
         queryable through `/schemas/**` regardless of toggle state.
+
+
+        **Scope of the `OWL` module toggle:** it controls only whether
+        *runtime-uploaded* ontology extensions contribute their subclasses to the
+        active trust-framework base classes. The deploy-time
+        `verification.semantics` and `verification.require-base-class` flags are
+        separate gates with different effects; see the arc42 chapter
+        "Verification toggle interactions" for how they compose.
       operationId: patchSchemaModule
       security:
         - jwt: []
