@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.RequiredArgsConstructor;
@@ -63,6 +64,15 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
   private static final String CLIENT_TYPE = "jwt-vc-compliance";
   private static final String VCID_QUERY_PARAM = "vcid";
 
+  /**
+   * Media type for the VP-JWT request body. {@code application/vp+jwt} is the content type the
+   * GXDCH compliance endpoint declares for this operation in its OpenAPI contract (verified against
+   * gx-compliance 2.11). Sending {@code text/plain} (or other types its body-parser middleware
+   * handles) makes the service consume the request stream before the handler reads it, yielding
+   * {@code HTTP 500 "stream is not readable"}.
+   */
+  private static final MediaType VP_JWT = new MediaType("application", "vp+jwt");
+
   private final ConcurrentHashMap<Integer, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
   @Override
@@ -107,7 +117,7 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
         + "?" + VCID_QUERY_PARAM + "=" + URLEncoder.encode(assetId, StandardCharsets.UTF_8));
 
     HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.TEXT_PLAIN);
+    headers.setContentType(VP_JWT);
     HttpEntity<String> request = new HttpEntity<>(vpJwt, headers);
 
     RestTemplate rest = buildRestTemplate(config.timeoutSeconds());
@@ -156,10 +166,7 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
   private ComplianceCheckOutcome parseComplianceJwt(String jwt) {
     try {
       JWTClaimsSet claims = readJwtPayload(jwt);
-      Instant validUntil = claims.getExpirationTime() != null
-          ? claims.getExpirationTime().toInstant()
-          : null;
-      return new IssuedAttestation(jwt, validUntil);
+      return new IssuedAttestation(jwt, extractValidUntil(claims));
     } catch (Exception e) {
       log.warn("Failed to parse compliance credential JWT", e);
       return new UnverifiableAttestation(
@@ -172,5 +179,26 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
 
   private JWTClaimsSet readJwtPayload(String jwt) throws ParseException {
     return JWTParser.parse(jwt).getJWTClaimsSet();
+  }
+
+  /**
+   * Resolves the attestation's validity end instant. Prefers the numeric JWT {@code exp} claim;
+   * falls back to the ISO-8601 {@code validUntil} claim used by W3C VC 2.0 credentials (which the
+   * Gaia-X GXDCH compliance attestation carries instead of a payload {@code exp}). Returns
+   * {@code null} when neither is present nor parseable.
+   */
+  private Instant extractValidUntil(JWTClaimsSet claims) {
+    if (claims.getExpirationTime() != null) {
+      return claims.getExpirationTime().toInstant();
+    }
+    try {
+      String validUntil = claims.getStringClaim("validUntil");
+      if (validUntil != null && !validUntil.isBlank()) {
+        return Instant.parse(validUntil);
+      }
+    } catch (ParseException | DateTimeParseException e) {
+      log.warn("Failed to parse VC validUntil claim: {}", e.getMessage());
+    }
+    return null;
   }
 }
