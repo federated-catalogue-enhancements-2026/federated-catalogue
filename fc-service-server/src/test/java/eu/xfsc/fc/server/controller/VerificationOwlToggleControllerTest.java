@@ -48,11 +48,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
  * new bundle declares (and the prefix accordingly). The OWL toggle behaviour being
  * tested here is bundle-agnostic; only the fixtures are tied to the snapshot.
  */
-@SpringBootTest(properties = {
-    // flipped the default to false; the OWL-toggle suite asserts
-    // that unknown subclasses are rejected, so opt the strict gate back on.
-    "federated-catalogue.verification.require-base-class=true"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -136,6 +132,7 @@ class VerificationOwlToggleControllerTest {
             .queryParam("verifySemantics", "false")
             .queryParam("verifyVPSignature", "false")
             .queryParam("verifyVCSignature", "false")
+            .queryParam("requireBaseClass", "true")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .content(CUSTOM_PARTICIPANT_VP)

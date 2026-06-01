@@ -190,8 +190,6 @@ federated-catalogue:
     semantics: true
     vp-signature: false
     vc-signature: false
-    # Post-strategy null-baseClass safety net — 400 on unresolvable @type.
-    require-base-class: false
     signature-verifier: uni-res #local
     did: 
       base-url: "https://dev.uniresolver.io/1.0" #/identifiers/

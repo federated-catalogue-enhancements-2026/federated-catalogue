@@ -60,10 +60,7 @@ import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
     "federated-catalogue.verification.signature-verifier=uni-res",
     "federated-catalogue.verification.did.base-url=https://dev.uniresolver.io/1.0",
     "federated-catalogue.verification.vc-signature=false",
-    "federated-catalogue.verification.vp-signature=false",
-    // flipped the default to false; the OWL-toggle suite asserts
-    // that unknown subclasses are rejected, so opt the strict gate back on.
-    "federated-catalogue.verification.require-base-class=true"
+    "federated-catalogue.verification.vp-signature=false"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
@@ -174,7 +171,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     // ClientException (→ HTTP 400). Mirrors the user-visible effect of the OWL kill-switch.
     ClientException ex = assertThrows(ClientException.class,
         () -> verificationService.verifyCredential(
-            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false));
+            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false, true));
     assertNotNull(ex.getMessage());
   }
 

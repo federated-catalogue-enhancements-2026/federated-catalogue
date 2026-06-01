@@ -54,11 +54,10 @@ import static org.mockito.Mockito.when;
  * lookup against the bundled 2511 ontology.
  */
 @Slf4j
-// require-base-class are set to false by default; the legacy
-// strict-gate behavior assumed throughout this suite is opted in here so the
-// existing unknown-type rejection tests continue to assert their contract.
-// VerificationServiceRequireBaseClassTest covers both toggle states.
-@SpringBootTest(properties = "federated-catalogue.verification.require-base-class=true")
+// require-base-class defaults to false (caller-only gate). Tests expecting rejection
+// for unknown-type credentials now explicitly pass requireBaseClass=true via the 5-arg
+// verifyCredential overload to opt into the strict gate.
+@SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
 @ContextConfiguration(classes = {VerificationServiceTest.TestApplication.class, VerificationStackTestConfig.class})
@@ -199,7 +198,7 @@ public class VerificationServiceTest {
     String path = "VerificationService/jsonld/input.vc.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(getAccessor(path), true, false, false));
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, true));
   }
 
   @Test
@@ -235,7 +234,7 @@ public class VerificationServiceTest {
     String path = "VerificationService/jsonld/input.vp.jsonld";
     schemaStore.addSchema(getAccessor("Schema-Tests/gx-2511-test-ontology.ttl"));
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(getAccessor(path), true, false, false));
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, true));
   }
 
   @Test
@@ -377,7 +376,7 @@ public class VerificationServiceTest {
       // → resolveSubjectBaseClass returns UNKNOWN → ClientException.
       ContentAccessor customExtContent = getAccessor("VerificationService/syntax/customExtParticipant.jsonld");
       assertThrowsExactly(ClientException.class,
-          () -> verificationService.verifyCredential(customExtContent, true, false, false));
+          () -> verificationService.verifyCredential(customExtContent, true, false, false, true));
     } finally {
       jdbcTemplate.update("UPDATE trust_frameworks SET enabled = false WHERE id = 'gaia-x'");
     }
@@ -413,7 +412,7 @@ public class VerificationServiceTest {
     schemaStore.initializeDefaultSchemas();
     String path = "VerificationService/syntax/complexCredentialPartType.jsonld";
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(getAccessor(path), true, false, false));
+        () -> verificationService.verifyCredential(getAccessor(path), true, false, false, true));
   }
 
   @Test
@@ -658,7 +657,7 @@ public class VerificationServiceTest {
     // so role resolution fails before claims are returned.
     ContentAccessor content = getAccessor("Claims-Extraction-Tests/participantCredential-only-fcmeta.jsonld");
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(content, false, false, false));
+        () -> verificationService.verifyCredential(content, false, false, false, true));
   }
 
   // --- T5: JWT signature verification smoke tests ---
@@ -940,7 +939,7 @@ public class VerificationServiceTest {
     ContentAccessor content = getAccessor("Claims-Tests/vc2NonGaiax.jsonld");
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(content, true, false, false));
+        () -> verificationService.verifyCredential(content, true, false, false, true));
   }
 
   /**
@@ -976,7 +975,7 @@ public class VerificationServiceTest {
     ContentAccessor content = new ContentAccessorDirect(evcBody, "application/vc+ld+json");
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(content, false, false, false));
+        () -> verificationService.verifyCredential(content, false, false, false, true));
     verify(loireJwtParserSpy).unwrap(any());
   }
 
@@ -992,7 +991,7 @@ public class VerificationServiceTest {
     ContentAccessor content = new ContentAccessorDirect(evpBody, "application/vp+ld+json");
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationService.verifyCredential(content, false, false, false));
+        () -> verificationService.verifyCredential(content, false, false, false, true));
     verify(loireJwtParserSpy).unwrap(any());
   }
 

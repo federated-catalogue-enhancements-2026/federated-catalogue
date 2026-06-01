@@ -26,10 +26,14 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
 import eu.xfsc.fc.core.service.trustframework.TrustFrameworkRegistry;
 
 /**
- * Tests the {@code requireBaseClassByDefault} property toggle on {@link VerificationServiceImpl}.
+ * Tests the caller-parameter-driven {@code requireBaseClass} gate on {@link VerificationServiceImpl}.
  *
- * <p>Property-toggle behavior is exercised via ReflectionTestUtils to match the pure-Mockito
- * style of this module's other tests. No Spring context is started.
+ * <p>The gate is invoked via explicit caller parameters in the overloads:
+ * - {@code verifyCredential(payload)} → requireBaseClass=false (no gate)
+ * - {@code verifyCredential(payload, requireBaseClass)} → gate fires iff requireBaseClass=true
+ * - {@code verifyCredential(payload, ..., requireBaseClass)} → 5-arg gate fires iff requireBaseClass=true
+ *
+ * <p>No Spring context is started; uses pure Mockito.
  */
 @ExtendWith(MockitoExtension.class)
 class VerificationServiceRequireBaseClassTest {
@@ -66,8 +70,7 @@ class VerificationServiceRequireBaseClassTest {
   }
 
   @Test
-  void verifyCredential_propertyFalse_unknownType_returnsResultWithoutThrowing() throws Exception {
-    ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", false);
+  void verifyCredential_defaultOverload_unknownType_returnsResultWithoutThrowing() throws Exception {
     when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
 
@@ -78,27 +81,36 @@ class VerificationServiceRequireBaseClassTest {
   }
 
   @Test
-  void verifyCredential_propertyTrue_unknownType_throwsClientException() {
-    ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", true);
+  void verifyCredential_requireBaseClassFalse_unknownType_returnsResultWithoutThrowing() throws Exception {
+    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
+        .thenReturn(nullBaseClassResult);
+
+    CredentialVerificationResult result = verificationServiceImpl.verifyCredential(jwtPayload, false);
+
+    assertSame(nullBaseClassResult, result);
+    assertNull(result.getBaseClass());
+  }
+
+  @Test
+  void verifyCredential_requireBaseClassTrue_unknownType_throwsClientException() {
     when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(List.of());
 
     ClientException thrown = assertThrowsExactly(ClientException.class,
-        () -> verificationServiceImpl.verifyCredential(jwtPayload));
+        () -> verificationServiceImpl.verifyCredential(jwtPayload, true));
 
     assertTrue(thrown.getMessage().contains("Credential type is not resolvable"));
   }
 
   @Test
-  void verifyCredential_propertyFalse_explicitRequireTrue_throwsClientException() {
-    ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", false);
+  void verifyCredential_5argRequireBaseClassTrue_unknownType_throwsClientException() {
     when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(List.of());
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationServiceImpl.verifyCredential(jwtPayload, true));
+        () -> verificationServiceImpl.verifyCredential(jwtPayload, true, false, false, true));
   }
 
 }

@@ -44,16 +44,10 @@ class VerificationServiceImplTest {
   @Mock
   private TrustFrameworkRegistry trustFrameworkRegistry;
 
-  // The require-base-class gate defaults to false. The two
-  // null-base-class tests below assert the strict-gate behavior, so we flip the
-  // flag on for the whole class. Other tests are unaffected: they either return
-  // a NonCredentialVerificationResult (short-circuits the gate) or a result with
-  // a resolved base class. See VerificationServiceRequireBaseClassTest for the
-  // toggle's own contract tests.
-  @BeforeEach
-  void enableRequireBaseClassByDefault() {
-    ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", true);
-  }
+  // The require-base-class gate defaults to false (caller-only). Tests that need the
+  // strict-gate behavior pass requireBaseClass=true explicitly to the verifyCredential overloads.
+  // Other tests are unaffected: they either return a NonCredentialVerificationResult (short-circuits
+  // the gate) or a result with a resolved base class.
 
   @Test
   void verifyCredential_jwtPayload_strategyReturnsNullRole_throwsClientException() {
@@ -68,7 +62,7 @@ class VerificationServiceImplTest {
         .thenReturn(nullRoleResult);
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationServiceImpl.verifyCredential(payload));
+        () -> verificationServiceImpl.verifyCredential(payload, true));
   }
 
   @Test
@@ -100,7 +94,7 @@ class VerificationServiceImplTest {
         .thenReturn(nullRoleResult);
 
     assertThrowsExactly(ClientException.class,
-        () -> verificationServiceImpl.verifyCredential(payload));
+        () -> verificationServiceImpl.verifyCredential(payload, true));
   }
 
   @Test

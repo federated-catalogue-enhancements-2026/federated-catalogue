@@ -33,10 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 
-// require-base-class defaults to false; the legacy
-// strict-gate behavior assumed throughout this suite is opted in here so the
-// existing unknown-type rejection tests continue to assert their contract.
-@SpringBootTest(properties = "federated-catalogue.verification.require-base-class=true")
+// require-base-class defaults to false (caller-only). Tests expecting rejection for
+// unknown-type credentials pass requireBaseClass=true via the query parameter.
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -174,6 +173,7 @@ public class VerificationControllerTest {
             .queryParam("verifySemantics", "false")
             .queryParam("verifyVPSignature", "false")
             .queryParam("verifyVCSignature", "false")
+            .queryParam("requireBaseClass", "true")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .content(UNKNOWN_TYPE_VP)
@@ -187,6 +187,7 @@ public class VerificationControllerTest {
             .queryParam("verifySemantics", "false")
             .queryParam("verifyVPSignature", "false")
             .queryParam("verifyVCSignature", "false")
+            .queryParam("requireBaseClass", "true")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .content(UNKNOWN_TYPE_VP)

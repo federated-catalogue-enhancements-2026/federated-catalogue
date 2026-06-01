@@ -47,12 +47,6 @@ public class VerificationServiceImpl implements VerificationService {
   private boolean verifyVPSignature;
   @Value("${federated-catalogue.verification.vc-signature:true}")
   private boolean verifyVCSignature;
-  // When false, the catalogue accepts credentials whose @type isn't a registered
-  // base class in any active trust-framework bundle. Useful for cross-framework
-  // demos against the bundled gaia-x-2511 / mock-2026 bundles. Strict mode flips
-  // this back on via env override.
-  @Value("${federated-catalogue.verification.require-base-class:false}")
-  private boolean requireBaseClassByDefault;
 
   private final CredentialVerificationStrategy credentialStrategy;
   private final NonCredentialIngestionStrategy nonCredentialStrategy;
@@ -81,8 +75,7 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload) throws VerificationException {
-    return verifyCredential(payload, verifySemantics, verifyVPSignature, verifyVCSignature,
-        requireBaseClassByDefault);
+    return verifyCredential(payload, verifySemantics, verifyVPSignature, verifyVCSignature, false);
   }
 
   @Override
@@ -94,11 +87,11 @@ public class VerificationServiceImpl implements VerificationService {
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    return verifyCredential(payload, verifySemantics, verifyVPSignatures, verifyVCSignatures,
-        requireBaseClassByDefault);
+    return verifyCredential(payload, verifySemantics, verifyVPSignatures, verifyVCSignatures, false);
   }
 
-  private CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
+  @Override
+  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures, boolean requireBaseClass) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).ingest(payload,
         verifySemantics, verifyVPSignatures, verifyVCSignatures);

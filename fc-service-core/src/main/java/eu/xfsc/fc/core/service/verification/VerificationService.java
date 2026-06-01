@@ -56,4 +56,20 @@ public interface VerificationService {
   CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException;
 
+  /**
+   * Validates the credential payload with all verification toggles and an explicit
+   * base-class requirement.
+   *
+   * @param payload ContentAccessor to credential which should be validated.
+   * @param verifySemantics whether to perform semantic validation
+   * @param verifyVPSignatures whether to perform VP signature verification
+   * @param verifyVCSignatures whether to perform VC signature verification
+   * @param requireBaseClass whether to reject credentials whose @type cannot be resolved
+   *     to a base class in any active trust-framework bundle
+   * @return a credential metadata validation result.
+   */
+  CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
+		  boolean verifyVPSignatures, boolean verifyVCSignatures, boolean requireBaseClass)
+      throws VerificationException;
+
 }
