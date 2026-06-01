@@ -2,6 +2,7 @@ package eu.xfsc.fc.core.service.trustframework.compliance;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import eu.xfsc.fc.api.FcMediaTypes;
 import eu.xfsc.fc.core.exception.ServiceUnavailableException;
 import eu.xfsc.fc.core.exception.TimeoutException;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
@@ -20,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -63,15 +63,6 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
 
   private static final String CLIENT_TYPE = "jwt-vc-compliance";
   private static final String VCID_QUERY_PARAM = "vcid";
-
-  /**
-   * Media type for the VP-JWT request body. {@code application/vp+jwt} is the content type the
-   * GXDCH compliance endpoint declares for this operation in its OpenAPI contract (verified against
-   * gx-compliance 2.11). Sending {@code text/plain} (or other types its body-parser middleware
-   * handles) makes the service consume the request stream before the handler reads it, yielding
-   * {@code HTTP 500 "stream is not readable"}.
-   */
-  private static final MediaType VP_JWT = new MediaType("application", "vp+jwt");
 
   private final ConcurrentHashMap<Integer, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
@@ -117,7 +108,10 @@ public class JwtVcComplianceClient implements TrustFrameworkClient {
         + "?" + VCID_QUERY_PARAM + "=" + URLEncoder.encode(assetId, StandardCharsets.UTF_8));
 
     HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(VP_JWT);
+    // application/vp+jwt is the content type the GXDCH compliance endpoint declares for this
+    // operation. Body-parser-handled types (e.g. text/plain) make the service consume the request
+    // stream before the handler reads it, yielding HTTP 500 "stream is not readable".
+    headers.setContentType(FcMediaTypes.VP_JWT);
     HttpEntity<String> request = new HttpEntity<>(vpJwt, headers);
 
     RestTemplate rest = buildRestTemplate(config.timeoutSeconds());
