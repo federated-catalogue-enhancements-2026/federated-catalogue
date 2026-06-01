@@ -88,7 +88,7 @@ public class GaiaxTrustFrameworkTest {
   private VerificationServiceImpl verificationService;
 
   @Autowired
-  private CredentialVerificationStrategy credentialVerificationStrategy;
+  private CredentialIngestionStrategy credentialVerificationStrategy;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;

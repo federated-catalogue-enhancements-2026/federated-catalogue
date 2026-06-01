@@ -44,7 +44,7 @@ class VerificationServiceRequireBaseClassTest {
   private VerificationServiceImpl verificationServiceImpl;
 
   @Mock
-  private CredentialVerificationStrategy credentialStrategy;
+  private CredentialIngestionStrategy credentialStrategy;
 
   @Mock
   private NonCredentialIngestionStrategy nonCredentialStrategy;

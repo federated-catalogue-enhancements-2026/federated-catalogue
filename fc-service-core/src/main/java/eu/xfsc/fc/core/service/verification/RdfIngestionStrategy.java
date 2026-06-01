@@ -12,7 +12,7 @@ import eu.xfsc.fc.core.pojo.CredentialVerificationResult;
  *
  * <p>Implementations:
  * <ul>
- *   <li>{@link CredentialVerificationStrategy} — W3C VC/VP (JSON-LD or JWT, incl. Loire
+ *   <li>{@link CredentialIngestionStrategy} — W3C VC/VP (JSON-LD or JWT, incl. Loire
  *       and W3C VC 2.0 Enveloped wrappers) with full semantic/schema/signature checks.</li>
  *   <li>{@link NonCredentialIngestionStrategy} — non-credential RDF payloads ingested as raw
  *       triples (no VC pipeline).</li>

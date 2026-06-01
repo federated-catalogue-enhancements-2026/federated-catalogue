@@ -80,20 +80,17 @@ trust-framework bundles; the admin API and the `getTrustFrameworks` endpoint exp
 For the architecture of the trust-framework bundle / family / profile model, see the
 [Architecture Document](https://github.com/eclipse-xfsc/docs/tree/main/federated-catalogue).
 
-## Verification: Base Class Requirement
+## Verification: No Forced Validation on Upload
 
-| Property                                              | Env var                                               | Default |
-|-------------------------------------------------------|-------------------------------------------------------|---------|
-| `federated-catalogue.verification.require-base-class` | `FEDERATED_CATALOGUE_VERIFICATION_REQUIRE_BASE_CLASS` | `false` |
+The upload path runs no forced SHACL/JSON-Schema/XML-Schema validation and no
+trust-framework base-class compliance check. Schema validation is on-demand only —
+clients pre-flight with `POST /assets/validate` (CAT-FR-CO-05) before `POST /assets`.
 
-When `true`, the catalogue rejects credentials whose `@type` is not a registered base class in any active
-trust-framework bundle (HTTP 400). The default `false` reflects the principle that trust-framework compliance is not
-required at upload time. The bundled `docker-compose.strict.yml` overlay flips this to `true` to preserve the legacy
-strict-gate behavior.
+A caller that wants the post-strategy base-class check on `POST /verification`
+must opt in explicitly with the `requireBaseClass=true` query parameter.
 
-For the full set of verification toggles and the conceptual distinction between this property,
-`verification.semantics`, and the runtime OWL schema-validation module, see the
-[Operator Wiki](https://github.com/eclipse-xfsc/federated-catalogue/wiki).
+For the full set of verification toggles and the runtime OWL schema-validation
+module, see the [Operator Wiki](https://github.com/eclipse-xfsc/federated-catalogue/wiki).
 
 ## Supported Credential Formats
 

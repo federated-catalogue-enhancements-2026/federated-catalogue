@@ -24,7 +24,7 @@ import static eu.xfsc.fc.core.service.verification.VerificationConstants.JWT_PRE
  * <p>Dispatches each incoming payload to one of two {@link RdfIngestionStrategy}
  * implementations based on a quick format peek:
  * <ul>
- *   <li>{@link CredentialVerificationStrategy} — for any recognised credential format
+ *   <li>{@link CredentialIngestionStrategy} — for any recognised credential format
  *       (Loire JWT, danubetech VC 2.0 JSON-LD or JWT, W3C VC 2.0 Enveloped wrappers) and
  *       for ambiguous JWTs (which it rejects with a clear error).</li>
  *   <li>{@link NonCredentialIngestionStrategy} — for non-credential JSON-LD or other RDF
@@ -48,7 +48,7 @@ public class VerificationServiceImpl implements VerificationService {
   @Value("${federated-catalogue.verification.vc-signature:true}")
   private boolean verifyVCSignature;
 
-  private final CredentialVerificationStrategy credentialStrategy;
+  private final CredentialIngestionStrategy credentialStrategy;
   private final NonCredentialIngestionStrategy nonCredentialStrategy;
   private final CredentialFormatDetector formatDetector;
   private final TrustFrameworkRegistry trustFrameworkRegistry;

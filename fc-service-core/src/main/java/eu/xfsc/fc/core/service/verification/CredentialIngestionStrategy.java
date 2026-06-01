@@ -55,7 +55,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Verification strategy for Verifiable Credential payloads (VP/VC).
+ * Ingestion strategy for Verifiable Credential payloads (VP/VC).
  *
  * <p>Owns the verification pipeline orchestration: format detection, semantic checks,
  * signature collection, claim extraction, role resolution, and result
@@ -66,7 +66,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CredentialVerificationStrategy implements RdfIngestionStrategy {
+public class CredentialIngestionStrategy implements RdfIngestionStrategy {
 
   @Value("${federated-catalogue.verification.require-vp:false}")
   private boolean requireVP;
