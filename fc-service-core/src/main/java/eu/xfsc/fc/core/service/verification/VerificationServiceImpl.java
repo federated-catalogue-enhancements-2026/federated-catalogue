@@ -43,8 +43,6 @@ public class VerificationServiceImpl implements VerificationService {
 
   @Value("${federated-catalogue.verification.semantics:true}")
   private boolean verifySemantics;
-  @Value("${federated-catalogue.verification.schema:false}")
-  private boolean verifySchema;
   @Value("${federated-catalogue.verification.vp-signature:true}")
   private boolean verifyVPSignature;
   @Value("${federated-catalogue.verification.vc-signature:true}")
@@ -60,11 +58,6 @@ public class VerificationServiceImpl implements VerificationService {
   private final NonCredentialIngestionStrategy nonCredentialStrategy;
   private final CredentialFormatDetector formatDetector;
   private final TrustFrameworkRegistry trustFrameworkRegistry;
-
-  /** Package-private for testing: allows overriding the schema verification toggle. */
-  void setVerifySchema(boolean verifySchema) {
-    this.verifySchema = verifySchema;
-  }
 
   /**
    * Picks the strategy for this payload. JWT bodies always go to the credential strategy
@@ -88,27 +81,27 @@ public class VerificationServiceImpl implements VerificationService {
    */
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload) throws VerificationException {
-    return verifyCredential(payload, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature,
+    return verifyCredential(payload, verifySemantics, verifyVPSignature, verifyVCSignature,
         requireBaseClassByDefault);
   }
 
   @Override
   public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean requireBaseClass)
       throws VerificationException {
-    return verifyCredential(payload, verifySemantics, verifySchema, verifyVPSignature, verifyVCSignature, requireBaseClass);
+    return verifyCredential(payload, verifySemantics, verifyVPSignature, verifyVCSignature, requireBaseClass);
   }
 
   @Override
-  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
+  public CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures) throws VerificationException {
-    return verifyCredential(payload, verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures,
+    return verifyCredential(payload, verifySemantics, verifyVPSignatures, verifyVCSignatures,
         requireBaseClassByDefault);
   }
 
-  private CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics, boolean verifySchema,
+  private CredentialVerificationResult verifyCredential(ContentAccessor payload, boolean verifySemantics,
 		  boolean verifyVPSignatures, boolean verifyVCSignatures, boolean requireBaseClass) throws VerificationException {
     CredentialVerificationResult result = resolveStrategy(payload).ingest(payload,
-        verifySemantics, verifySchema, verifyVPSignatures, verifyVCSignatures);
+        verifySemantics, verifyVPSignatures, verifyVCSignatures);
     if (requireBaseClass && !(result instanceof NonCredentialVerificationResult) && result.getBaseClass() == null) {
       String bundleInfo = getActiveTrustFrameworkBundleInfos();
       throw new ClientException(

@@ -68,7 +68,7 @@ class VerificationServiceRequireBaseClassTest {
   @Test
   void verifyCredential_propertyFalse_unknownType_returnsResultWithoutThrowing() throws Exception {
     ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", false);
-    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
 
     CredentialVerificationResult result = verificationServiceImpl.verifyCredential(jwtPayload);
@@ -80,7 +80,7 @@ class VerificationServiceRequireBaseClassTest {
   @Test
   void verifyCredential_propertyTrue_unknownType_throwsClientException() {
     ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", true);
-    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(List.of());
 
@@ -93,7 +93,7 @@ class VerificationServiceRequireBaseClassTest {
   @Test
   void verifyCredential_propertyFalse_explicitRequireTrue_throwsClientException() {
     ReflectionTestUtils.setField(verificationServiceImpl, "requireBaseClassByDefault", false);
-    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+    when(credentialStrategy.ingest(any(), anyBoolean(), anyBoolean(), anyBoolean()))
         .thenReturn(nullBaseClassResult);
     when(trustFrameworkRegistry.getActiveBundles()).thenReturn(List.of());
 

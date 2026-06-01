@@ -133,7 +133,6 @@ subscriber:
   fixed-rate: 30s
   verify:
     semantics: true
-    schema: true
     vp-signature: false
     vc-signature: false
     integrity: true
@@ -189,8 +188,6 @@ federated-catalogue:
     # gate; combine carefully.
     # VP/VC envelope semantic checks — 422 on violation.
     semantics: true
-    # SHACL shape validation — also needs the SHACL admin module enabled.
-    schema: false
     vp-signature: false
     vc-signature: false
     # Post-strategy null-baseClass safety net — 400 on unresolvable @type.

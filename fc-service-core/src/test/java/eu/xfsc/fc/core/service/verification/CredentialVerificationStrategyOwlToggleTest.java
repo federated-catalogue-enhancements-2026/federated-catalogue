@@ -121,7 +121,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(true);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false);
 
     assertNotNull(result);
     verify(schemaStore, atLeastOnce()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -132,7 +132,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false);
 
     assertNotNull(result);
     verify(schemaStore, never()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -145,7 +145,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), true, false, false, false);
+        getAccessor(PARTICIPANT_FIXTURE), true, false, false);
 
     assertNotNull(result);
     verify(schemaStore, never()).getCompositeSchema(SchemaType.ONTOLOGY);
@@ -157,7 +157,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(true);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false, false);
+        getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false);
 
     assertNotNull(result);
     assertEquals("Participant", result.getBaseClass(),
@@ -174,7 +174,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     // ClientException (→ HTTP 400). Mirrors the user-visible effect of the OWL kill-switch.
     ClientException ex = assertThrows(ClientException.class,
         () -> verificationService.verifyCredential(
-            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false, false));
+            getAccessor(CUSTOM_PARTICIPANT_FIXTURE), false, false, false));
     assertNotNull(ex.getMessage());
   }
 
@@ -186,7 +186,7 @@ class CredentialVerificationStrategyOwlToggleTest {
     when(schemaModuleConfigService.isModuleEnabled(SchemaModuleType.OWL)).thenReturn(false);
 
     CredentialVerificationResult result = verificationService.verifyCredential(
-        getAccessor(PARTICIPANT_FIXTURE), false, false, false, false);
+        getAccessor(PARTICIPANT_FIXTURE), false, false, false);
 
     assertNotNull(result);
     assertNotNull(result.getBaseClass(), "registry-direct type resolves regardless of OWL toggle");

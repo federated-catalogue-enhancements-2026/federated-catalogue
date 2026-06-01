@@ -32,14 +32,13 @@ public interface RdfIngestionStrategy {
    *
    * @param payload            the credential content to verify
    * @param verifySemantics    whether to perform semantic verification
-   * @param verifySchema       whether to perform schema verification
    * @param verifyVPSignatures whether to verify VP signatures
    * @param verifyVCSignatures whether to verify VC signatures
    * @return the verification result
    * @throws VerificationException if verification fails
    */
   CredentialVerificationResult ingest(ContentAccessor payload,
-                                      boolean verifySemantics, boolean verifySchema,
+                                      boolean verifySemantics,
                                       boolean verifyVPSignatures,
                                       boolean verifyVCSignatures) throws VerificationException;
 

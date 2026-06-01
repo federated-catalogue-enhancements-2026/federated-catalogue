@@ -3323,13 +3323,6 @@ paths:
           schema:
             type: boolean
             default: true
-        - name: verifySchema
-          in: query
-          description: 'To verify credential against stored SHACL shapes or not'
-          required: false
-          schema:
-            type: boolean
-            default: false
         - name: verifyVPSignature
           in: query
           description: 'To verify VP signature or not'
@@ -3398,14 +3391,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/VerificationResult'
         '400':
-          description: >-
-            Client error. When `verifySchema=true` and the SHACL module is
-            administratively disabled, the body is `module_disabled:SHACL`
-            (see `PUT /admin/schema-validation/modules/{type}`).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/ClientError'
         '422':
           $ref: '#/components/responses/Unprocessible'
         '500':

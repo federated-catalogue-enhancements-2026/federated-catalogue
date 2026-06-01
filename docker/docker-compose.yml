@@ -200,9 +200,8 @@ services:
       # Enable a trust framework by listing its family (matches framework.yaml `family` field).
       # Multiple families: comma-separated, e.g. "gaia-x,untp".
       FEDERATED_CATALOGUE_ENABLED_TRUST_FRAMEWORKS: "${ENABLED_TRUST_FRAMEWORKS:-}"
-      FEDERATED_CATALOGUE_VERIFICATION_SCHEMA: "${VERIFY_SCHEMA:-false}"
       # Verification toggles: see arc42 chapter 5 "Verification toggle interactions"
-      # for how SEMANTICS, SCHEMA, and REQUIRE_BASE_CLASS compose.
+      # for how SEMANTICS and signature flags compose.
       # VP/VC envelope semantic checks — 422 on violation.
       FEDERATED_CATALOGUE_VERIFICATION_SEMANTICS: "${VERIFY_SEMANTICS:-true}"
       # Post-strategy null-baseClass safety net — 400 on unresolvable @type.
