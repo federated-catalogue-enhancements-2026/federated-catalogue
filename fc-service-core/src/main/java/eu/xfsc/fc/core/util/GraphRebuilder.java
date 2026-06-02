@@ -132,9 +132,13 @@ public class GraphRebuilder {
     // have contentAccessor = null; calling extractClaims(null) would throw a NullPointerException.
     rebuildLinkTriples();
 
-    // After asset claims are restored, rebuild validation result triples
+    // After asset claims are restored, rebuild validation result triples. The
+    // progress callback contract (see Javadoc on the public overload) ticks once
+    // per asset; reusing it here would push processed past total because the
+    // rebuild status `total` only counts assets. Run silently — the
+    // rebuildValidationResults info log emits a per-pass summary for operators.
     log.info("Rebuilding validation result triples...");
-    rebuildValidationResults(progressCallback);
+    rebuildValidationResults(null);
     log.info("Graph rebuild complete (assets + validation results)");
   }
 
