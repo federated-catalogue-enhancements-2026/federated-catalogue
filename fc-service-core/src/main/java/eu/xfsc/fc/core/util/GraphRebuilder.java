@@ -182,6 +182,13 @@ public class GraphRebuilder {
     }
     List<RdfClaim> claims = extractClaims(assetMetaData);
     claims = protectedNamespaceFilter.filterClaims(claims, "graph rebuild").claims();
+    // Remove any prior claims for this credential subject before re-adding so the
+    // rebuild is idempotent — repeated rebuilds against the same asset set must
+    // converge on the same graph state, not accumulate. Without this clear, RDF
+    // backends silently grow on every rebuild because the per-claim RDF-star
+    // annotations regenerate slightly different blank-node identifiers each pass,
+    // and Neo4j hits its n10s.unique-uri constraint mid-import.
+    graphStore.deleteClaims(assetMetaData.getId());
     graphStore.addClaims(claims, assetMetaData.getId());
     return true;
   }
