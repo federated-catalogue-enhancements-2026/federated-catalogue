@@ -144,6 +144,195 @@ class JsonSchemaValidationStrategyTest {
   }
 
   @Test
+  void validate_absoluteRefMatchingDeclaredIdInDocument_returnsConforming() {
+    // Standard bundling: an absolute-scheme $ref pointing at a $id declared elsewhere in the same
+    // document resolves entirely against the document's own already-loaded schema resources and
+    // never reaches the blocked loader — the pre-check must not reject it (regression: PR #154
+    // review comment https://github.com/eclipse-xfsc/federated-catalogue/pull/154#issuecomment-5571684071).
+    String bundledSchemaWithAbsoluteRef = """
+        {"$id":"https://ex.org/main",\
+        "$defs":{"x":{"$id":"https://ex.org/x"}},\
+        "properties":{"id":{"$ref":"https://ex.org/x"}}}""";
+
+    ValidationReport report = strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(bundledSchemaWithAbsoluteRef)));
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
+  }
+
+  @Test
+  void validate_absoluteRefMatchingDeclaredIdWithFragment_returnsConforming() {
+    // Same shape as above, but the $ref also carries a fragment into the declared sub-schema
+    // ("https://ex.org/x#/definitions/y") — the fragment must be stripped before matching against
+    // the declared-$id set, not treated as part of the base URI.
+    String bundledSchemaWithFragmentRef = """
+        {"$id":"https://ex.org/main",\
+        "$defs":{"x":{"$id":"https://ex.org/x","definitions":{"y":{"type":"string"}}}},\
+        "properties":{"id":{"$ref":"https://ex.org/x#/definitions/y"}}}""";
+
+    ValidationReport report = strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(bundledSchemaWithFragmentRef)));
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
+  }
+
+  @Test
+  void validate_absoluteRefNotMatchingAnyDeclaredId_throwsClientException() {
+    // Same bundled-document shape, but the $ref points at an absolute URI that is not declared by
+    // any $id in the document — this must still be rejected with the existing precise message,
+    // proving the fix does not over-relax the check into accepting any absolute $ref.
+    String schemaWithUndeclaredAbsoluteRef = """
+        {"$id":"https://ex.org/main",\
+        "$defs":{"x":{"$id":"https://ex.org/x"}},\
+        "properties":{"id":{"$ref":"https://ex.org/not-declared"}}}""";
+
+    ClientException exception = assertThrows(ClientException.class, () -> strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithUndeclaredAbsoluteRef))));
+
+    assertTrue(exception.getMessage().contains("https://ex.org/not-declared")
+            && exception.getMessage().contains("resolves outside the schema document"),
+        "Expected the pre-check's own error, got: " + exception.getMessage());
+  }
+
+  @Test
+  void validate_refUnderDefaultKeyword_isIgnoredAsData_returnsConforming() {
+    // "default" holds a literal example value, never a nested schema — a "$ref"-shaped value there
+    // is data, not a real reference, and must not be walked into at all (previously this threw,
+    // since the old blind walk checked every object's "$ref" field regardless of position).
+    String schemaWithRefShapedDefault = """
+        {"type":"object",\
+        "properties":{"id":{"type":"string","default":{"$ref":"https://not-a-real-ref.example/x"}}}}""";
+
+    ValidationReport report = strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithRefShapedDefault)));
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
+  }
+
+  @Test
+  void validate_idUnderExamplesKeyword_notTreatedAsDeclaredAnchor_throwsClientException() {
+    // "examples" holds illustrative data, never a nested schema — a "$id" placed there is a decoy,
+    // not a real same-document anchor, and must not be added to the declared-$id set. Otherwise an
+    // absolute $ref matching it would incorrectly bypass the pre-check.
+    String schemaWithDecoyIdInExamples = """
+        {"$id":"https://ex.org/main",\
+        "examples":[{"$id":"https://ex.org/decoy"}],\
+        "properties":{"id":{"$ref":"https://ex.org/decoy"}}}""";
+
+    ClientException exception = assertThrows(ClientException.class, () -> strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithDecoyIdInExamples))));
+
+    assertTrue(exception.getMessage().contains("https://ex.org/decoy")
+            && exception.getMessage().contains("resolves outside the schema document"),
+        "Expected the pre-check's own error, got: " + exception.getMessage());
+  }
+
+  @Test
+  void validate_externalRefInDefsEntryNamedConst_throwsClientException() {
+    // "const" here is not the NON_SCHEMA_DATA_KEYWORDS "const" keyword — it is the NAME of a
+    // $defs map entry (map keys in $defs/properties/patternProperties/dependentSchemas are
+    // user-chosen identifiers, not JSON-Schema keywords). That entry's value is a genuine nested
+    // schema carrying a real external $ref. Because collectIdsAndRefs matches on the key string
+    // alone, it currently skips recursing into this entry entirely, so the $ref is never checked —
+    // an SSRF pre-check bypass. This must throw exactly like the top-level $ref tests above.
+    String schemaWithExternalRefInDefsEntryNamedConst = """
+        {"$defs":{"const":{"$ref":"https://evil.example/x"}}}""";
+
+    assertThrows(ClientException.class, () -> strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithExternalRefInDefsEntryNamedConst))));
+  }
+
+  @Test
+  void validate_absoluteRefMatchingIdDeclaredInDefsEntryNamedConst_returnsConforming() {
+    // Symmetric case: the $defs entry NAMED "const" declares a genuine $id, referenced elsewhere
+    // in the document by a matching absolute $ref — legitimate same-document bundling, same shape
+    // as validate_absoluteRefMatchingDeclaredIdInDocument_returnsConforming above, except the
+    // $defs entry's name happens to collide with the NON_SCHEMA_DATA_KEYWORDS string "const". The
+    // key-string-only check skips recursing into this entry, so its $id is never collected into
+    // declaredIds, and the matching $ref is wrongly rejected as external.
+    String schemaWithIdInDefsEntryNamedConst = """
+        {"$id":"https://ex.org/main",\
+        "$defs":{"const":{"$id":"https://ex.org/x"}},\
+        "properties":{"id":{"$ref":"https://ex.org/x"}}}""";
+
+    ValidationReport report = strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithIdInDefsEntryNamedConst)));
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
+  }
+
+  @Test
+  void validate_externalRefInPropertiesEntryNamedDefault_throwsClientException() {
+    // Same ambiguity as validate_externalRefInDefsEntryNamedConst_throwsClientException, but for a
+    // different name-keyed-map keyword ("properties" instead of "$defs") colliding with a different
+    // NON_SCHEMA_DATA_KEYWORDS string ("default" instead of "const"). The JSON property that this
+    // schema entry describes is itself named "default" — a legitimate, if unusual, property name —
+    // and its schema value carries a real external $ref that must still be rejected.
+    String schemaWithExternalRefInPropertiesEntryNamedDefault = """
+        {"properties":{"default":{"$ref":"https://evil.example/x"}}}""";
+
+    assertThrows(ClientException.class, () -> strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithExternalRefInPropertiesEntryNamedDefault))));
+  }
+
+  @Test
+  void validate_idShapedEntryInPropertiesMap_notTreatedAsDeclaredAnchor_throwsClientException() {
+    // "properties" is a name-keyed map: the map node itself is not a schema, so its own top-level
+    // field named "$id" must never be harvested as a declared anchor — only a "$id" belonging to
+    // one of the map's ENTRY VALUES (a real nested schema) counts. If the map node's own fields were
+    // harvested like a schema's, an attacker could plant a decoy anchor directly on the map node
+    // ("properties":{"$id":"<attacker-chosen absolute URI>"}) that a matching absolute $ref
+    // elsewhere in the document would then hide behind, bypassing the pre-check entirely.
+    String schemaWithDecoyIdAsPropertiesMapNodeField = """
+        {"properties":{"$id":"https://ex.org/decoy-via-properties-map-node"},\
+        "$ref":"https://ex.org/decoy-via-properties-map-node"}""";
+
+    ClientException exception = assertThrows(ClientException.class, () -> strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithDecoyIdAsPropertiesMapNodeField))));
+
+    assertTrue(exception.getMessage().contains("https://ex.org/decoy-via-properties-map-node")
+            && exception.getMessage().contains("resolves outside the schema document"),
+        "Expected the pre-check's own error, got: " + exception.getMessage());
+  }
+
+  @Test
+  void validate_absoluteRefMatchingIdDeclaredInsideAllOf_returnsConforming() {
+    // The document walk must also traverse array-valued applicator keywords (allOf/anyOf/oneOf),
+    // not just plain object properties: a legitimate $id declared on a schema bundled inside an
+    // "allOf" array element must still be collected, so a matching absolute $ref elsewhere in the
+    // document is recognised as same-document bundling rather than rejected as external.
+    String schemaWithIdInsideAllOf = """
+        {"$id":"https://ex.org/main",\
+        "allOf":[{"$id":"https://ex.org/x"}],\
+        "properties":{"id":{"$ref":"https://ex.org/x"}}}""";
+
+    ValidationReport report = strategy.validate(
+        List.of(buildAsset(CONFORMING_JSON)),
+        List.of(new ContentAccessorDirect(schemaWithIdInsideAllOf)));
+
+    assertTrue(report.getConforms());
+    assertNotNull(report.getViolations());
+    assertTrue(report.getViolations().isEmpty());
+  }
+
+  @Test
   void validate_conformingJson_withWellKnownMetaSchemaDeclared_returnsConforming() {
     // A well-known "$schema" IRI resolves to a built-in dialect preset and must not be treated as
     // an external resource by the registry's block-all schema loader.
