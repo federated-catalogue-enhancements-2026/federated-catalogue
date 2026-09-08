@@ -57,6 +57,38 @@ Or via the dev helper script:
 This enables all verification flags and requires DID resolution infrastructure (did-server,
 certificates, trust anchor registry).
 
+### Corporate TLS-interception proxy (custom-cacerts)
+
+The `server` (`fc-server`) container's JVM is started with:
+
+```
+JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/opt/certs/custom-cacerts -Djavax.net.ssl.trustStorePassword=changeit
+```
+
+(see the `server` service in `docker-compose.yml`), with `docker/certs/custom-cacerts` mounted
+read-only into the container at `/opt/certs/custom-cacerts`. This PKCS12 keystore of standard
+public CAs is `.gitignore`d and not tracked in git — each developer keeps their own copy on disk.
+
+If your network runs a TLS-intercepting corporate proxy (e.g. Zscaler) and its root CA isn't in
+`custom-cacerts`, `fc-server` will crash-loop at startup, failing to load external JSON-LD
+contexts (e.g. from `registry.lab.gaia-x.eu`) with a `LOADING_DOCUMENT_FAILED` error — even
+though the host machine trusts that CA fine (e.g. via the macOS system keychain), because the
+container's JVM only trusts what's in `custom-cacerts`.
+
+To fix it, import your proxy's root CA into the keystore. `docker/certs/ZscalerRootCertificate.crt`
+is kept locally as an example of the kind of file you'd export from your own proxy/browser.
+
+```sh
+# optional: back up first so you can revert
+cp docker/certs/custom-cacerts docker/certs/custom-cacerts.bak
+
+keytool -importcert -alias <some-alias> -file <your-corporate-root-ca.crt> \
+  -keystore docker/certs/custom-cacerts -storetype PKCS12 -storepass changeit
+```
+
+Since `docker/certs/custom-cacerts` is untracked, this change stays local — it won't show up in
+`git status` or get committed by accident.
+
 ### Keycloak setup
 
 When all components started you should setup Keycloak which is used as Identity and Access Management layer in the project. Add keycloak host to your local `hosts` file:
