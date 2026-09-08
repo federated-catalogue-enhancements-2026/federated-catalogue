@@ -95,8 +95,8 @@ public class JsonSchemaValidationStrategy implements ValidationStrategy {
   }
 
   /**
-   * Returns {@code true} for non-RDF JSON assets, and for RDF assets serialised as JSON-LD
-   * (SRS 3.1.6). Other RDF serialisations (Turtle, RDF/XML, ...) remain SHACL-only.
+   * Returns {@code true} for non-RDF JSON assets, and for RDF assets serialised as JSON-LD.
+   * Other RDF serialisations (Turtle, RDF/XML, ...) remain SHACL-only.
    */
   @Override
   public boolean appliesTo(AssetMetadata asset) {
