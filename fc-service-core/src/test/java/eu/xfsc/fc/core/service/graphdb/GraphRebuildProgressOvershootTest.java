@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import eu.xfsc.fc.api.FcMediaTypes;
 import eu.xfsc.fc.api.generated.model.AssetStatus;
 import eu.xfsc.fc.core.dao.assets.AssetRepository;
 import eu.xfsc.fc.core.dao.assets.ContentKind;
@@ -23,7 +24,6 @@ import eu.xfsc.fc.core.service.validation.ValidationResultStore;
 import eu.xfsc.fc.core.service.verification.CredentialFormatDetector;
 import eu.xfsc.fc.core.service.verification.EnvelopedCredentialResolver;
 import eu.xfsc.fc.core.service.verification.ProtectedNamespaceFilter;
-import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import eu.xfsc.fc.core.service.verification.claims.ClaimExtractionService;
 import eu.xfsc.fc.core.util.GraphRebuilder;
 import java.util.LinkedHashMap;
@@ -180,7 +180,7 @@ public class GraphRebuildProgressOvershootTest {
     AssetMetadata metadata = mock(AssetMetadata.class);
     when(metadata.getContentAccessor()).thenReturn(asset.hasContent() ? content : null);
     when(metadata.getId()).thenReturn("subject-" + asset.hash());
-    when(metadata.getContentType()).thenReturn(VerificationConstants.MEDIA_TYPE_TURTLE);
+    when(metadata.getContentType()).thenReturn(FcMediaTypes.TURTLE_VALUE);
     return metadata;
   }
 
