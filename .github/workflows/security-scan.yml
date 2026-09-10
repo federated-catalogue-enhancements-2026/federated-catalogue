@@ -20,12 +20,21 @@ jobs:
       fail-on-vuln: false
 
   severity-gate:
-    name: Fail on CVSS > 7.0
+    name: Fail on CVSS >= 7.0
     needs: [osv-scan, grype-scan]
+    # Run even when a needed job failed/was cancelled, so we can fail the gate
+    # instead of GitHub Actions silently skipping it (see step below).
+    if: always()
     runs-on: ubuntu-latest
     permissions:
       actions: read
     steps:
+      - name: Fail closed if a required scanner did not succeed
+        if: needs.osv-scan.result != 'success' || needs.grype-scan.result != 'success'
+        run: |
+          echo "::error::osv-scan=${{ needs.osv-scan.result }} grype-scan=${{ needs.grype-scan.result }} — a required scanner did not succeed; failing the gate instead of skipping it."
+          exit 1
+
       - name: Download OSV-Scanner SARIF
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -69,7 +78,7 @@ jobs:
                           score = float(severity)
                       except (TypeError, ValueError):
                           continue
-                      if score > threshold:
+                      if score >= threshold:
                           location = result.get("locations", [{}])[0].get("physicalLocation", {}) \
                               .get("artifactLocation", {}).get("uri", "unknown")
                           failures.append((score, report_name, result.get("ruleId"), location))
@@ -112,7 +121,7 @@ jobs:
 
   # Grype is a second, complementary scanner over the same CycloneDX SBOM used
   # by the OSV scan above. The scan step itself never fails the build, so the
-  # report always publishes; severity-gate applies the same CVSS > 7.0
+  # report always publishes; severity-gate applies the same CVSS >= 7.0
   # threshold to both scanners' findings.
   grype-scan:
     name: Grype second-opinion scan
