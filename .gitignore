@@ -49,3 +49,5 @@ docker/certs/
 ### Temporary files
 *.tmp
 .*
+# Maven project directory anchor (maven.multiModuleProjectDirectory); must not be swallowed by .*
+!.mvn/
