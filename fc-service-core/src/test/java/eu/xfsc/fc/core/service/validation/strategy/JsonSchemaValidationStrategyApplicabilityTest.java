@@ -66,16 +66,16 @@ class JsonSchemaValidationStrategyApplicabilityTest {
             null, FcMediaTypes.SCHEMA_JSON_VALUE, true),
         Arguments.of(
             "RDF asset serialised as JSON-LD applies to JSON Schema (SRS 3.1.6)",
-            new ContentAccessorDirect(JSON_LD_CONTENT), VerificationConstants.MEDIA_TYPE_LD_JSON, true),
+            new ContentAccessorDirect(JSON_LD_CONTENT), FcMediaTypes.LD_JSON_VALUE, true),
         Arguments.of(
             "RDF asset with brace-prefixed but malformed content applies (naive prefix heuristic, not a JSON-LD validity check)",
             new ContentAccessorDirect(MALFORMED_BRACE_PREFIXED_CONTENT), null, true),
         Arguments.of(
             "RDF asset serialised as Turtle does not apply to JSON Schema",
-            new ContentAccessorDirect(TURTLE_CONTENT), VerificationConstants.MEDIA_TYPE_TURTLE, false),
+            new ContentAccessorDirect(TURTLE_CONTENT), FcMediaTypes.TURTLE_VALUE, false),
         Arguments.of(
             "RDF asset serialised as RDF/XML does not apply to JSON Schema",
-            new ContentAccessorDirect(RDF_XML_CONTENT), VerificationConstants.MEDIA_TYPE_RDF_XML, false),
+            new ContentAccessorDirect(RDF_XML_CONTENT), FcMediaTypes.RDF_XML_VALUE, false),
         Arguments.of(
             "RDF asset with no content type and non-JSON-LD-shaped content does not apply",
             new ContentAccessorDirect(OPAQUE_RDF_CONTENT), null, false),

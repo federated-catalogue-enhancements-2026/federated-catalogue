@@ -14,11 +14,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 
+import eu.xfsc.fc.api.FcMediaTypes;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.filestore.FileStore;
-import eu.xfsc.fc.core.service.verification.VerificationConstants;
 
 /**
  * Parameterised over the content-type / content combinations the on-demand validation
@@ -75,13 +75,13 @@ class XmlSchemaValidationStrategyApplicabilityTest {
             opaqueRdf, MediaType.APPLICATION_XML_VALUE, false),
         Arguments.of(
             "RDF asset serialised as RDF/XML applies to XML Schema (SRS 3.1.6)",
-            new ContentAccessorDirect(RDF_XML_CONTENT), VerificationConstants.MEDIA_TYPE_RDF_XML, true),
+            new ContentAccessorDirect(RDF_XML_CONTENT), FcMediaTypes.RDF_XML_VALUE, true),
         Arguments.of(
             "RDF asset serialised as Turtle does not apply to XML Schema",
-            new ContentAccessorDirect(TURTLE_CONTENT), VerificationConstants.MEDIA_TYPE_TURTLE, false),
+            new ContentAccessorDirect(TURTLE_CONTENT), FcMediaTypes.TURTLE_VALUE, false),
         Arguments.of(
             "RDF asset serialised as JSON-LD does not apply to XML Schema",
-            new ContentAccessorDirect(JSON_LD_CONTENT), VerificationConstants.MEDIA_TYPE_LD_JSON, false),
+            new ContentAccessorDirect(JSON_LD_CONTENT), FcMediaTypes.LD_JSON_VALUE, false),
         Arguments.of(
             "RDF asset with no content type still routes to SHACL",
             opaqueRdf, null, false),
