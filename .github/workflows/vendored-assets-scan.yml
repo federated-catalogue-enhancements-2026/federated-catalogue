@@ -23,8 +23,9 @@ jobs:
         uses: actions/checkout@v6
 
       # Gates every PR: diffs the file list against the baseline and checks
-      # that oss-inventory-vendored-assets.csv still covers every baselined
-      # path. No LFS needed - it reads paths and pom.xml text, not content.
+      # that the two licence-inventory CSVs together still cover every
+      # baselined path. No LFS needed - it reads paths and pom.xml text, not
+      # content.
       - name: Check vendored-asset baseline and licence-inventory coverage
         run: ./fc-tools/scan-vendored-assets.sh --check
 
@@ -48,10 +49,11 @@ jobs:
       - name: Generate vendored-asset file list
         run: ./fc-tools/scan-vendored-assets.sh > vendored-assets-inventory.txt
 
-      # fc-tools/oss-inventory-vendored-assets.csv is the actual dependency
-      # + version + licence inventory (hand-maintained, not generated) - the
-      # file list above only tells you *that* something changed, not what
-      # it is or under what licence. Publish both.
+      # The file list above only tells you *that* something changed, not
+      # what it is or under what licence. The two licence-inventory CSVs
+      # cover that: oss-inventory-vendored-assets.csv (Dash-resolvable
+      # coordinates) and oss-inventory-vendored-assets-manual.csv (hand-
+      # evidenced entries Dash can't resolve). Publish all three together.
       - name: Upload inventory as workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +61,7 @@ jobs:
           path: |
             vendored-assets-inventory.txt
             fc-tools/oss-inventory-vendored-assets.csv
+            fc-tools/oss-inventory-vendored-assets-manual.csv
 
       - name: Attach inventory to the release
         if: github.event_name == 'release'
@@ -68,4 +71,5 @@ jobs:
           gh release upload "${{ github.event.release.tag_name }}" \
             vendored-assets-inventory.txt \
             fc-tools/oss-inventory-vendored-assets.csv \
+            fc-tools/oss-inventory-vendored-assets-manual.csv \
             --clobber

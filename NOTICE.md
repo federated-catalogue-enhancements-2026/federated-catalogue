@@ -34,10 +34,11 @@ The project maintains the following source code repository:
 
 This project depends on third-party libraries resolved through the Maven build,
 and vendors a small number of files outside that dependency tree: committed
-`.jar` files, Maven `system`-scope/`systemPath` dependencies, and vendored
+`.jar` files, Maven `system`-scope/`systemPath` dependencies, vendored
 front-end JS/CSS/font files checked into `static`/`webapp`/`public` resource
-directories. `fc-tools/scan-vendored-assets.sh` discovers this set. For the
-inventory, see:
+directories, and images colocated with those vendored front-end libraries that
+need manual license attribution. `fc-tools/scan-vendored-assets.sh` discovers
+this set. For the inventory, see:
 
 * [`fc-tools/oss-inventory-vendored-assets.csv`](fc-tools/oss-inventory-vendored-assets.csv)
   (`path,component,dash_coordinate`) — the subset resolvable by the Eclipse

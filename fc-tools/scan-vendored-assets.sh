@@ -68,6 +68,13 @@ esac
 
 hr() { printf '%.0s-' {1..78}; echo; }
 
+require_csv() {
+  if [[ ! -f "$1" ]]; then
+    echo "Missing licence-inventory CSV: $1" >&2
+    exit 1
+  fi
+}
+
 # --- gather the three categories, shared by every mode ----------------------
 
 jars=$(git ls-files -- '*.jar' | LC_ALL=C sort)
@@ -124,7 +131,14 @@ fi
 # into a file for Eclipse Dash (e.g. `--dash-coordinates > vendored.deps`).
 
 if [[ "$MODE" == "dash-coordinates" ]]; then
-  tail -n +2 "$CSV" | cut -d, -f3 | LC_ALL=C sort -u
+  require_csv "$CSV"
+  require_csv "$MANUAL_CSV"
+  coordinates="$(tail -n +2 "$CSV" | cut -d, -f3 | LC_ALL=C sort -u)"
+  if [[ -z "$coordinates" ]]; then
+    echo "No Dash coordinates found in $CSV (header-only or corrupted) - refusing to emit empty output." >&2
+    exit 1
+  fi
+  echo "$coordinates"
   exit 0
 fi
 
@@ -141,7 +155,7 @@ if [[ "$MODE" == "check" ]]; then
     diff -u "$BASELINE" <(echo "$current") >&2
     echo >&2
     echo "A committed jar, system-scope dependency, or vendored front-end asset was added, removed, or moved." >&2
-    echo "Review its licence, update $CSV," >&2
+    echo "Review its licence, update $CSV or $MANUAL_CSV," >&2
     echo "then regenerate the baseline: ./$(basename "$0") --list > $BASELINE" >&2
     exit 1
   fi
@@ -151,6 +165,8 @@ if [[ "$MODE" == "check" ]]; then
   # one of the two licence-inventory CSVs (Dash-resolvable coordinates in
   # $CSV, manual-only entries in $MANUAL_CSV) - a path may appear in either,
   # but not both.
+  require_csv "$CSV"
+  require_csv "$MANUAL_CSV"
   baseline_paths=$(cut -f2 "$BASELINE" | LC_ALL=C sort -u)
   csv_paths=$(tail -n +2 "$CSV" | cut -d, -f1 | LC_ALL=C sort -u)
   manual_paths=$(tail -n +2 "$MANUAL_CSV" | cut -d, -f1 | LC_ALL=C sort -u)
@@ -237,3 +253,4 @@ hr
 
 echo "Done. Cross-check results against:"
 echo "  fc-tools/oss-inventory-vendored-assets.csv"
+echo "  fc-tools/oss-inventory-vendored-assets-manual.csv"

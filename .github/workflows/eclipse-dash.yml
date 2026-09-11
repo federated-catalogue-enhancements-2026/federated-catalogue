@@ -34,6 +34,13 @@ jobs:
             "https://repo.eclipse.org/service/rest/v1/search/assets/download?sort=version&repository=dash-maven2-releases&maven.groupId=org.eclipse.dash&maven.artifactId=org.eclipse.dash.licenses&maven.extension=jar"
           file dash-licenses.jar
 
+      # Dash exits non-zero when any coordinate resolves unresolved/restricted -
+      # deliberately not swallowed here (no continue-on-error, no `|| true`).
+      # 3 of the current vendored coordinates resolve `restricted` pending
+      # Eclipse IP Team review, so this job is expected to stay red - including
+      # on the monthly cron below - until that clears. Do not "fix" the red by
+      # adding continue-on-error; the per-coordinate status is in the summary
+      # artifact uploaded by the always() step below.
       - name: Run Dash scan against vendored-asset coordinates
         run: |
           java -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar dash-licenses.jar /tmp/vendored.deps \
