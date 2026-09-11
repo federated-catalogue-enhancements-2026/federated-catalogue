@@ -22,15 +22,23 @@
 #                                                   diff it against the baseline,
 #                                                   and verify every baselined
 #                                                   path has a matching row in
-#                                                   fc-tools/oss-inventory-vendored-assets.csv;
-#                                                   exit 1 on either kind of drift.
+#                                                   fc-tools/oss-inventory-vendored-assets.csv or
+#                                                   fc-tools/oss-inventory-vendored-assets-manual.csv
+#                                                   (never both); exit 1 on any kind of drift.
 #                                                   Wired into CI by
 #                                                   .github/workflows/vendored-assets-scan.yml
+#   ./fc-tools/scan-vendored-assets.sh --dash-coordinates
+#                                                   the `dash_coordinate` column of
+#                                                   fc-tools/oss-inventory-vendored-assets.csv,
+#                                                   one coordinate per line, deduplicated and
+#                                                   sorted, nothing else — for piping straight
+#                                                   into an Eclipse Dash license-scanner run.
 #
 # CI runs --check as a PR gate (reads and diffs, never writes) and the default
 # report mode at release time (informational artifact upload). Regenerating
 # the baseline after a reviewed vendored-asset change, and updating
-# fc-tools/oss-inventory-vendored-assets.csv with the
+# fc-tools/oss-inventory-vendored-assets.csv (Dash-resolvable coordinates) or
+# fc-tools/oss-inventory-vendored-assets-manual.csv (everything else) with the
 # licence findings for that change, is a manual step for whoever makes it:
 #
 #   ./fc-tools/scan-vendored-assets.sh --list > fc-tools/vendored-assets-baseline.txt
@@ -47,13 +55,15 @@ cd "$REPO_ROOT" || exit 1
 
 BASELINE="fc-tools/vendored-assets-baseline.txt"
 CSV="fc-tools/oss-inventory-vendored-assets.csv"
+MANUAL_CSV="fc-tools/oss-inventory-vendored-assets-manual.csv"
 
 MODE="report"
 case "${1:-}" in
-  --check) MODE="check" ;;
-  --list)  MODE="list" ;;
+  --check)           MODE="check" ;;
+  --list)            MODE="list" ;;
+  --dash-coordinates) MODE="dash-coordinates" ;;
   "") ;;
-  *) echo "Usage: $0 [--check|--list]" >&2; exit 2 ;;
+  *) echo "Usage: $0 [--check|--list|--dash-coordinates]" >&2; exit 2 ;;
 esac
 
 hr() { printf '%.0s-' {1..78}; echo; }
@@ -108,6 +118,16 @@ if [[ "$MODE" == "list" ]]; then
   exit 0
 fi
 
+# --- --dash-coordinates: Eclipse Dash-resolvable coordinates, one per line --
+# Reads the dash_coordinate column (field 3) of every data row of $CSV,
+# deduplicated and sorted. Nothing else on stdout - this is piped straight
+# into a file for Eclipse Dash (e.g. `--dash-coordinates > vendored.deps`).
+
+if [[ "$MODE" == "dash-coordinates" ]]; then
+  tail -n +2 "$CSV" | cut -d, -f3 | LC_ALL=C sort -u
+  exit 0
+fi
+
 if [[ "$MODE" == "check" ]]; then
   if [[ ! -f "$BASELINE" ]]; then
     echo "Missing baseline: $BASELINE" >&2
@@ -127,19 +147,34 @@ if [[ "$MODE" == "check" ]]; then
   fi
 
   # The baseline only tracks paths, not licences - a CSV row can be deleted
-  # without changing it. Every baselined path must have a matching CSV row.
+  # without changing it. Every baselined path must have a matching row in
+  # one of the two licence-inventory CSVs (Dash-resolvable coordinates in
+  # $CSV, manual-only entries in $MANUAL_CSV) - a path may appear in either,
+  # but not both.
   baseline_paths=$(cut -f2 "$BASELINE" | LC_ALL=C sort -u)
   csv_paths=$(tail -n +2 "$CSV" | cut -d, -f1 | LC_ALL=C sort -u)
-  missing=$(comm -23 <(echo "$baseline_paths") <(echo "$csv_paths"))
+  manual_paths=$(tail -n +2 "$MANUAL_CSV" | cut -d, -f1 | LC_ALL=C sort -u)
+  union_paths=$(cat <(echo "$csv_paths") <(echo "$manual_paths") | LC_ALL=C sort -u)
+
+  missing=$(comm -23 <(echo "$baseline_paths") <(echo "$union_paths"))
   if [[ -n "$missing" ]]; then
-    echo "Licence-inventory drift: baselined path(s) missing from $CSV:" >&2
+    echo "Licence-inventory drift: baselined path(s) missing from $CSV or $MANUAL_CSV:" >&2
     echo "$missing" | sed 's/^/  /' >&2
     echo >&2
-    echo "Add a licence-inventory row for each path, or explain the removal in the PR." >&2
+    echo "Add a licence-inventory row (in either CSV) for each path, or explain the removal in the PR." >&2
     exit 1
   fi
 
-  echo "OK: vendored-asset inventory matches $BASELINE and $CSV covers every entry"
+  duplicated=$(comm -12 <(echo "$csv_paths") <(echo "$manual_paths"))
+  if [[ -n "$duplicated" ]]; then
+    echo "Licence-inventory drift: path(s) double-counted in both $CSV and $MANUAL_CSV:" >&2
+    echo "$duplicated" | sed 's/^/  /' >&2
+    echo >&2
+    echo "Each path must appear in exactly one of the two CSVs." >&2
+    exit 1
+  fi
+
+  echo "OK: vendored-asset inventory matches $BASELINE and $CSV + $MANUAL_CSV together cover every entry"
   exit 0
 fi
 
