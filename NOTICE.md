@@ -49,6 +49,12 @@ this set. For the inventory, see:
   subset Eclipse Dash cannot resolve, with license evidence recorded per row
   by hand.
 
+The licenses for the coordinates in `oss-inventory-vendored-assets.csv` are
+resolved by the `vendored-assets-dash-scan` job in
+`.github/workflows/eclipse-dash.yml` and published as the
+`vendored-assets-dependencies-summary` workflow artifact; durable
+release-asset publication of that summary is tracked separately.
+
 Verbatim third-party files vendored outside this scanned scope — such as
 `docker/fuseki/Dockerfile` and `docker/fuseki/download.sh` (Apache Jena,
 ASF-headed, Apache-2.0 — same license as this project) — carry their own
