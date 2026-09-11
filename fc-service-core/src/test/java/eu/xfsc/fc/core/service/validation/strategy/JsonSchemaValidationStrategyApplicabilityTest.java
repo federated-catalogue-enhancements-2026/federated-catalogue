@@ -7,12 +7,11 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import eu.xfsc.fc.api.FcMediaTypes;
 import eu.xfsc.fc.core.pojo.AssetMetadata;
 import eu.xfsc.fc.core.pojo.ContentAccessor;
 import eu.xfsc.fc.core.pojo.ContentAccessorDirect;
 import eu.xfsc.fc.core.service.filestore.FileStore;
-import eu.xfsc.fc.core.service.schemastore.SchemaStore;
-import eu.xfsc.fc.core.service.verification.VerificationConstants;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -64,7 +63,7 @@ class JsonSchemaValidationStrategyApplicabilityTest {
             null, "application/json; charset=utf-8", true),
         Arguments.of(
             "non-RDF asset with JSON Schema media type",
-            null, SchemaStore.MEDIA_TYPE_JSON_SCHEMA, true),
+            null, FcMediaTypes.SCHEMA_JSON_VALUE, true),
         Arguments.of(
             "RDF asset serialised as JSON-LD applies to JSON Schema (SRS 3.1.6)",
             new ContentAccessorDirect(JSON_LD_CONTENT), VerificationConstants.MEDIA_TYPE_LD_JSON, true),
