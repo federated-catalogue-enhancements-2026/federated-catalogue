@@ -33,13 +33,25 @@ The project maintains the following source code repository:
 ## Third-party Content
 
 This project depends on third-party libraries resolved through the Maven build,
-and vendors a small number of files that Maven dependency resolution does not
-see (committed `.jar` files and static front-end assets such as bundled JS/CSS/
-font libraries). For the vendored files, see:
+and vendors a small number of files outside that dependency tree: committed
+`.jar` files, Maven `system`-scope/`systemPath` dependencies, and vendored
+front-end JS/CSS/font files checked into `static`/`webapp`/`public` resource
+directories. `fc-tools/scan-vendored-assets.sh` discovers this set. For the
+inventory, see:
 
-* [`fc-tools/oss-inventory-vendored-assets.csv`](fc-tools/oss-inventory-vendored-assets.csv) —
-  path, component, version, license (SPDX identifier), and source for every
-  vendored asset in this repository.
+* [`fc-tools/oss-inventory-vendored-assets.csv`](fc-tools/oss-inventory-vendored-assets.csv)
+  (`path,component,dash_coordinate`) — the subset resolvable by the Eclipse
+  Dash license tool: committed jars published to Maven Central, plus vendored
+  front-end files resolvable via npm coordinates.
+* [`fc-tools/oss-inventory-vendored-assets-manual.csv`](fc-tools/oss-inventory-vendored-assets-manual.csv)
+  (`path,component,version,license,confidence,evidence,spdx,source`) — the
+  subset Eclipse Dash cannot resolve, with license evidence recorded per row
+  by hand.
+
+Verbatim third-party files vendored outside this scanned scope — such as
+`docker/fuseki/Dockerfile` and `docker/fuseki/download.sh` (Apache Jena,
+ASF-headed, Apache-2.0 — same license as this project) — carry their own
+license headers in-file and are intentionally not duplicated in these CSVs.
 
 For the full transitive dependency list resolved from the Maven build,
 see the `DEPENDENCIES` file published as a release asset alongside each
